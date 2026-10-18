@@ -68,6 +68,14 @@ Browsing runs on [Scramjet](https://github.com/MercuryWorkshop/scramjet). Pages 
 - Locally, Scramjet runs on the same origin as the app. In production set `PROXY_ORIGIN` to a **sibling subdomain** (for example app.example.com and sites.example.com) so proxied sites cannot touch the app's session.
 - The files live in `public/sj/` (shell page and service worker) and `src/scramjet.ts` (static files and tunnel).
 
+## Host it at home (YouTube and other sites that distrust data centers)
+
+Sites like YouTube show "sign in to confirm you're not a bot" when traffic comes from a data-center address such as Render's. A home internet connection is trusted much more, so running Artemis at home usually fixes it. Nothing is faked: the traffic simply leaves from your own address.
+
+1. Keep a computer on at home (a Mac works). Start Artemis there with `OWNER_PASSWORD="..." npx tsx src/server.ts`. On a Mac, run `caffeinate -s` in a second Terminal tab so it does not sleep.
+2. To let friends in over the internet with https (Scramjet needs https), use a tunnel so you do not have to open router ports. For example with Cloudflare Tunnel: `brew install cloudflared`, then `cloudflared tunnel --url http://localhost:8080`. It prints an `https://...trycloudflare.com` address. It changes each time you start it; a fixed address needs a free Cloudflare account and a domain.
+3. Heavy video traffic through one home connection can slow your internet and can still trigger YouTube checks sometimes. Keep the member list small.
+
 ## Limits
 Sites that are heavy on JavaScript, use DRM video, or show CAPTCHAs may not work through any rewriting proxy.
 

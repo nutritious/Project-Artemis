@@ -69,6 +69,20 @@ export function buildBrowser() {
   on("bookmarks", () => { renderBmBar(); syncToolbar(); renderTiles(); });
   newTab();
   renderBmBar();
+  prewarmScramjet();
+}
+
+/** Boot Scramjet in a hidden frame while you look at the home page, so the first site opens fast. */
+function prewarmScramjet() {
+  if (hooks.frame || !state.proxyToken) return;
+  const go = () => {
+    const f = document.createElement("iframe");
+    f.id = "sjWarm"; f.tabIndex = -1; f.setAttribute("aria-hidden", "true");
+    f.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;border:0;visibility:hidden;pointer-events:none";
+    f.src = `${state.sjOrigin || ""}/sj/shell.html#t=${encodeURIComponent(state.proxyToken)}`;
+    document.body.append(f);
+  };
+  (window.requestIdleCallback || ((fn) => setTimeout(fn, 1500)))(go, { timeout: 4000 });
 }
 
 /* ------------------------------ tabs ------------------------------ */

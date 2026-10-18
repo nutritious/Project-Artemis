@@ -19,7 +19,7 @@ const mod = (p: string) => path.resolve("node_modules", p);
 
 /** Static assets the browser needs. */
 export function mountScramjet(app: Express) {
-  const opts = { maxAge: "1h", fallthrough: false, index: false } as const;
+  const opts = { maxAge: "7d", fallthrough: false, index: false } as const;
   app.use("/sj/lib", express.static(mod("@mercuryworkshop/scramjet/dist"), opts));
   app.use("/sj/mux", express.static(mod("@mercuryworkshop/bare-mux/dist"), opts));
   app.use("/sj/curl", express.static(mod("@mercuryworkshop/libcurl-transport/dist"), opts));
@@ -30,6 +30,7 @@ wisp.options.allow_private_ips = ALLOW_PRIVATE;
 wisp.options.allow_loopback_ips = ALLOW_PRIVATE;
 wisp.options.allow_udp_streams = false;
 wisp.options.parse_real_ip = false;
+wisp.options.dns_ttl = 600;
 wisp.options.stream_limit_total = 120;
 wisp.options.port_blacklist = [22, 23, 25, 110, 143, 445, 465, 587, 993, 995, 3306, 5432, 6379, 27017];
 

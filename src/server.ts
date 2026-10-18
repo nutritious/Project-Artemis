@@ -15,6 +15,7 @@ import { ACHIEVEMENTS, BASE_THEMES, GAMES, PACKS, WHEEL, WHEEL_MS } from "../pub
 import { answer as answerRound, partyState, setAuto, skipRound, startRound, startRushNow } from "./party.js";
 import { BUILD, broadcast, broadcastCustomTags, checkTrust, notifyOwners, broadcastEvent, broadcastAnnouncement, broadcastChannels, broadcastMembers, broadcastRoles, closeUserSockets, deleteMessage, handleChatUpgrade, hasAdminSubscribers, pushSelf, pushSelfAll, pushToAdmins } from "./chat.js";
 import { encodeTarget, errorPage, handleProxy, handleProxyWsUpgrade, isBlocked, realFromProxyUrl } from "./proxy.js";
+import compression from "compression";
 import { handleWispUpgrade, isWispPath, mountScramjet } from "./scramjet.js";
 import { snapshot, record } from "./monitor.js";
 import { extendPhase, gotoPhase, resumeDirector, skipPhase } from "./director.js";
@@ -37,6 +38,10 @@ function proxyOriginFor(req: Request): string {
   if (req.hostname === "localhost") return `${req.protocol}://127.0.0.1:${(req.get("host") ?? "").split(":")[1] ?? PORT}`;
   return "";
 }
+
+/* Shrink the app and the Scramjet engine files (the engine is several MB). The proxy and API keep their own handling. */
+const gzip = compression();
+app.use((req, res, next) => (req.path.startsWith("/p/") || req.path.startsWith("/api/") ? next() : gzip(req, res, next)));
 
 app.use((req, res, next) => {
   const role = hostRole(req.hostname);
