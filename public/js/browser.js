@@ -122,6 +122,14 @@ function loadFrame(t, url) {
   // Scramjet: once the shell is up, just tell it where to go (no page reload, no flicker).
   if (t.sjReady && t.iframe.contentWindow) t.iframe.contentWindow.postMessage({ artemis: "go", url, token: state.proxyToken }, "*");
   else { t.sjReady = false; t.iframe.src = sjSrc(url); }
+  // Safety net: if Scramjet never answers (tunnel blocked, host timing out), switch this tab to the classic proxy.
+  clearTimeout(t.watchdog);
+  t.watchdog = setTimeout(() => {
+    if (!t.loading || t.legacy || t.expect !== url) return;
+    t.legacy = true; t.sjReady = false;
+    toast("Scramjet was too slow to start here, so this tab switched to the classic proxy.", true);
+    loadFrame(t, url); render();
+  }, 25000);
 }
 function back() { const t = cur(); if (t && t.idx > 0) go(t, t.idx - 1); }
 function forward() { const t = cur(); if (t && t.idx < t.stack.length - 1) go(t, t.idx + 1); }
@@ -364,7 +372,7 @@ function onFrameMessage(e) {
     return;
   }
   if (d.artemis === "nav" && t) {
-    t.loading = false; if (t.id === active) loadbar(1);
+    t.loading = false; clearTimeout(t.watchdog); if (t.id === active) loadbar(1);
     const url = d.url || "";
     t.title = d.title || hostOf(url) || "Page";
     t.favicon = d.favicon || "";

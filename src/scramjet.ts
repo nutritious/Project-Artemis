@@ -48,6 +48,7 @@ export function isWispPath(url: string | undefined) {
 
 export function handleWispUpgrade(req: http.IncomingMessage, socket: Duplex, head: Buffer) {
   const fail = (code: number, msg: string) => {
+    console.log(`[scramjet] tunnel refused: ${code} ${msg}`);
     socket.write(`HTTP/1.1 ${code} ${msg}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`);
     socket.destroy();
   };
@@ -62,6 +63,7 @@ export function handleWispUpgrade(req: http.IncomingMessage, socket: Duplex, hea
   if (!allow(`wisp:${user.id}`, 60, 60_000)) return fail(429, "Too Many Requests");
   syncBlocklist();
   user.lastSeen = Date.now();
+  console.log(`[scramjet] tunnel open for ${user.username}`);
   record({ ts: Date.now(), user: user.username, method: "TUNNEL", host: "(scramjet)", path: "/wisp", status: 101, bytes: 0, ms: 0 });
   wisp.routeRequest(req, socket as any, head);
 }
