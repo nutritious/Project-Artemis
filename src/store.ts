@@ -93,6 +93,7 @@ export interface Db {
 const T = (h: number, m: number) => Date.UTC(2026, 9, 15, h + 7, m);
 /** The update log starts with the history of this build. Only the owner can add to or edit it. */
 export const SEED_UPDATES: UpdateEntry[] = [
+  { id: "u24", ts: Date.UTC(2026, 9, 19, 6, 0), by: "Artemis", title: "Download and restore your data", body: "- Owner console, Safety tab: a new Data & backup card. The owner can download every account, chat message, coin and setting as one file, and restore it later. Only the owner can do either.\n- If the server is on Render without a permanent disk, the card (and a warning when you sign in) tells you that updates erase data, so you know to download a backup first.\n- Restoring saves a copy of the current data first, then restarts the server on the backup." },
   { id: "u23", ts: Date.UTC(2026, 9, 19, 5, 0), by: "Artemis", title: "Scramjet proxy and a light, easy-to-read browser", body: "- The proxy now runs on Scramjet, a newer engine that handles far more sites (video, logins, heavy web apps). It works in your browser, so pages open faster and Back, Forward and reload feel normal.\n- If your browser cannot run Scramjet (for example on plain http), that tab quietly falls back to the classic proxy, so nothing breaks. The same happens if a page has not started loading after 25 seconds.\n- The browser view now has a bright, light background in every theme: the new tab page, the search results, the tab bar and the address bar are all much easier to read.\n- The owner's blocklist, bans, maintenance mode and the private-network protection still apply to Scramjet traffic.\n- Pages start faster: the engine warms up in the background while you browse the home page, and its big files are now compressed and cached.\n- Reaching Legend now also posts a permanent message from ArtemisBot in #general, and the gold banner stays up for 12 seconds, so nobody misses it." },
   { id: "u22", ts: Date.UTC(2026, 9, 19, 2, 0), by: "Artemis", title: "Event timelines, shared Gulper arena and boss hunt", body: "- Live events now run on a timeline the owner builds: Gulper arena, Loot drop storm, Boss worm hunt and Trivia and word games, each with its own minutes, plus presets and settings (bots, loot rate, boss strength, loop). Everyone sees a phase timer and a leaderboard for the current phase and overall.\n- The Gulper arena is now one shared world: everyone in the event is in the same arena. New power-ups (magnet, shield, speed, double points), a minimap, kill streaks and a kill feed, themed music with a mute button, and a boss worm everyone hunts together by touching its head.\n- Loot drop storm: coins and loot crates drop around the map, with a ping on the minimap.\n- Trivia, scrambles, reaction races and polls now appear only inside the live event instead of popping up over the app.\n- If you already own an event's limited title and effect when it runs again, you get 2,500 bonus coins instead." },
   { id: "u21", ts: Date.UTC(2026, 9, 18, 23, 0), by: "Artemis", title: "Live event arena, redeem codes and Chroma cutscenes", body: "- Redeem codes: the owner and co-owners make codes in the owner console (coins, free crates and an item, with a use limit and an optional expiry). Players enter them in Packs or the Hub and get a gift-opening animation. One use per player, and rewards skip the daily coin limit.\n- Packs: tap See what's inside on any crate to see every item it can drop, the odds, and which ones you own. Every pack can drop Chroma items.\n- Each Chroma item now has its own cutscene (prism, holo burst, lightning, ribbons, iris wipe, banner, holo foil). Replay any from the pack preview.\n- Events: only the owner can start or end live events and run rounds. Co-owners can fire quick events. Commanders keep Mission control but cannot start events.\n- Live events are now a full-screen arena: when the owner starts one everyone drops into it after the opening scene. Later you can join from the top bar or the chat. It is a worm arena (Void Worms) with a theme per event (Halloween has its own look), a live leaderboard and a movable event chat. Your score feeds the event points.\n- The owner and co-owners can show a countdown banner at the top of everyone's screen with a date, time and what it is about.\n- After an update, a green banner tells you to click and restart. Updates never reset accounts, chat or progress, and the server now keeps automatic backups of its data." },
@@ -133,6 +134,10 @@ class JsonStore<T extends object> {
   data: T;
   private file: string;
   private timer: NodeJS.Timeout | null = null;
+  private frozen = false;
+  get path() { return this.file; }
+  /** After a restore the file on disk is the truth: never write memory over it. */
+  freeze() { this.frozen = true; if (this.timer) { clearTimeout(this.timer); this.timer = null; } }
   constructor(name: string, defaults: T) {
     this.file = path.join(DATA_DIR, name);
     this.data = defaults;
@@ -160,6 +165,7 @@ class JsonStore<T extends object> {
     }, 250);
   }
   flush() {
+    if (this.frozen) return;
     const tmp = this.file + ".tmp";
     fs.writeFileSync(tmp, JSON.stringify(this.data));
     fs.renameSync(tmp, this.file);
@@ -233,6 +239,17 @@ for (const u of d.users) {
 }
 if (!d.secret) d.secret = crypto.randomBytes(32).toString("hex");
 db.flush();
+
+/** Is the data folder on a permanent disk? On Render a missing disk means every deploy erases accounts and chat. */
+export function storageInfo() {
+  const dir = path.dirname(db.path);
+  let permanent: boolean | null = null;
+  try {
+    const sameAsRoot = fs.statSync(dir).dev === fs.statSync("/").dev;
+    if (process.env.RENDER || process.env.ARTEMIS_WARN_EPHEMERAL === "1") permanent = !sameAsRoot;
+  } catch { /* unknown */ }
+  return { permanent, dir, onRender: !!process.env.RENDER };
+}
 
 export const isStaff = (u: { role: string } | undefined | null) => u?.role === "owner" || u?.role === "coowner" || u?.role === "admin";
 export const uid = () => crypto.randomBytes(8).toString("hex");

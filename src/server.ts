@@ -11,6 +11,7 @@ import { can, effectivePerms, hasDashboard, outranks, publicRoles, PERMS, PERM_I
 import { runCommand } from "./commands.js";
 import { activity, progress, addEventPoints, earnedToday, activeBoosts, newGame, boards, publicEvent, publicGame, rankIndex, submitRun } from "./game.js";
 import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giveItems, joinLive, openPack, spinWheel, pushEventState, quick, startLive, targets } from "./economy.js";
+import { storageInfo } from "./store.js";
 import { ACHIEVEMENTS, BASE_THEMES, GAMES, PACKS, WHEEL, WHEEL_MS } from "../public/js/cosmetics.js";
 import { answer as answerRound, partyState, setAuto, skipRound, startRound, startRushNow } from "./party.js";
 import { BUILD, broadcast, broadcastCustomTags, checkTrust, notifyOwners, broadcastEvent, broadcastAnnouncement, broadcastChannels, broadcastMembers, broadcastRoles, closeUserSockets, deleteMessage, handleChatUpgrade, hasAdminSubscribers, pushSelf, pushSelfAll, pushToAdmins } from "./chat.js";
@@ -209,6 +210,7 @@ api.get("/me", auth, (req, res) => {
     permInfo: PERM_INFO,
     proxyOrigin: proxyOriginFor(req),
     sjOrigin: PROXY_ORIGIN,
+    storageWarn: user.role === "owner" && storageInfo().permanent === false,
     proxyToken: proxyToken(user),
     bookmarks: user.bookmarks,
     channels: db.data.channels.map((c) => ({ id: c.id, name: c.name, topic: c.topic })),
@@ -654,8 +656,17 @@ const ownerPassword = async (req: Request, res: Response) => {
 api.get("/trust", auth, (req, res) => res.json(trustInfo(me(req))));
 api.get("/owner/safety", auth, panelUp, (_req, res) => {
   const bot = db.data.server.bot!;
-  res.json({ launchAt: db.data.server.launchAt ?? 0, rules: TRUST, bot: { enabled: bot.enabled, action: bot.action, strikes: bot.strikes, words: bot.words, log: bot.log },
+  res.json({ storage: storageInfo(), launchAt: db.data.server.launchAt ?? 0, rules: TRUST, bot: { enabled: bot.enabled, action: bot.action, strikes: bot.strikes, words: bot.words, log: bot.log },
     users: db.data.users.filter((u) => !u.banned).map((u) => ({ id: u.id, username: u.username, role: u.role, roleId: u.roleId ?? null, ...trustInfo(u) })) });
+});
+api.get("/owner/backup", auth, ownerOnly, (req, res) => {
+  if (!allow(`backup:${me(req).id}`, 10, 60 * 60_000)) return void res.status(429).json({ error: "Too many downloads. Try again later." });
+  db.flush();
+  logAdmin(req, "backup.download", "full data download");
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
+  res.setHeader("Content-Disposition", `attachment; filename="artemis-backup-${stamp}.json"`);
+  res.setHeader("Cache-Control", "no-store");
+  res.type("application/json").send(JSON.stringify(db.data));
 });
 api.post("/owner/launch", auth, panelUp, (req, res) => {
   const s = db.data.server; s.launchAt = req.body?.action === "stop" ? 0 : Date.now(); saveDb();
@@ -846,6 +857,38 @@ api.post("/admin/command", auth, need("use_terminal"), async (req, res) => {
 });
 
 api.use((_req, res) => res.status(404).json({ error: "Not found" }));
+
+/* Restore a backup. It lives outside the API router because backups are far bigger than the normal 100 KB limit.
+   Only the owner can do this. The file is checked, the current data is copied aside, and the server restarts on the restored data. */
+app.post("/api/owner/restore", express.json({ limit: "80mb" }), (req, res) => {
+  const origin = req.get("origin");
+  let okOrigin = false;
+  try { okOrigin = !!origin && new URL(origin).host === req.get("host"); } catch { /* bad origin */ }
+  if (!okOrigin) return void res.status(403).json({ error: "Bad origin" });
+  const user = userFromRequest(req);
+  if (!user || user.role !== "owner") return void res.status(403).json({ error: "Owner only" });
+  if (!allow(`restore:${user.id}`, 4, 60 * 60_000)) return void res.status(429).json({ error: "Too many restores. Try again later." });
+  const b = req.body as any;
+  const good = b && typeof b === "object" && Array.isArray(b.users) && b.users.length > 0 && b.users.every((u: any) => u && typeof u.id === "string" && typeof u.username === "string" && typeof u.hash === "string") &&
+    Array.isArray(b.channels) && Array.isArray(b.messages) && typeof b.secret === "string" && b.secret.length >= 16 && b.users.some((u: any) => u.role === "owner");
+  if (!good) return void res.status(400).json({ error: "That does not look like an Artemis backup file." });
+  try {
+    db.flush();
+    const bdir = path.join(path.dirname(db.path), "backups");
+    fs.mkdirSync(bdir, { recursive: true });
+    if (fs.existsSync(db.path)) fs.copyFileSync(db.path, path.join(bdir, `before-restore-${Date.now()}.json`));
+    const tmp = db.path + ".restore";
+    fs.writeFileSync(tmp, JSON.stringify(b));
+    fs.renameSync(tmp, db.path);
+    db.freeze();
+  } catch (e: any) {
+    return void res.status(500).json({ error: "Could not write the backup: " + (e?.message ?? e) });
+  }
+  console.log(`[artemis] data restored from a backup by ${user.username}; restarting`);
+  res.json({ ok: true, users: b.users.length, messages: b.messages.length });
+  setTimeout(() => process.exit(0), 700);
+});
+
 app.use("/api", api);
 
 /* ---------------- static UI ---------------- */

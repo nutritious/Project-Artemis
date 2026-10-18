@@ -33,15 +33,39 @@ function html() {
   const trust = `<div class="card glass"><h3>Trusted members</h3>
     <p class="note">Trusted members can post GIFs and chat in <b>#trusted-general</b>. Anyone earns it by reaching ${r.msgs} messages, ${r.proxyHours} hours on the proxy, an account at least ${r.ageDays} days old and no ban in the last ${r.banFreeDays} days. You can give it early here, or take it away.</p>
     <div class="inline"><input id="trustSearch" type="search" placeholder="Search players…" value="${esc(Q)}" autocomplete="off"></div><div class="mlist" id="trustList">${userRows()}</div></div>`;
-  return launch + bot + trust;
+  const st = S.storage ?? {}, warn = st.permanent === false;
+  const data = `<div class="card glass"><h3>Data &amp; backup <span class="chip ${warn ? "warn" : st.permanent ? "ok" : ""}">${warn ? "no permanent disk" : st.permanent ? "permanent disk" : "local"}</span></h3>
+    ${warn ? `<p class="note" style="color:var(--warn)"><b>Heads up:</b> this server has no permanent disk, so every deploy or restart erases accounts, chat and coins. Download a backup before you update, then restore it afterwards. A paid Render disk at <code>/data</code> fixes it for good.</p>` : `<p class="note">Everything (accounts, chat, coins, packs, settings) lives in one data file. Download it now and then, and restore it if the server is ever reset.</p>`}
+    <p class="note">The backup holds every player's account data, including their password hashes. Keep the file private. Only the owner can download or restore it.</p>
+    <div class="inline"><button class="btn primary" data-backup="download">Download backup</button><label class="btn" style="cursor:pointer">Restore from file<input type="file" accept=".json,application/json" data-restore hidden></label></div></div>`;
+  return data + launch + bot + trust;
+}
+async function downloadBackup() {
+  const res = await fetch("/api/owner/backup", { credentials: "same-origin" });
+  if (!res.ok) { let m = "Download failed"; try { m = (await res.json()).error || m; } catch { /* ignore */ } throw new Error(m); }
+  const blob = await res.blob(), a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = (/filename="([^"]+)"/.exec(res.headers.get("content-disposition") || "") || [])[1] || "artemis-backup.json";
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+async function restoreFrom(file) {
+  let data;
+  try { data = JSON.parse(await file.text()); } catch { throw new Error("That file is not a valid backup."); }
+  const ok = await confirmBox("Restore this backup?", `This replaces ALL current data (${data.users?.length ?? "?"} accounts, ${data.messages?.length ?? "?"} messages) with the file's contents and restarts the server. A copy of the current data is saved first. You will be signed out, so sign in with the password from the backup.`, { ok: "Restore and restart", danger: true });
+  if (!ok) return;
+  const r = await api("/owner/restore", "POST", data);
+  toast(`Restored ${r.users} accounts. The server is restarting; reload in a few seconds.`, "ok");
+  setTimeout(() => location.reload(), 9000);
 }
 async function click(b) {
   const d = b.dataset;
   if (d.launch) return run(() => api("/owner/launch", "POST", { action: d.launch }), d.launch === "start" ? "OG window started" : "OG window closed");
+  if (d.backup) return run(() => downloadBackup(), "Backup downloaded. Keep it private.");
   if (d.trust) { const [mode, id] = d.trust.split(":"); return run(() => api("/owner/trust", "POST", { id, mode }), mode === "grant" ? "They are trusted now" : "Updated"); }
   return false;
 }
 async function change(el) {
+  if (el.matches?.("[data-restore]")) { const f = el.files?.[0]; el.value = ""; if (f) { try { await restoreFrom(f); } catch (e) { toast(e.message, true); } } return true; }
   if (!el.dataset?.botopt) return false;
   const k = el.dataset.botopt, v = el.type === "checkbox" ? el.checked : k === "strikes" ? Number(el.value) : el.value;
   return run(() => api("/owner/bot", "PUT", { [k]: v }), k === "enabled" ? (v ? "ArtemisBot is on" : "ArtemisBot is off") : "Saved");
