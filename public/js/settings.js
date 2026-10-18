@@ -60,6 +60,8 @@ export function buildSettings() {
       <label class="switch"><span>Bookmarks bar</span><input type="checkbox" id="setBar" ${s.bookmarksBar ? "checked" : ""}></label></div>
     <div class="card glass"><h3>Search</h3><label>Default engine<select id="setEngine">${state.engines.map((e) => `<option value="${e.id}" ${s.engine === e.id ? "selected" : ""}>${esc(e.name)}</option>`).join("")}</select></label>
       <p class="note">Searches run on the server, so the engine never sees your IP. If one engine blocks or returns nothing, Artemis automatically tries the next.</p></div>
+    <div class="card glass"><h3>Proxy engine</h3><label>Engine<select id="setProxy">${["scramjet:Scramjet (default)", "classic:Classic"].map((o) => { const [k, n] = o.split(":"); return `<option value="${k}" ${(localStorage.getItem("artemis.proxy") || "scramjet") === k ? "selected" : ""}>${n}</option>`; }).join("")}</select></label>
+      <p class="note">Scramjet is the default and works with most sites. Classic is the older engine, handy if a site breaks. Applies to new tabs and reloads. Artemis never switches on its own.</p></div>
     <div class="card glass"><h3>Tab cloak</h3><label>Preset<select id="setCloak">${Object.entries(CLOAKS).map(([k, c]) => `<option value="${k}" ${s.cloakIcon === k ? "selected" : ""}>${c.label}</option>`).join("")}</select></label>
       <label>Custom title<input id="setCloakTitle" maxlength="80" value="${esc(s.cloakTitle)}" placeholder="Overrides the preset title"></label>
       <button class="btn" id="blankBtn">Open in an about:blank window</button></div>
@@ -93,6 +95,7 @@ export function buildSettings() {
   $("#setPresence").onchange = (e) => saveProfile({ presence: e.target.value });
   $("#setSound").onchange = (e) => saveSettings({ chatSound: e.target.checked });
   $("#setBar").onchange = (e) => saveSettings({ bookmarksBar: e.target.checked });
+  $("#setProxy").onchange = (e) => { try { localStorage.setItem("artemis.proxy", e.target.value); } catch {} toast(e.target.value === "classic" ? "Classic engine on. Open a new tab or reload." : "Scramjet on. Open a new tab or reload."); };
   $("#setEngine").onchange = (e) => saveSettings({ engine: e.target.value });
   $("#setCloak").onchange = (e) => { saveSettings({ cloakIcon: e.target.value, cloakTitle: "" }); $("#setCloakTitle").value = ""; };
   $("#setCloakTitle").oninput = (e) => saveSettings({ cloakTitle: e.target.value });

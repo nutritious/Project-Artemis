@@ -86,8 +86,9 @@ function prewarmScramjet() {
 }
 
 /* ------------------------------ tabs ------------------------------ */
+const wantClassic = () => { try { return localStorage.getItem("artemis.proxy") === "classic"; } catch { return false; } };
 export function newTab(entry = { kind: "home" }, activate = true) {
-  const t = { id: ++seq, title: "New tab", favicon: "", stack: [], idx: -1, pane: null, iframe: null, loading: false, expect: "" };
+  const t = { id: ++seq, title: "New tab", favicon: "", stack: [], idx: -1, pane: null, iframe: null, loading: false, expect: "", legacy: wantClassic() };
   t.pane = document.createElement("div");
   t.pane.className = "pane";
   $("#stage").append(t.pane);
@@ -129,7 +130,7 @@ function loadFrame(t, url) {
     t.iframe.addEventListener("load", () => { if (t.legacy || hooks.frame) { t.loading = false; if (t.id === active) loadbar(1); render(true); } });
     $("#stage").append(t.iframe);
   }
-  t.loading = true; t.expect = url;
+  t.legacy = wantClassic(); t.loading = true; t.expect = url;
   if (t.id === active) loadbar(.3);
   if (hooks.frame) return hooks.frame(t.iframe, url);
   if (t.legacy) { t.iframe.src = proxySrc(url); return; }
@@ -140,9 +141,7 @@ function loadFrame(t, url) {
   clearTimeout(t.watchdog);
   t.watchdog = setTimeout(() => {
     if (!t.loading || t.legacy || t.expect !== url) return;
-    t.legacy = true; t.sjReady = false;
-    toast("Scramjet was too slow to start here, so this tab switched to the classic proxy.", true);
-    loadFrame(t, url); render();
+    toast("Scramjet is taking a while. Still trying. If it never loads, switch to Classic in Settings > Proxy engine.", true);
   }, 25000);
 }
 function back() { const t = cur(); if (t && t.idx > 0) go(t, t.idx - 1); }
@@ -379,10 +378,8 @@ function onFrameMessage(e) {
   if (d.artemis === "ready" && t) { t.sjReady = true; return; }
   if (d.artemis === "sj-failed" && t) {
     // Scramjet couldn't start here (old browser, plain http, blocked service workers): fall back to the classic proxy.
-    t.legacy = true; t.sjReady = false;
-    const en = t.stack[t.idx];
-    if (en?.kind === "page") loadFrame(t, en.url);
-    if (!sjWarned) { sjWarned = true; toast("Scramjet couldn't start in this browser, so this tab is using the classic proxy.", true); }
+    t.loading = false; clearTimeout(t.watchdog); render();
+    if (!sjWarned) { sjWarned = true; toast("Scramjet couldn't start in this browser. You can switch to Classic in Settings > Proxy engine.", true); }
     return;
   }
   if (d.artemis === "nav" && t) {
