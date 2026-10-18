@@ -1,0 +1,29 @@
+# Project Artemis on a VPS with automatic HTTPS (Caddy).
+# 1. Point TWO DNS records at your server: artemis.example.com and p.artemis.example.com
+# 2. Edit .env (copy .env.example) and run:  docker compose up -d
+services:
+  artemis:
+    build: .
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      TRUST_PROXY: "1"
+      PROXY_ORIGIN: https://${PROXY_DOMAIN}
+      OWNER_USERNAME: ${OWNER_USERNAME:-Warmaster}
+      OWNER_PASSWORD: ${OWNER_PASSWORD:-}
+    volumes:
+      - artemis-data:/data
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      PROXY_DOMAIN: ${PROXY_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on: [artemis]
+volumes:
+  artemis-data:
+  caddy-data:

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Artemis · Scramjet</title>
+<style>
+  html,body{margin:0;height:100%;background:#fff;color:#1b2333;font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;overflow:hidden}
+  iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff}
+  #boot{position:fixed;inset:0;display:grid;place-content:center;gap:12px;text-align:center;background:#f6f8fc}
+  #boot .ring{width:38px;height:38px;margin:auto;border-radius:50%;border:3px solid #dbe3f2;border-top-color:#4b6fff;animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  #boot.err .ring{display:none}
+</style>
+</head><body>
+<div id="boot"><div class="ring"></div><div id="msg">Warming up the engine…</div></div>
+<script src="/sj/lib/scramjet.all.js"></script>
+<script type="module" src="/sj/shell.js"></script>
+</body></html>

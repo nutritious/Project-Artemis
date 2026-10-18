@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en" data-theme="eclipse">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#05060d">
+  <title>Project Artemis</title>
+  <link id="favicon" rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23e8ecff'/%3E%3Ccircle cx='21' cy='13' r='12' fill='%2305060d'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <canvas id="stars" aria-hidden="true"></canvas>
+  <div id="space" aria-hidden="true"><i class="neb n1"></i><i class="neb n2"></i><i class="planet saturn"></i><i class="planet ice"></i><i class="planet mooni"></i></div>
+
+  <!-- Launch gate: a click is needed so the browser allows sound -->
+  <div id="gate" class="hidden">
+    <div>
+      <div class="gate-moon"></div>
+      <h1>PROJECT ARTEMIS</h1>
+    </div>
+    <p>Mission control for the open web.</p>
+    <button class="launch" id="launchBtn" type="button">INITIATE LAUNCH</button>
+    <div class="row"><label class="switch" style="color:#8e97c4;gap:10px"><span>Sound</span><input type="checkbox" id="gateSound" checked></label><button id="gateSkip" type="button">Skip intro</button></div>
+  </div>
+
+  <div id="intro" class="hidden" aria-hidden="true">
+    <canvas id="introCanvas"></canvas>
+    <div id="hud"><div class="hud-1">T-MINUS 3</div><div class="hud-2">ALL SYSTEMS NOMINAL</div></div>
+    <div id="introTitle">
+      <div class="it-eyebrow">MISSION CONTROL</div>
+      <h1 class="it-main"><span>PROJECT</span> <span>ARTEMIS</span></h1>
+      <div class="it-sub">The open web, one small step at a time.</div>
+    </div>
+    <button class="skip" type="button">SKIP ▸</button>
+  </div>
+
+  <main id="auth" class="hidden">
+    <section class="auth-card glass">
+      <div class="logo"><div class="orbit"></div><div class="moon"></div></div>
+      <h1>PROJECT ARTEMIS</h1>
+      <p class="tag">Mission control for the open web.</p>
+      <div class="seg"><button class="on" data-mode="login" type="button">Sign in</button><button data-mode="register" type="button">Join the crew</button></div>
+      <form id="authForm">
+        <label>Callsign<input name="username" autocomplete="username" required minlength="3" maxlength="24" placeholder="neil_a"></label>
+        <label>Passcode<input name="password" type="password" autocomplete="current-password" required minlength="8" placeholder="••••••••"></label>
+        <label id="inviteField" class="hidden">Invite code<input name="invite" placeholder="ARTEMIS-XXXXXXXX" autocomplete="off"></label>
+        <label class="switch remember"><span>Keep me signed in<small>For 30 days on this device</small></span><input type="checkbox" name="remember" checked></label>
+        <p id="openNote" class="note hidden">Registration is open. Pick a callsign and you're in.</p>
+        <p id="firstRun" class="note hidden">This server has no owner yet. Register as <b id="ownerName">Warmaster</b> to become the <b>Owner</b>.</p>
+        <div id="authAnn" class="auth-ann hidden" role="status"></div>
+        <p id="authError" class="error" role="alert"></p>
+        <button class="btn primary big" type="submit">Begin mission</button>
+      </form>
+      <button id="replayIntro" class="link" type="button">▶ Replay launch</button>
+    </section>
+  </main>
+
+  <div id="app" class="hidden no-announce">
+    <div id="announce"><span class="a-tag">MISSION CONTROL</span><span class="a-text"></span><button type="button" aria-label="Dismiss">×</button></div>
+    <nav id="rail" class="glass" aria-label="Main">
+      <div class="rail-logo"><div class="moon sm"></div><span class="lbl brand">Artemis</span></div>
+      <button data-view="browse" title="Browse (Alt+1)" class="on"></button>
+      <button data-view="chat" title="Chat (Alt+2)"><span class="badge hidden" id="chatBadge">0</span></button>
+      <button data-view="hub" title="Hub (Alt+7)"></button>
+      <button data-view="arcade" title="Arcade (Alt+8)"></button>
+      <button data-view="packs" title="Packs (Alt+9)"></button>
+      <button data-view="updates" title="Update log (Alt+3)"><span class="new-dot hidden" id="updDot"></span></button>
+      <button data-view="admin" class="admin-only" title="Mission control (Alt+4)"></button>
+      <button data-view="owner" class="owner-only" title="Owner console (Alt+5)"></button>
+      <div class="spacer"></div>
+      <button id="reportBtn" class="rail-act" type="button" title="Report an issue"></button>
+      <button data-view="settings" title="Settings (Alt+6)"></button>
+      <button class="rail-toggle" id="railToggle" type="button" title="Collapse sidebar" aria-label="Collapse sidebar"></button>
+      <div id="railGrip" role="separator" aria-orientation="vertical" aria-label="Resize sidebar" tabindex="0" title="Drag to resize · double-click to collapse"></div>
+    </nav>
+    <section id="views">
+      <div id="view-browse" class="view on"></div>
+      <div id="view-chat" class="view"></div>
+      <div id="view-hub" class="view"></div>
+      <div id="view-arcade" class="view"></div>
+      <div id="view-packs" class="view"></div>
+      <div id="view-updates" class="view"></div>
+      <div id="view-admin" class="view"></div>
+      <div id="view-owner" class="view"></div>
+      <div id="view-settings" class="view"></div>
+    </section>
+  </div>
+
+  <div id="toasts" aria-live="polite"></div>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

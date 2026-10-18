@@ -1,0 +1,31 @@
+{
+  "name": "project-artemis",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Project Artemis - web proxy, chat and mission control for you and your crew",
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "dev": "tsx watch src/server.ts",
+    "check": "tsc --noEmit",
+    "build:preview": "node scripts/build-preview.mjs"
+  },
+  "dependencies": {
+    "@mercuryworkshop/bare-mux": "^2.1.9",
+    "@mercuryworkshop/libcurl-transport": "^1.5.2",
+    "@mercuryworkshop/scramjet": "^1.1.0",
+    "@mercuryworkshop/wisp-js": "^0.5.0",
+    "cheerio": "^1.0.0",
+    "express": "^4.21.2",
+    "tsx": "^4.19.2",
+    "undici": "^6.21.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.0",
+    "@types/ws": "^8.5.13",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.7.2"
+  }
+}

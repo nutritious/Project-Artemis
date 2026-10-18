@@ -1,0 +1,6 @@
+# Both hostnames go to the same Node process; Artemis tells them apart by Host header.
+# Keeping proxied sites on their own hostname is what stops them reaching your login session.
+{$APP_DOMAIN}, {$PROXY_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy artemis:8080
+}
