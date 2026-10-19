@@ -59,6 +59,7 @@ async function watch(vid) {
     const r = await api(`/yt/video/${encodeURIComponent(vid)}?b=${bsel()}`);
     if (id !== busy) return;
     watching = r.video; backends = r.backends; paintBack(); paintTabs();
+    if (!state.proxyToken) { try { const t = await api("/proxy-token"); state.proxyToken = t.proxyToken; state.proxyOrigin = t.proxyOrigin; state.sjOrigin = t.sjOrigin ?? ""; state.exitUrl = t.exitUrl ?? ""; state.exitToken = t.exitToken ?? ""; } catch { /* the player will say so */ } if (id !== busy) return; }
     const src = sjSrc(`${r.base}/embed/${vid}?autoplay=1&local=true&quality=dash`);
     body.innerHTML = `<div class="tu-main"><div class="tu-player"><iframe src="${esc(src)}" allow="fullscreen; autoplay; encrypted-media; picture-in-picture" allowfullscreen title="${esc(r.video.title)}"></iframe></div>
       <h2>${esc(r.video.title)}</h2><p class="tu-meta"><b>${esc(r.video.author)}</b> · ${num(r.video.views)} views${r.video.published ? " · " + esc(r.video.published) : ""}</p>

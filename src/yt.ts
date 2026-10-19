@@ -32,10 +32,8 @@ export async function ask(path: string, prefer = -1): Promise<{ data: any; from:
     const ha = health.get(INSTANCES[a])!, hb = health.get(INSTANCES[b])!;
     return (ha.ok === false ? 1 : 0) - (hb.ok === false ? 1 : 0) || ha.ms - hb.ms;
   });
-  let tried = 0;
-  for (const i of order) {
-    if (tried >= 4) break; tried++;
-    try { return { data: await get(INSTANCES[i], path), from: i }; } catch { /* next server */ }
+  for (let k = 0; k < Math.min(order.length, 6); k += 2) { /* two servers at a time, so a dead one costs seconds, not a minute */
+    try { return await Promise.any(order.slice(k, k + 2).map(async (i) => ({ data: await get(INSTANCES[i], path, 6000), from: i }))); } catch { /* next pair */ }
   }
   throw new Error("No video server answered. Try again, or pick another backend.");
 }
