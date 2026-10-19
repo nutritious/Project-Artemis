@@ -8,7 +8,7 @@ const rnd = (a = 1, b) => (b === undefined ? Math.random() * a : a + Math.random
 export const DUR = 10;
 const mix = (c1, c2, k) => { const p = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)); const a = p(c1), b = p(c2); return `rgb(${a.map((v, i) => Math.round(lerp(v, b[i], k))).join(",")})`; };
 const pulse = (S, key, rate) => { S[key] = (S[key] ?? 0) + rate * S.dt; const n = Math.floor(S[key]); S[key] -= n; return n; };
-const BLURB = ["First steps into the void", "Faster than light", "You can find your way anywhere", "Command of the crew", "Beyond the known map", "A legend of Artemis", "A star is born", "Feeding on the dark", "Your heartbeat, across the galaxy", "Past the point of no return", "You have been online enough. Go outside."];
+const BLURB = ["First steps into the void", "Faster than light", "You can find your way anywhere", "Command of the crew", "Beyond the known map", "A legend of Artemis", "A star is born", "Feeding on the dark", "Your heartbeat, across the galaxy", "Past the point of no return", "Congrats, you unlocked sunlight. Go outside."];
 
 function skyStars(x, W, H, S, t, alpha = 1, n = 160) {
   S.bg ??= Array.from({ length: n }, () => ({ x: Math.random(), y: Math.random(), p: Math.random() * 6, s: 0.5 + Math.random() * 1.4 }));
@@ -203,7 +203,7 @@ export const SCENES = [
     if (t >= 5.2) { glow(x, cx, cy, R * (0.2 + easeOut(q / 1.5) * 1.1), "#fff", Math.max(0, 1 - q * 0.45)); ringPulse(x, cx, cy, q * 0.6, D * 0.6, c, 16, 5); }
   } },
   /* 11 TOUCH GRASS: fall out of orbit, break through the clouds, land in a sunny meadow */
-  { tag: "GO OUTSIDE", hit: 5.0, draw(x, W, H, t, c, S, R) {
+  { tag: "SKILL ISSUE: SUNLIGHT", hit: 5.0, draw(x, W, H, t, c, S, R) {
     const cx = W / 2, k = R / 720, q = Math.max(0, t - 5), desc = ease(t / 4.8);
     S.gr ??= Array.from({ length: 520 }, () => ({ x: Math.random(), y: rnd(0.66, 1.02), h: rnd(0.6, 1.4), p: rnd(TAU), hue: rnd(95, 135), l: rnd(28, 52) }));
     S.fl ??= Array.from({ length: 40 }, () => ({ x: Math.random(), y: rnd(0.72, 1), h: [330, 50, 280, 15, 200][Math.floor(Math.random() * 5)], p: rnd(TAU) }));
@@ -244,12 +244,19 @@ function caption(x, W, H, t, hit, rank, idx, tag, R) {
   const t0 = hit + 0.4; if (t < t0) return;
   const name = rank.name.toUpperCase(), size = Math.min(R * 0.15, W / (name.length * 0.82)), sp = size * 0.07, y = Math.min(H * 0.8, H - size * 2.15), out = 1 - ease((t - (DUR - 0.9)) / 0.7);
   x.save(); x.textAlign = "left"; x.textBaseline = "middle"; x.globalAlpha = out;
+  if (idx === 10) { const g = x.createLinearGradient(0, y - size * 2.2, 0, H); g.addColorStop(0, "rgba(0,12,4,0)"); g.addColorStop(0.35, "rgba(0,12,4,.72)"); g.addColorStop(1, "rgba(0,12,4,.85)"); x.globalAlpha = out * ease((t - t0) / 0.6); x.fillStyle = g; x.fillRect(0, y - size * 2.2, W, H); x.globalAlpha = out; }
   x.font = `700 ${Math.max(11, R * 0.017)}px JB, 'JetBrains Mono', monospace`; x.letterSpacing = "6px"; x.fillStyle = rank.color; x.textAlign = "center"; x.globalAlpha = out * ease((t - t0) / 0.6); x.fillText(`RANK UP · ${tag}`, W / 2, y - size * 0.95); x.textAlign = "left"; x.letterSpacing = "0px";
   x.font = `900 ${size}px Unbounded, Inter, sans-serif`;
   const widths = [...name].map((ch) => x.measureText(ch).width + sp), total = widths.reduce((a, b) => a + b, 0) - sp; let px = W / 2 - total / 2;
   [...name].forEach((ch, i) => { const e = easeOut((t - t0 - 0.15 - i * 0.075) / 0.55); x.save(); x.globalAlpha = out * e; x.translate(px + widths[i] / 2 - sp / 2, y + (1 - e) * size * 0.35); x.scale(1 + (1 - e) * 0.5, 1 + (1 - e) * 0.5); x.textAlign = "center"; x.shadowColor = rank.color; x.shadowBlur = size * 0.5; x.fillStyle = "#fff"; x.fillText(ch, 0, 0); x.shadowBlur = size * 0.12; x.fillText(ch, 0, 0); x.restore(); px += widths[i]; });
   x.textAlign = "center"; x.font = `400 ${Math.max(14, R * 0.026)}px Inter, system-ui, sans-serif`; x.fillStyle = "#b9c2ee"; x.globalAlpha = out * ease((t - t0 - 1.1) / 0.8); x.fillText(BLURB[idx] ?? "", W / 2, y + size * 0.78);
-  const pa = out * ease((t - t0 - 1.6) / 0.7), pw = R * 0.03; for (let i = 0, n = SCENES.length; i < n; i++) { const dx = W / 2 + (i - (n - 1) / 2) * pw * 1.7, dy = y + size * 1.32; x.globalAlpha = pa; x.fillStyle = i <= idx ? rank.color : "rgba(255,255,255,.18)"; x.shadowColor = rank.color; x.shadowBlur = i <= idx ? 12 : 0; x.beginPath(); x.moveTo(dx, dy - pw * 0.55); x.lineTo(dx + pw * 0.45, dy); x.lineTo(dx, dy + pw * 0.55); x.lineTo(dx - pw * 0.45, dy); x.fill(); }
+  if (idx === 10) { /* troll rank: show how long they have been on the site */
+    const hrs = Math.max(0, state.siteHours ?? 0), k = ease((t - t0 - 1.7) / 2.2), shown = hrs * k, txt = (hrs < 10 ? shown.toFixed(1) : Math.round(shown).toLocaleString()) + " HOURS ON THIS WEBSITE";
+    const line = hrs < 1 ? "less than an hour?? suspicious. go outside anyway" : hrs < 10 ? "ok that is actually healthy. still, go outside" : hrs < 50 ? "you never log off, do you" : hrs < 200 ? "bro lives here now. the grass misses you" : "the wifi is not a personality. touch some grass";
+    x.globalAlpha = out * ease((t - t0 - 1.5) / 0.6); x.fillStyle = "#fff"; x.font = `800 ${Math.max(16, R * 0.034)}px JB, 'JetBrains Mono', monospace`; x.shadowColor = rank.color; x.shadowBlur = 14; x.fillText(txt, W / 2, y + size * 1.12); x.shadowBlur = 0;
+    x.globalAlpha = out * ease((t - t0 - 3.9) / 0.7); x.fillStyle = rank.color; x.font = `italic 600 ${Math.max(13, R * 0.022)}px Inter, system-ui, sans-serif`; x.fillText(line, W / 2, y + size * 1.5);
+  }
+  const pa = out * ease((t - t0 - 1.6) / 0.7), pw = R * 0.03; for (let i = 0, n = SCENES.length; i < n; i++) { const dx = W / 2 + (i - (n - 1) / 2) * pw * 1.7, dy = y + size * (idx === 10 ? 1.95 : 1.32); x.globalAlpha = pa; x.fillStyle = i <= idx ? rank.color : "rgba(255,255,255,.18)"; x.shadowColor = rank.color; x.shadowBlur = i <= idx ? 12 : 0; x.beginPath(); x.moveTo(dx, dy - pw * 0.55); x.lineTo(dx + pw * 0.45, dy); x.lineTo(dx, dy + pw * 0.55); x.lineTo(dx - pw * 0.45, dy); x.fill(); }
   x.restore();
 }
 /** Draw one frame. idx is 0..10 (Cadet..Touch Grass). S is per-run state. */

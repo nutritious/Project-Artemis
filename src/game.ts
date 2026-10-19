@@ -174,7 +174,7 @@ export function publicGame(u: User) {
     xp: g.xp, rank: i, streak: fresh || g.lastDay === dayKey(Date.now() - 864e5) ? g.streak : 0, best: g.best, bests: g.bests, plays: g.plays, coins: u.coins, freePacks: u.freePacks,
     next: next ? { name: next.name, xp: next.xp } : null,
     missions: MISSIONS.map((m) => ({ id: m.id, title: m.title, hint: m.hint, goal: m.goal, xp: m.xp, coins: m.coins, n: fresh ? Math.min(g.n[m.id], m.goal) : 0, done: fresh && g.done.includes(m.id) })),
-    sweep: SWEEP_XP, boosts: activeBoosts(), earnedToday: earnedToday(u), cap: DAILY_CAP, nextSpin: nextSpin(u), ach: Object.keys(g.ach).length,
+    sweep: SWEEP_XP, boosts: activeBoosts(), earnedToday: earnedToday(u), cap: DAILY_CAP, nextSpin: nextSpin(u), ach: Object.keys(g.ach).length, hours: Math.max(u.siteMs ?? 0, u.proxyMs ?? 0) / 36e5,
   };
 }
 const row = (u: User) => ({ id: u.id, username: u.username, role: u.role, roleId: u.roleId ?? null, xp: u.game.xp, rank: rankIndex(u.game.xp), streak: u.game.streak, best: u.game.best, fx: u.equip.effect, tag: u.equip.tag });

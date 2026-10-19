@@ -18,7 +18,7 @@ export function buildHub() {
     const r = e.target.closest("[data-rk]"); if (r) playLevelUp(+r.dataset.rk, rk(+r.dataset.rk)); /* replay a rank you have reached */
   });
   on("game", (m) => {
-    G = m.game; state.me.coins = G.coins; state.me.freePacks = G.freePacks;
+    G = m.game; state.siteHours = G.hours ?? 0; state.me.coins = G.coins; state.me.freePacks = G.freePacks;
     for (const g of m.gains ?? []) toast(g.xp ? `+${g.xp} XP · ${g.text}` : g.text, "ok");
     if (m.rankUp) playLevelUp(m.game.rank, m.rankUp);
     if (state.view === "hub" && B.ranks.length) paint();

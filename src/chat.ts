@@ -210,5 +210,5 @@ wss.on("connection", (ws: WebSocket, user: User) => {
 });
 
 setInterval(() => {
-  for (const c of clients) if (c.ws.readyState === WebSocket.OPEN) c.ws.ping();
+  for (const c of clients) if (c.ws.readyState === WebSocket.OPEN) { c.ws.ping(); c.user.siteMs = (c.user.siteMs ?? 0) + 30_000; }
 }, 30_000).unref();
