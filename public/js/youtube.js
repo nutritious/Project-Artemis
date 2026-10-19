@@ -54,7 +54,7 @@ async function load() {
 
 async function watch(vid) {
   const id = ++busy, body = $("#tuBody"); body.className = "tu-watch"; paintTabs();
-  body.innerHTML = `<p class="tu-msg">Opening…</p>`; scrollTo?.(0, 0);
+  body.innerHTML = `<p class="tu-msg">Opening…</p>`; $("#tube").scrollTo?.(0, 0);
   try {
     const r = await api(`/yt/video/${encodeURIComponent(vid)}?b=${bsel()}`);
     if (id !== busy) return;

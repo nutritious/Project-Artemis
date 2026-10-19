@@ -1023,3 +1023,4 @@ body:has(.cb-view) #liveBar { display: none !important; } /* the coin/spin chips
 .tu-desc summary { cursor: pointer; color: #ccc; } .tu-desc pre { white-space: pre-wrap; word-break: break-word; font: inherit; color: #ccc; max-height: 280px; overflow: auto; }
 .tu-rel { display: grid; gap: 18px; } .tu-rel .tu-t { font-size: 15px; } .tu-rel .tu-a { font-size: 14px; }
 @media (max-width: 900px) { .tu-watch { grid-template-columns: 1fr; } .tu-sp { display: none; } #tube { padding: 14px 12px 30px; } }
+#view-tube { overflow: hidden; } #tube { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
