@@ -3,11 +3,11 @@ import crypto from "node:crypto";
 
 const b64 = (b: Buffer | string) => Buffer.from(b).toString("base64url");
 const mac = (key: string, body: string) => crypto.createHmac("sha256", key).update("exit:" + body).digest("base64url");
-export function makeExitToken(key: string, userId: string, ttlMs = 8 * 3600_000) {
-  const body = b64(JSON.stringify({ u: userId, exp: Date.now() + ttlMs }));
+export function makeExitToken(key: string, userId: string, ttlMs = 8 * 3600_000, unlimited = false) {
+  const body = b64(JSON.stringify({ u: userId, exp: Date.now() + ttlMs, ...(unlimited ? { ul: 1 } : {}) }));
   return `${body}.${mac(key, body)}`;
 }
-export function checkExitToken(key: string, token: string): { u: string; exp: number } | null {
+export function checkExitToken(key: string, token: string): { u: string; exp: number; ul?: number } | null {
   const [body, sig] = String(token).split(".");
   if (!body || !sig || !key) return null;
   const want = mac(key, body);

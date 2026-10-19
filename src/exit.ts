@@ -1,6 +1,7 @@
 /* The main site's side of the home exit node: settings, health checks, and passes for browsers. */
 import { db, saveDb, type User } from "./store.js";
 import { makeExitToken } from "./exit-token.js";
+import { TOP_TIERS } from "./perms.js";
 
 export const exitKey = () => process.env.EXIT_KEY || db.data.server.exitKey || "";
 export const exitConfigured = () => !!(db.data.server.exitUrl && exitKey());
@@ -33,5 +34,5 @@ export function setExit(url: unknown, key: unknown) {
 /** What a signed-in browser needs to use the exit node, or nothing when it is off or down (then the site's own connection is used). */
 export function exitInfo(u: User): { exitUrl?: string; exitToken?: string } {
   if (!exitConfigured() || !ok) return {};
-  return { exitUrl: db.data.server.exitUrl!.replace(/^http/, "ws"), exitToken: makeExitToken(exitKey(), u.id) };
+  return { exitUrl: db.data.server.exitUrl!.replace(/^http/, "ws"), exitToken: makeExitToken(exitKey(), u.id, undefined, TOP_TIERS.includes(u.role)) };
 }

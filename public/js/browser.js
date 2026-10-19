@@ -1,4 +1,5 @@
 /* Browser view: tabs, omnibox with suggestions, native search results, proxied pages. */
+import { openCloud } from "./cloud.js";
 import { $, $$, api, b64u, emit, esc, hooks, hostOf, hue, icon, on, state, toast } from "./util.js";
 
 const TILES = [
@@ -45,6 +46,7 @@ export function buildBrowser() {
       <button class="tb" id="tbHome" title="New search">${icon("home")}</button>
       <div id="omniWrap">${icon("search")}<input id="omni" placeholder="Search or enter address" autocomplete="off" spellcheck="false" aria-label="Search or enter address"><div id="suggest" class="hidden" role="listbox"></div></div>
       <span id="engTag" class="chip hidden" title="Which proxy engine this tab is using"></span>
+      <button class="tb" id="tbCloud" title="Cloud browser: Chrome, Firefox or Edge running on the host computer">☁</button>
       <button class="tb" id="tbStar" title="Bookmark this page (Ctrl+D)">${icon("star")}</button>
       <button class="tb" id="tbFull" title="Full screen">${icon("expand")}</button>
     </div>
@@ -54,6 +56,7 @@ export function buildBrowser() {
   $("#tbBack").onclick = back; $("#tbFwd").onclick = forward;
   $("#tbReload").onclick = reload;
   $("#tbHome").onclick = () => navigate(cur(), { kind: "home" });
+  $("#tbCloud").onclick = () => openCloud(); 
   $("#tbStar").onclick = toggleBookmark;
   $("#tbFull").onclick = () => { const s = $("#stage"); (document.fullscreenElement ? document.exitFullscreen() : s.requestFullscreen?.())?.catch?.(() => {}); };
   setupOmnibox();

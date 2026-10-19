@@ -90,3 +90,17 @@ Sites that are heavy on JavaScript, use DRM video, or show CAPTCHAs may not work
 
 ## Preview
 `npm run build:preview` builds `preview/artemis-preview.html`, a single file with sample data and no live proxying.
+
+## Cloud browser
+
+The ☁ button in Browse opens a real Chrome, Firefox or Edge-style browser that runs on your exit-node computer and is streamed to the site. Everyone gets one private 30-minute session; admins and above are unlimited.
+
+On the computer that runs the exit node:
+
+```
+npm i                                   # installs playwright as an optional dependency
+npx playwright install chromium firefox
+EXIT_KEY="a-long-secret" MAIN_URL="https://your-site.onrender.com" npx tsx src/exit-node.ts
+```
+
+It uses the same tunnel and key as the home exit node. The browser cannot open localhost or any private/LAN address, and it follows the site's bans and blocklist. Set `CLOUD_MAX` to change how many sessions can run at once (default 4).
