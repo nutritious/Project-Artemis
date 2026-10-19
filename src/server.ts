@@ -263,6 +263,23 @@ api.get("/exit/policy", (req, res) => {
   if (!k || got.length !== k.length || !crypto.timingSafeEqual(Buffer.from(got), Buffer.from(k))) return void res.status(403).json({ error: "No" });
   res.json({ banned: db.data.users.filter((u) => u.banned).map((u) => u.id), blocklist: db.data.blocklist, maintenance: db.data.server.maintenance });
 });
+api.get("/owner/network", auth, ownerOnly, async (_req, res) => {
+  const get = async (url: string, ms = 8000) => { const r = await undiciRequest(url, { dispatcher: safeDispatcher, headersTimeout: ms, bodyTimeout: ms, headers: { "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36", "accept-language": "en-US,en;q=0.9" } }); return { status: r.statusCode, text: (await r.body.text()).slice(0, 600_000) }; };
+  const out: any = { viaUpstream: !!UPSTREAM_PROXY, ip: "", org: "", hosting: null, city: "", youtube: { state: "unknown", note: "" } };
+  try {
+    const j = JSON.parse((await get("https://ipinfo.io/json")).text);
+    out.ip = String(j.ip ?? ""); out.org = String(j.org ?? ""); out.city = [j.city, j.region, j.country].filter(Boolean).join(", ");
+    out.hosting = /amazon|aws|google|gcp|microsoft|azure|digitalocean|hetzner|ovh|linode|akamai|vultr|oracle|cloudflare|render|fly\.io|leaseweb|contabo|hosting|cloud|data ?center|server/i.test(out.org);
+  } catch { out.error = "Could not look up the server's address (the lookup site may be blocked)."; }
+  try {
+    const r = await get("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+    const t = r.text;
+    if (/confirm you.{0,8}re not a bot|LOGIN_REQUIRED|unusual traffic/i.test(t)) out.youtube = { state: "blocked", note: "YouTube asked this server to prove it is not a bot." };
+    else if (r.status === 200 && /"playabilityStatus":\{"status":"OK"/.test(t)) out.youtube = { state: "ok", note: "YouTube served a playable video to this server." };
+    else out.youtube = { state: "unclear", note: "YouTube answered with status " + r.status + " and no clear verdict." };
+  } catch { out.youtube = { state: "unclear", note: "Could not reach YouTube from the server." }; }
+  res.json(out);
+});
 api.get("/owner/exit", auth, ownerOnly, (_req, res) => res.json(exitStatus()));
 api.put("/owner/exit", auth, ownerOnly, async (req, res) => {
   try { setExit(req.body?.url, req.body?.key); audit(me(req).username, "exit.set", db.data.server.exitUrl || "(off)"); await checkExit(); res.json(exitStatus()); } catch (e: any) { res.status(400).json({ error: e.message }); }

@@ -1,7 +1,7 @@
 /* Owner console: launch window (OG title), the ArtemisBot chat moderator, and trusted-member controls. */
 import { $, api, ago, esc, toast, confirmBox, state } from "./util.js";
 
-let S = null, Q = "", repaint = () => {};
+let S = null, NET = null, NETBUSY = false, Q = "", repaint = () => {};
 export const bindSafety = (fn) => { repaint = fn; };
 export const safety = { load, html, click, submit, change, input };
 async function load() { try { S = await api("/owner/safety"); } catch (e) { toast(e.message, true); } return S; }
@@ -46,7 +46,12 @@ function html() {
       ${x.error && x.url ? `<p class="note" style="color:var(--warn)">${esc(x.error)}</p>` : ""}
       <div class="inline"><button class="btn primary">Save and test</button><button class="btn" type="button" data-exittest>Test again</button>${x.url ? `<button class="btn danger" type="button" data-exitoff>Turn off</button>` : ""}</div></form>
     <p class="note">Everything people browse goes through your home connection, so it uses your home bandwidth, and sites see your home address. Keep the member list small. The free tunnel address changes each time you restart the tunnel; paste the new one here.</p></div>`;
-  return data + exitCard + launch + bot + trust;
+  const n = NET, yt = n?.youtube, ytc = { ok: "ok", blocked: "warn", unclear: "", unknown: "" };
+  const netCard = state.me?.role !== "owner" ? "" : `<div class="card glass"><h3>Server network <span class="chip ${n ? (n.hosting ? "warn" : "ok") : ""}">${n ? (n.hosting ? "data center" : n.hosting === false ? "not a known data center" : "checked") : "not checked"}</span></h3>
+    <p class="note">Shows the address this server uses to reach the internet, who owns it, and whether YouTube accepts it. This is the server's address, not yours or your players'.</p>
+    ${n ? `<div class="sub"><b>IP:</b> ${esc(n.ip || "unknown")}${n.city ? " · " + esc(n.city) : ""}<br><b>Owner of the address:</b> ${esc(n.org || "unknown")}<br><b>Goes through an upstream proxy:</b> ${n.viaUpstream ? "yes" : "no"}<br><b>YouTube:</b> <span class="chip ${ytc[yt.state] || ""}">${esc(yt.state)}</span> ${esc(yt.note)}</div>${n.error ? `<p class="note" style="color:var(--warn)">${esc(n.error)}</p>` : ""}<p class="note">A data center address is the usual reason YouTube shows the bot check. The home exit node (above) or an upstream proxy (ARTEMIS_UPSTREAM_PROXY) changes where traffic leaves from. This test checks the server's own connection.</p>` : ""}
+    <div class="inline"><button class="btn primary" data-nettest ${NETBUSY ? "disabled" : ""}>${NETBUSY ? "Checking…" : "Check server network"}</button></div></div>`;
+  return data + netCard + exitCard + launch + bot + trust;
 }
 async function downloadBackup() {
   const res = await fetch("/api/owner/backup", { credentials: "same-origin" });
@@ -68,6 +73,7 @@ async function restoreFrom(file) {
 async function click(b) {
   const d = b.dataset;
   if (d.launch) return run(() => api("/owner/launch", "POST", { action: d.launch }), d.launch === "start" ? "OG window started" : "OG window closed");
+  if (b.matches?.("[data-nettest]")) { NETBUSY = true; repaint(); try { NET = await api("/owner/network"); } catch (e) { toast(e.message, true); } NETBUSY = false; repaint(); return true; }
   if (b.matches?.("[data-exittest]")) return run(() => api("/owner/exit/test", "POST", {}), "Checked");
   if (b.matches?.("[data-exitoff]")) return run(() => api("/owner/exit", "PUT", { url: "" }), "Exit node turned off");
   if (d.backup) return run(() => downloadBackup(), "Backup downloaded. Keep it private.");
