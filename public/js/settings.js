@@ -10,6 +10,23 @@ export const CLOAKS = {
   mail: { label: "Inbox", title: "Inbox (3)", svg: "<rect x='3' y='7' width='26' height='18' rx='3' fill='#e8590c'/><path d='m4 9 12 9 12-9' stroke='#fff' stroke-width='2' fill='none'/>" },
   calendar: { label: "Calendar", title: "Calendar", svg: "<rect x='4' y='6' width='24' height='22' rx='3' fill='#37b24d'/><rect x='4' y='6' width='24' height='7' fill='#2f9e44'/><text x='16' y='24' font-size='11' text-anchor='middle' fill='#fff' font-family='sans-serif'>15</text>" },
   notes: { label: "Notes", title: "Notes", svg: "<rect x='6' y='3' width='20' height='26' rx='3' fill='#fab005'/><path d='M10 12h12M10 17h12M10 22h7' stroke='#fff' stroke-width='2'/>" },
+  classroom: { label: "Google Classroom", title: "Classes", svg: "<rect x='3' y='5' width='26' height='22' rx='3' fill='#1e8e3e'/><circle cx='16' cy='14' r='3.4' fill='#fff'/><path d='M9.5 23c.8-3.6 3.2-5 6.5-5s5.7 1.4 6.5 5' fill='#fff'/>" },
+  drive: { label: "Google Drive", title: "My Drive - Google Drive", svg: "<path d='M11 4h10l9 16h-10z' fill='#ffba00'/><path d='M11 4 2 20l5 8 9-16z' fill='#0066da'/><path d='M7 28h19l4-8H11z' fill='#00ac47'/>" },
+  docs: { label: "Google Docs", title: "Untitled document - Google Docs", svg: "<path d='M7 3h13l6 6v20H7z' fill='#4285f4'/><path d='M20 3v6h6z' fill='#a1c2fa'/><path d='M11 15h11M11 19h11M11 23h7' stroke='#fff' stroke-width='2'/>" },
+  slides: { label: "Google Slides", title: "Untitled presentation - Google Slides", svg: "<path d='M7 3h13l6 6v20H7z' fill='#f4b400'/><path d='M20 3v6h6z' fill='#fbe29a'/><rect x='10.5' y='14' width='12' height='9' rx='1' fill='none' stroke='#fff' stroke-width='2'/>" },
+  sheets: { label: "Google Sheets", title: "Untitled spreadsheet - Google Sheets", svg: "<path d='M7 3h13l6 6v20H7z' fill='#0f9d58'/><path d='M20 3v6h6z' fill='#87ceac'/><path d='M10.5 14h12v9h-12zM10.5 18.5h12M16.5 14v9' stroke='#fff' stroke-width='1.8' fill='none'/>" },
+  forms: { label: "Google Forms", title: "Untitled form - Google Forms", svg: "<path d='M7 3h13l6 6v20H7z' fill='#7248b9'/><path d='M20 3v6h6z' fill='#b9a0e0'/><circle cx='12' cy='15' r='1.4' fill='#fff'/><circle cx='12' cy='20' r='1.4' fill='#fff'/><path d='M15 15h8M15 20h8' stroke='#fff' stroke-width='2'/>" },
+  gmail: { label: "Gmail", title: "Inbox (2) - Gmail", svg: "<rect x='3' y='7' width='26' height='18' rx='3' fill='#fff'/><path d='M3 10v15h4V13l9 7 9-7v12h4V10l-3-3-10 8L6 7z' fill='#ea4335'/>" },
+  meet: { label: "Google Meet", title: "Meet", svg: "<rect x='3' y='9' width='17' height='14' rx='3' fill='#00832d'/><path d='m21 14 8-5v14l-8-5z' fill='#00ac47'/>" },
+  canvas: { label: "Canvas", title: "Dashboard", svg: "<circle cx='16' cy='16' r='13' fill='#e72429'/><circle cx='16' cy='16' r='3' fill='#fff'/><circle cx='16' cy='8.5' r='2' fill='#fff'/><circle cx='16' cy='23.5' r='2' fill='#fff'/><circle cx='8.5' cy='16' r='2' fill='#fff'/><circle cx='23.5' cy='16' r='2' fill='#fff'/>" },
+  schoology: { label: "Schoology", title: "Home | Schoology", svg: "<rect x='3' y='3' width='26' height='26' rx='6' fill='#1f5fd1'/><path d='M21 12c-1-2-4-3-6-2s-2 4 1 5 6 2 5 5-5 3-8 1' stroke='#fff' stroke-width='2.4' fill='none' stroke-linecap='round'/>" },
+  khan: { label: "Khan Academy", title: "Khan Academy", svg: "<path d='M16 3 27 9v14l-11 6L5 23V9z' fill='#14bf96'/><circle cx='16' cy='13' r='3' fill='#fff'/><path d='M10 23c1-4 3-5 6-5s5 1 6 5' fill='#fff'/>" },
+  clever: { label: "Clever", title: "Clever | Portal", svg: "<circle cx='16' cy='16' r='13' fill='#4274f6'/><path d='M21 11.5c-1.5-1.6-3.2-2.2-5-2.2-3.8 0-6.7 2.9-6.7 6.7s2.9 6.7 6.7 6.7c1.8 0 3.5-.6 5-2.2' stroke='#fff' stroke-width='3' fill='none' stroke-linecap='round'/>" },
+  ixl: { label: "IXL", title: "IXL | Math, Language Arts, Science, Social Studies, and Spanish", svg: "<rect x='3' y='3' width='26' height='26' rx='6' fill='#6b3fa0'/><text x='16' y='21.5' font-size='13' font-weight='800' text-anchor='middle' fill='#fff' font-family='sans-serif'>IXL</text>" },
+  quizlet: { label: "Quizlet", title: "Quizlet", svg: "<rect x='3' y='3' width='26' height='26' rx='6' fill='#4255ff'/><path d='M10 12v9a2 2 0 0 0 2 2h8M22 20l-3 3 3 3' stroke='#fff' stroke-width='2.4' fill='none' stroke-linecap='round'/>" },
+  desmos: { label: "Desmos", title: "Desmos | Graphing Calculator", svg: "<rect x='3' y='3' width='26' height='26' rx='6' fill='#1d9b5e'/><path d='M7 22c5 0 4-14 9-14s4 14 9 14' stroke='#fff' stroke-width='2.4' fill='none' stroke-linecap='round'/>" },
+  edpuzzle: { label: "Edpuzzle", title: "Edpuzzle", svg: "<rect x='3' y='3' width='26' height='26' rx='6' fill='#0a6fe0'/><path d='m13 10 9 6-9 6z' fill='#fff'/>" },
+  zoom: { label: "Zoom", title: "Zoom Meeting", svg: "<rect x='3' y='8' width='17' height='16' rx='4' fill='#2d8cff'/><path d='m21 14 8-5v14l-8-5z' fill='#2d8cff'/>" }
 };
 export const THEMES = [
   ["eclipse", "Eclipse", "linear-gradient(135deg,#05060d,#3b2f9e)"], ["lunar", "Lunar", "linear-gradient(135deg,#f4f5fa,#b9bfdc)"],
@@ -22,6 +39,7 @@ export function applySettings() {
   document.documentElement.dataset.theme = s.theme;
   const c = CLOAKS[s.cloakIcon] ?? CLOAKS.none;
   document.title = s.cloakTitle || c.title || "Project Artemis";
+  window.onbeforeunload = s.antiClose ? (e) => { e.preventDefault(); e.returnValue = ""; return ""; } : null;
   const fav = $("#favicon"); if (fav) fav.href = svgUri(c.svg || "<circle cx='16' cy='16' r='14' fill='#e8ecff'/><circle cx='21' cy='13' r='12' fill='#05060d'/>");
   const meta = document.querySelector("meta[name=theme-color]"); if (meta) meta.content = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#05060d";
 }
@@ -62,10 +80,11 @@ export function buildSettings() {
       <label class="switch"><span>Bookmarks bar</span><input type="checkbox" id="setBar" ${s.bookmarksBar ? "checked" : ""}></label></div>
     <div class="card glass"><h3>Search</h3><label>Default engine<select id="setEngine">${state.engines.map((e) => `<option value="${e.id}" ${s.engine === e.id ? "selected" : ""}>${esc(e.name)}</option>`).join("")}</select></label>
       <p class="note">Searches run on the server, so the engine never sees your IP. If one engine blocks or returns nothing, Artemis automatically tries the next.</p></div>
-    <div class="card glass"><h3>Proxy engine</h3><label>Engine<select id="setProxy">${["scramjet:Scramjet (default)", "classic:Classic"].map((o) => { const [k, n] = o.split(":"); return `<option value="${k}" ${(localStorage.getItem("artemis.proxy") || "scramjet") === k ? "selected" : ""}>${n}</option>`; }).join("")}</select></label>
-      <p class="note">Scramjet is the default and works with most sites. Classic is the older engine, handy if a site breaks. Applies to new tabs and reloads. Artemis never switches on its own.</p></div>
+    <div class="card glass"><h3>Proxy engine</h3><label>Engine<select id="setProxy">${["scramjet:Scramjet V2 (default)", "classic:Classic"].map((o) => { const [k, n] = o.split(":"); return `<option value="${k}" ${(localStorage.getItem("artemis.proxy") || "scramjet") === k ? "selected" : ""}>${n}</option>`; }).join("")}</select></label>
+      <p class="note">Scramjet V2 is the default and works with most sites, including YouTube. Classic is the older engine, handy if a site breaks. Applies to new tabs and reloads. Artemis never switches on its own.</p></div>
     <div class="card glass"><h3>Tab cloak</h3><label>Preset<select id="setCloak">${Object.entries(CLOAKS).map(([k, c]) => `<option value="${k}" ${s.cloakIcon === k ? "selected" : ""}>${c.label}</option>`).join("")}</select></label>
       <label>Custom title<input id="setCloakTitle" maxlength="80" value="${esc(s.cloakTitle)}" placeholder="Overrides the preset title"></label>
+      <label class="switch"><span>Anti-close<small>Asks "Are you sure you want to leave?" before the tab can be closed or reloaded.</small></span><input type="checkbox" id="setAntiClose" ${s.antiClose ? "checked" : ""}></label>
       <button class="btn" id="blankBtn">Open in an about:blank window</button></div>
     <div class="card glass"><h3>Panic key</h3><label>Key (press twice quickly)<input id="setPanicKey" maxlength="10" value="${esc(s.panicKey)}"></label><label>Jump to<input id="setPanicUrl" value="${esc(s.panicUrl)}"></label></div>
     <div class="card glass"><h3>Account</h3>
@@ -101,6 +120,7 @@ export function buildSettings() {
   $("#setProxy").onchange = (e) => { try { localStorage.setItem("artemis.proxy", e.target.value); } catch {} toast(e.target.value === "classic" ? "Classic engine on. Open a new tab or reload." : "Scramjet on. Open a new tab or reload."); };
   $("#setEngine").onchange = (e) => saveSettings({ engine: e.target.value });
   $("#setCloak").onchange = (e) => { saveSettings({ cloakIcon: e.target.value, cloakTitle: "" }); $("#setCloakTitle").value = ""; };
+  $("#setAntiClose").onchange = (e) => saveSettings({ antiClose: e.target.checked });
   $("#setCloakTitle").oninput = (e) => saveSettings({ cloakTitle: e.target.value });
   $("#setPanicKey").oninput = (e) => saveSettings({ panicKey: e.target.value });
   $("#setPanicUrl").oninput = (e) => saveSettings({ panicUrl: e.target.value });

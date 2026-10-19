@@ -21,7 +21,7 @@ const mod = (p: string) => path.resolve("node_modules", p);
 export function mountScramjet(app: Express) {
   const opts = { maxAge: "7d", fallthrough: false, index: false } as const;
   app.use("/sj/lib", express.static(mod("@mercuryworkshop/scramjet/dist"), opts));
-  app.use("/sj/mux", express.static(mod("@mercuryworkshop/bare-mux/dist"), opts));
+  app.use("/sj/ctl", express.static(mod("@mercuryworkshop/scramjet-controller/dist"), opts));
   app.use("/sj/curl", express.static(mod("@mercuryworkshop/libcurl-transport/dist"), opts));
 }
 

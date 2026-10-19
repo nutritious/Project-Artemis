@@ -1,14 +1,6 @@
-/* Scramjet service worker: intercepts /sj/service/* and rewrites it in the browser. */
-importScripts("/sj/lib/scramjet.all.js");
-const { ScramjetServiceWorker } = $scramjetLoadWorker();
-const scramjet = new ScramjetServiceWorker();
+/* Scramjet 2 service worker: hands every request under /sj/service/ to the controller page, which rewrites it. */
+importScripts("/sj/ctl/controller.sw.js");
 
-self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener("fetch", (event) => {
-  event.respondWith((async () => {
-    await scramjet.loadConfig();
-    if (scramjet.route(event)) return scramjet.fetch(event);
-    return fetch(event.request);
-  })());
+  if ($scramjetController.shouldRoute(event)) event.respondWith($scramjetController.route(event));
 });

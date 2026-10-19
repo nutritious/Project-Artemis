@@ -6,62 +6,55 @@ let exitBase = hash.get("x") || "", exitTok = hash.get("xt") || ""; /* home exit
 const boot = document.getElementById("boot"), msg = document.getElementById("msg");
 const tell = (o) => { try { parent.postMessage({ ...o }, "*"); } catch { /* not framed */ } };
 
-let scramjet, frame, conn, wispUrl = "", current = "";
+let controller, frame, current = "", poll = 0;
+const PREFIX = "/sj/service/";
 
 function setWisp() {
   if (exitBase && exitTok) return `${exitBase}/wisp/${encodeURIComponent(exitTok)}/`;
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   return `${proto}//${location.host}/wisp/${encodeURIComponent(token)}/`;
 }
-async function setTransport() {
-  wispUrl = setWisp();
-  await conn.setTransport("/sj/curl/index.mjs", [{ wisp: wispUrl, websocket: wispUrl }]);
-}
-
-/* The tunnel library decodes a WebAssembly module on first use; a request that arrives before that
-   finishes fails with "wasm not loaded yet". Poke it with a harmless closed-port request until it answers. */
-async function warmUp() {
-  const { BareClient } = await import("/sj/mux/index.mjs");
-  const probe = new BareClient("/sj/mux/worker.js");
-  for (let i = 0; i < 30; i++) {
-    try { await probe.fetch("http://127.0.0.1:9/", { method: "HEAD" }); return; }
-    catch (e) {
-      if (!/wasm not loaded/i.test(String(e?.message || e))) return; // any other answer means the engine is awake
-      await new Promise((r) => setTimeout(r, 250));
-    }
-  }
-}
+const makeTransport = () => { const u = setWisp(); return new LibcurlTransport.LibcurlClient({ wisp: u, websocket: u }); };
 
 async function start() {
   if (!("serviceWorker" in navigator)) throw new Error("This browser can't run service workers here (needs https or localhost).");
-  const { ScramjetController } = $scramjetLoadController();
-  scramjet = new ScramjetController({
-    prefix: "/sj/service/",
-    files: { wasm: "/sj/lib/scramjet.wasm.wasm", all: "/sj/lib/scramjet.all.js", sync: "/sj/lib/scramjet.sync.js" },
-  });
-  await scramjet.init();
-  await navigator.serviceWorker.register("/sj/sw.js", { scope: "/sj/" });
+  const reg = await navigator.serviceWorker.register("/sj/sw.js", { scope: "/sj/" });
   await navigator.serviceWorker.ready;
-  const { BareMuxConnection } = await import("/sj/mux/index.mjs");
-  conn = new BareMuxConnection("/sj/mux/worker.js");
-  await setTransport();
-  await warmUp();
-
-  frame = scramjet.createFrame();
-  document.body.append(frame.frame);
-  frame.frame.allow = "fullscreen; autoplay; clipboard-write; encrypted-media; picture-in-picture";
-  frame.addEventListener("urlchange", (e) => report(e.url));
-  frame.frame.addEventListener("load", () => report());
+  const sw = reg.active || navigator.serviceWorker.controller;
+  if (!sw) throw new Error("The service worker did not start. Reload the page.");
+  const { Controller } = $scramjetController;
+  controller = new Controller({
+    serviceworker: sw,
+    transport: makeTransport(),
+    config: { prefix: PREFIX, scramjetPath: "/sj/lib/scramjet.js", wasmPath: "/sj/lib/scramjet.wasm", injectPath: "/sj/ctl/controller.inject.js" },
+  });
+  await controller.wait();
+  frame = controller.createFrame();
+  const el = frame.element;
+  el.allow = "fullscreen; autoplay; clipboard-write; encrypted-media; picture-in-picture";
+  document.body.append(el);
+  el.addEventListener("load", () => report());
+  poll = setInterval(() => report(true), 700); /* pages that change address without loading (YouTube, SPAs) */
   boot.remove();
 }
 
-let lastTitle = "";
-function report(url) {
+/** The real address behind the iframe's rewritten one. */
+function realUrl() {
   try {
-    const href = url ? String(url) : frame.url?.href ? String(scramjet.decodeUrl(frame.url.href)) : current;
-    if (href) current = href;
-    const doc = frame.frame.contentDocument;
+    const href = frame.element.contentWindow.location.href, base = location.origin + frame.prefix;
+    if (!href.startsWith(base)) return "";
+    return controller.config.codec.decode(href.slice(base.length));
+  } catch { return ""; }
+}
+
+let lastTitle = "";
+function report(quiet) {
+  try {
+    const href = realUrl() || current;
+    const doc = frame.element.contentDocument;
     const title = (doc?.title || "").trim();
+    if (quiet && href === current && title === lastTitle) return;
+    if (href) current = href;
     const icon = doc?.querySelector('link[rel~="icon"]')?.href || "";
     lastTitle = title;
     tell({ artemis: "nav", url: current, title, favicon: icon });
@@ -78,7 +71,7 @@ window.addEventListener("message", async (e) => {
   if (!d || e.source !== parent) return;
   if (d.artemis === "go" && d.url) {
     const ex = d.exit || "", xt = d.exitToken || "";
-    if ((d.token && d.token !== token) || ex !== exitBase || xt !== exitTok) { if (d.token) token = d.token; exitBase = ex; exitTok = xt; try { await setTransport(); } catch { /* retried on next go */ } }
+    if ((d.token && d.token !== token) || ex !== exitBase || xt !== exitTok) { if (d.token) token = d.token; exitBase = ex; exitTok = xt; try { controller.setTransport(makeTransport()); } catch { /* retried on next go */ } }
     go(d.url);
   } else if (d.artemis === "back") frame.back();
   else if (d.artemis === "forward") frame.forward();

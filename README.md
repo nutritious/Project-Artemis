@@ -60,9 +60,9 @@ Caddy gets HTTPS certificates automatically. Data lives in the `/data` volume.
 | `ARTEMIS_UA` | user agent for outbound requests |
 | `ARTEMIS_ALLOW_PRIVATE=1` | disable the SSRF guard (testing only) |
 
-## Proxy engine: Scramjet
+## Proxy engine: Scramjet V2
 
-Browsing runs on [Scramjet](https://github.com/MercuryWorkshop/scramjet). Pages are rewritten **in the browser** by a service worker, and the server only carries traffic through a Wisp tunnel at `/wisp/<token>/`. That tunnel is where Artemis keeps its rules: the signed token, bans, maintenance mode, the owner's blocklist, private-network protection and the rate limit.
+Browsing runs on [Scramjet V2](https://github.com/MercuryWorkshop/scramjet) (the 2.x line with the scramjet-controller and the libcurl transport). Pages are rewritten **in the browser** by a service worker, and the server only carries traffic through a Wisp tunnel at `/wisp/<token>/`. That tunnel is where Artemis keeps its rules: the signed token, bans, maintenance mode, the owner's blocklist, private-network protection and the rate limit.
 
 - Scramjet needs a secure context: `https://`, or `http://localhost`. On plain `http` a tab falls back to the classic server-side proxy automatically.
 - Locally, Scramjet runs on the same origin as the app. In production set `PROXY_ORIGIN` to a **sibling subdomain** (for example app.example.com and sites.example.com) so proxied sites cannot touch the app's session.

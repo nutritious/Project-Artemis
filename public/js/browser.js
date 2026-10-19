@@ -145,7 +145,7 @@ function loadFrame(t, url) {
   clearTimeout(t.watchdog);
   t.watchdog = setTimeout(() => {
     if (!t.loading || t.legacy || t.expect !== url) return;
-    toast("Scramjet is taking a while. Still trying. If it never loads, switch to Classic in Settings > Proxy engine.", true);
+    toast("Scramjet V2 is taking a while. Still trying. If it never loads, switch to Classic in Settings > Proxy engine.", true);
   }, 25000);
 }
 function back() { const t = cur(); if (t && t.idx > 0) go(t, t.idx - 1); }
@@ -196,7 +196,7 @@ function render(light) {
   if (tag) {
     const isPage = e.kind === "page" && !hooks.frame;
     tag.classList.toggle("hidden", !isPage);
-    tag.textContent = t.legacy ? "Classic" : "Scramjet";
+    tag.textContent = t.legacy ? "Classic" : "Scramjet V2";
     tag.classList.toggle("warn", !!t.legacy); tag.classList.toggle("ok", !t.legacy);
   }
 }
@@ -383,7 +383,7 @@ function onFrameMessage(e) {
   if (d.artemis === "sj-failed" && t) {
     // Scramjet couldn't start here (old browser, plain http, blocked service workers): fall back to the classic proxy.
     t.loading = false; clearTimeout(t.watchdog); render();
-    if (!sjWarned) { sjWarned = true; toast("Scramjet couldn't start in this browser. You can switch to Classic in Settings > Proxy engine.", true); }
+    if (!sjWarned) { sjWarned = true; toast("Scramjet V2 couldn't start in this browser. You can switch to Classic in Settings > Proxy engine.", true); }
     return;
   }
   if (d.artemis === "nav" && t) {
