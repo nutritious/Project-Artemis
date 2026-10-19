@@ -67,7 +67,12 @@ export const rankOf = (p) => (!p ? 100 : p.role === "owner" ? 0 : p.role === "co
 export const myRank = () => rankOf(state.me);
 export const roleById = (id) => state.roles.find((r) => r.id === id);
 /** Tag chips for a person: OWNER / CMD / custom role (colored). */
-export const titleInfo = (id) => (id ? tagMap.get(id) ?? state.customTags.find((t) => t.id === id) ?? null : null);
+const tagTint = new Map();
+export const titleInfo = (id) => {
+  if (!id) return null; const b = tagMap.get(id);
+  if (b) { if (!tagTint.has(id)) tagTint.set(id, b.rarity && RARITY[b.rarity] ? { ...b, color: RARITY[b.rarity].color } : b); return tagTint.get(id); }
+  return state.customTags.find((t) => t.id === id) ?? null;
+};
 export const titleChip = (id) => { const t = titleInfo(id); return t ? `<span class="chip title ${t.limited ? "ltd" : ""} ${t.rarity === "chroma" ? "chroma" : ""}" style="--tc:${esc(t.color)}" title="${esc(t.name)}${t.limited ? " (limited)" : ""}">${esc(t.name)}</span>` : ""; };
 export const rarityColor = (r) => RARITY[r]?.color ?? "#9aa4cf";
 const roleChips = (p) => !p ? "" : p.role === "owner" ? `<span class="chip owner" title="Owner">OWNER</span>` : p.role === "coowner" ? `<span class="chip coowner" title="Co-owner">CO-OWNER</span>` : p.role === "admin" ? `<span class="chip" title="Commander">CMD</span>` : (() => { const r = roleById(p.roleId); return r ? `<span class="chip role" style="--rc:${esc(r.color)}" title="${esc(r.name)}">${esc(r.name)}</span>` : ""; })();

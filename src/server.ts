@@ -10,6 +10,7 @@ import { trustInfo, TRUST, accrueProxy } from "./trust.js";
 import { can, effectivePerms, hasDashboard, outranks, publicRoles, PERMS, PERM_INFO, rank, roleRank, roleTag, type Perm } from "./perms.js";
 import { runCommand } from "./commands.js";
 import { activity, progress, addEventPoints, earnedToday, activeBoosts, newGame, boards, publicEvent, publicGame, rankIndex, submitRun } from "./game.js";
+import { casinoPlay, casinoState } from "./casino.js";
 import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giveItems, giveSelfWholePack, takeItems, joinLive, openPack, spinWheel, pushEventState, quick, startLive, targets } from "./economy.js";
 import { storageInfo } from "./store.js";
 import { checkExit, exitInfo, exitKey, exitStatus, setExit } from "./exit.js";
@@ -294,6 +295,8 @@ api.post("/owner/codes", auth, coownerUp, (req, res) => { try {
 api.put("/owner/codes/:code", auth, coownerUp, (req, res) => { const c = db.data.codes.find((x) => x.code === req.params.code); if (!c) return void res.status(404).json({ error: "No such code" }); c.disabled = !c.disabled; saveDb(); logAdmin(req, "code.toggle", c.code); res.json({ ok: true }); });
 api.delete("/owner/codes/:code", auth, coownerUp, (req, res) => { const n = db.data.codes.length; db.data.codes = db.data.codes.filter((x) => x.code !== req.params.code); if (db.data.codes.length === n) return void res.status(404).json({ error: "No such code" }); saveDb(); logAdmin(req, "code.delete", String(req.params.code)); res.json({ ok: true }); });
 api.post("/wheel/spin", auth, (req, res) => { try { res.json(spinWheel(me(req))); } catch (e: any) { res.status(400).json({ error: e.message }); } });
+api.get("/casino", auth, (req, res) => res.json(casinoState(me(req))));
+api.post("/casino/:game", auth, (req, res) => { try { res.json(casinoPlay(me(req), String(req.params.game), req.body ?? {})); } catch (e: any) { res.status(400).json({ error: e.message }); } });
 api.get("/wheel", auth, (req, res) => res.json({ wheel: WHEEL, next: me(req).game.lastSpin + WHEEL_MS, ms: WHEEL_MS }));
 api.get("/achievements", auth, (req, res) => { const u = me(req); res.json({ list: ACHIEVEMENTS.map((a) => ({ ...a, done: u.game.ach[a.id] ?? 0 })), stats: { ...u.game.stats, plays: u.game.plays, rank: rankIndex(u.game.xp), items: u.inv.effects.length + u.inv.tags.length + u.inv.themes.length + u.inv.bgs.length }, earnedToday: earnedToday(u) }); });
 api.get("/profile/:name", auth, (req, res) => {

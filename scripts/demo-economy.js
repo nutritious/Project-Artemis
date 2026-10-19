@@ -2,6 +2,7 @@
 import { hooks } from "../public/js/util.js";
 import { playChroma } from "../public/js/chroma.js";
 import { ArenaWorld } from "../public/js/arena-core.js";
+import { CAS, flip as cFlip, slots as cSlots, roulette as cRoul, rouletteKindOk, bjDeal, bjHit, bjStand, bjDouble, bjView } from "../public/js/casino-core.js";
 import { cleanSchedule, DEFAULT_CFG, DUPE_COINS, EVENT_PRESETS, QUICK_PRESETS, PHASE_KINDS, EVENTS, EFFECTS, TAGS, THEMES, BGS, PACKS, GAMES, QUICK_EVENTS, ACHIEVEMENTS, WHEEL, WHEEL_MS, DAILY_CAP, COIN_RATES, packMap, rollPack } from "../public/js/cosmetics.js";
 
 const TQ = [["Which planet is known as the Red Planet?", "Mars", "Venus", "Jupiter", "Mercury"], ["What is NASA's program to return humans to the Moon called?", "Artemis", "Apollo", "Gemini", "Voyager"], ["What does \"GG\" mean in gaming?", "Good game", "Get going", "Great goal", "Go go"], ["Which planet is famous for its rings?", "Saturn", "Mars", "Earth", "Mercury"], ["In Minecraft, which block builds a Nether portal frame?", "Obsidian", "Bedrock", "Diamond", "Netherrack"], ["Not even what can escape a black hole?", "Light", "Sound", "Heat", "Radio waves"], ["What was the first dog in orbit called?", "Laika", "Belka", "Strelka", "Lassie"], ["Which planet spins on its side?", "Uranus", "Neptune", "Saturn", "Venus"], ["In Mario Kart, which item hits the player in first place?", "Blue shell", "Red shell", "Banana", "Bullet Bill"], ["About how long does sunlight take to reach Earth?", "8 minutes", "8 seconds", "8 hours", "8 days"]];
@@ -221,6 +222,25 @@ export function installEconomy(C) {
     if (p === "/owner/launch") { need(); SRV.launchAt = body.action === "stop" ? 0 : Date.now(); return { ok: true, launchAt: SRV.launchAt }; }
     if (p === "/owner/bot" && method === "PUT") { need(); const b = SRV.bot; if ("enabled" in body) b.enabled = !!body.enabled; if (body.action === "ban" || body.action === "warn") b.action = body.action; if ("strikes" in body) b.strikes = Math.max(1, Math.min(10, Math.round(Number(body.strikes)) || 3)); if (Array.isArray(body.words)) b.words = [...new Set(body.words.map((w) => String(w).trim().toLowerCase()).filter(Boolean))]; return { ok: true }; }
     if (p === "/owner/trust") { need(); const t = body.id === me.id ? me : bots[body.id]; if (!t) throw demoErr("No such player", 404); if (body.mode === "grant") t.trust = "grant"; else if (body.mode === "revoke") t.trust = "revoke"; else delete t.trust; X.recheck(); push({ t: "members", members: C.members() }); return { ok: true }; }
+    if (p === "/casino" || /^\/casino\/\w+$/.test(p)) {
+      const C = (me.casino ??= { net: 0, bj: null }), rnd = Math.random, out = (o) => ({ ...o, coins: me.coins });
+      if (p === "/casino") return { min: CAS.MIN, max: CAS.MAX, coins: me.coins, bj: C.bj ? bjView(C.bj) : null };
+      const g = p.split("/")[2], b = body ?? {};
+      const stake = (v) => { const bet = Math.floor(+v); if (!(bet >= CAS.MIN && bet <= CAS.MAX)) throw demoErr(`Bets are ${CAS.MIN} to ${CAS.MAX} coins`); if (me.coins < bet) throw demoErr("Not enough coins"); return bet; };
+      const pay = (bet, win) => { me.coins += win - bet; C.net += win - bet; gp(); };
+      if (g !== "bj" && C.bj) throw demoErr("Finish your blackjack hand first");
+      if (g === "flip") { const bet = stake(b.bet), r = cFlip(bet, b.side === "tails" ? "tails" : "heads", rnd); pay(bet, r.payout); return out(r); }
+      if (g === "slots") { const bet = stake(b.bet), r = cSlots(bet, rnd); pay(bet, r.payout); return out(r); }
+      if (g === "roulette") { const num = Math.floor(+b.num); if (!rouletteKindOk(String(b.kind), num)) throw demoErr("Pick a bet"); const bet = stake(b.bet), r = cRoul(bet, b.kind, num, rnd); pay(bet, r.payout); return out(r); }
+      if (g === "bj") {
+        if (b.act === "deal") { if (C.bj) throw demoErr("You already have a hand going"); const bet = stake(b.bet); me.coins -= bet; C.net -= bet; const st = bjDeal(bet, rnd); if (st.done) { me.coins += st.payout ?? 0; C.net += st.payout ?? 0; } else C.bj = st; gp(); return out({ bj: bjView(st) }); }
+        let st = C.bj; if (!st) throw demoErr("No hand in play");
+        if (b.act === "hit") st = bjHit(st, rnd); else if (b.act === "stand") st = bjStand(st, rnd);
+        else if (b.act === "double") { if (st.player.length !== 2 || me.coins < st.bet) throw demoErr("You can't double now"); me.coins -= st.bet; C.net -= st.bet; st = bjDouble(st, rnd); } else throw demoErr("Unknown move");
+        if (st.done) { me.coins += st.payout ?? 0; C.net += st.payout ?? 0; C.bj = null; } else C.bj = st; gp(); return out({ bj: bjView(st) });
+      }
+      throw demoErr("Unknown game");
+    }
     if (p === "/wheel/spin" && method === "POST") {
       if (Date.now() < G.lastSpin + WHEEL_MS) throw demoErr("The wheel is still recharging");
       const total = WHEEL.reduce((a, b) => a + b.w, 0); let r = Math.random() * total, idx = 0; for (let i = 0; i < WHEEL.length; i++) { r -= WHEEL[i].w; if (r < 0) { idx = i; break; } }

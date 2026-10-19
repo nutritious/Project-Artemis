@@ -47,7 +47,7 @@ const voiceState = () => {
 const broadcastVoice = () => { const raw = { t: "voice", state: voiceState() }; for (const c of X.clients()) X.send(c.ws, raw); };
 /* ------------------------------ friends ------------------------------ */
 const MAX_FRIENDS = 200;
-const areFriends = (a: User, b: User) => !!a.friends?.includes(b.id) && !!b.friends?.includes(a.id);
+export const areFriends = (a: User, b: User) => !!a.friends?.includes(b.id) && !!b.friends?.includes(a.id);
 const fstate = (u: User) => ({
   friends: (u.friends ?? []).filter((id) => userById(id)),
   incoming: db.data.friendReqs.filter((r) => r.to === u.id && userById(r.from)).map((r) => ({ id: r.from, ts: r.ts })),

@@ -3,6 +3,7 @@ import { $, $$, api, esc, fmtNum, on, state, toast } from "./util.js";
 import { GAMES } from "./cosmetics.js";
 import { FACTORY, HELP, SKINS } from "./games.js";
 import { setBoards } from "./hub.js";
+import { buildCasino, onCasinoShown } from "./casino.js";
 
 let cv, ctx, W = 0, H = 0, dpr = 1, raf = 0, G = null, mode = "idle", cur = "run", bests = {}, boards = {}, last = 0, started = 0;
 const inp = { x: null, y: null, down: false, keys: new Set(), taps: [], swipe: null };
@@ -11,11 +12,14 @@ const skin = () => (state.event?.kind === "halloween" ? SKINS.halloween : SKINS.
 
 export function buildArcade() {
   $("#view-arcade").innerHTML = `<div class="page" id="arcPage">
-    <div><h2>Arcade</h2><p class="sub" style="margin:4px 0 0" id="arcHelp"></p></div>
+    <div class="arc-head"><div><h2>Games</h2><p class="sub" style="margin:4px 0 0" id="arcHelp"></p></div><div class="seg2" id="arcMode"><button data-m="arcade" class="on">🕹 Arcade</button><button data-m="casino">🎰 Casino</button></div></div>
+    <div id="casinoBox" hidden></div>
     <div id="arcEvent"></div>
     <div class="gtabs" id="gTabs">${GAMES.map((g) => `<button data-g="${g.id}"><b>${esc(g.name)}</b><small>${esc(g.desc)}</small></button>`).join("")}</div>
-    <div class="arc-wrap"><div class="arc-stage glass"><canvas id="arcCv" aria-label="Game"></canvas><div class="arc-over" id="arcOver"></div></div>
+    <div class="arc-wrap" id="arcWrap"><div class="arc-stage glass"><canvas id="arcCv" aria-label="Game"></canvas><div class="arc-over" id="arcOver"></div></div>
       <div class="card glass arc-top"><h3 id="arcTopT">Top pilots</h3><div id="arcTop"></div></div></div></div>`;
+  buildCasino($("#casinoBox"));
+  $("#arcMode").addEventListener("click", (e) => { const b = e.target.closest("[data-m]"); if (b) setMode(b.dataset.m); });
   cv = $("#arcCv"); ctx = cv.getContext("2d"); cv.style.touchAction = "none";
   const pos = (e) => { const r = cv.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H]; };
   cv.addEventListener("pointermove", (e) => { const [px, py] = pos(e); inp.x = px; inp.y = py; if (sw) { const dx = px - sx, dy = py - sy; if (Math.hypot(dx, dy) > 26) { inp.swipe = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "r" : "l") : dy > 0 ? "d" : "u"; sx = px; sy = py; } } });
@@ -35,6 +39,12 @@ export function buildArcade() {
   new ResizeObserver(size).observe(cv.parentElement);
   on("liveevent", () => { paintEvent(); if (mode === "idle") title(); });
 }
+let casinoOn = false;
+function setMode(m) {
+  casinoOn = m === "casino"; $$("#arcMode button").forEach((b) => b.classList.toggle("on", b.dataset.m === m));
+  $("#casinoBox").hidden = !casinoOn; for (const q of ["#arcEvent", "#gTabs", "#arcWrap"]) $(q).hidden = casinoOn;
+  if (casinoOn) { cancelAnimationFrame(raf); raf = 0; if (mode === "play") mode = "idle"; $("#arcHelp").textContent = "Test your luck with Artemis coins. Fake coins only, no real money."; onCasinoShown(); } else { pick(cur); size(); }
+}
 function pick(id) { cur = id; cancelAnimationFrame(raf); raf = 0; G = null; mode = "idle"; title(); paintTop(); $$("#gTabs button").forEach((b) => b.classList.toggle("on", b.dataset.g === id)); $("#arcHelp").textContent = HELP[id]; }
 function size() {
   const box = cv.parentElement.getBoundingClientRect(); dpr = Math.min(devicePixelRatio || 1, 2);
@@ -43,6 +53,7 @@ function size() {
 }
 function preview() { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); const g = FACTORY[cur](W, H, skin(), () => {}); g.draw(ctx); }
 export async function onArcadeShown() {
+  if (casinoOn) { onCasinoShown(); return; }
   pick(cur); size();
   try { const r = await api("/game"); setBoards(r); state.event = r.event; bests = r.game.bests ?? {}; boards = r.arcade; paintTop(); paintEvent(); title(); } catch { /* offline */ }
 }

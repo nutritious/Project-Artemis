@@ -8,6 +8,7 @@ import { publicUser } from "./auth.js";
 import { canSeeChannel, checkTrust, gifUrl, isTrusted, onTrust, trustInfo } from "./trust.js";
 import { moderate, post as botPost } from "./bot.js";
 import { initSocial, socialClose, socialInit, socialMessage } from "./social.js";
+import { initPoker, pokerClose, pokerMessage } from "./poker.js";
 import { activity, grant, onGame, onLegend, progress, publicEvent, activeBoosts, rankIndex } from "./game.js";
 
 interface Client { ws: WebSocket; user: User; adminSub: boolean; cid: string; rooms: Set<string> }
@@ -90,6 +91,7 @@ export function deleteMessage(id: string) {
 
 const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
 initSocial({ clients: () => clients, send, ban: (id) => { closeUserSockets(id, "Banned by ArtemisBot"); broadcast({ t: "members", members: members() }); } });
+initPoker({ clients: () => clients, send });
 
 export function handleChatUpgrade(req: http.IncomingMessage, socket: Duplex, head: Buffer, isAppHost: (host: string) => boolean) {
   const url = new URL(req.url ?? "/", "http://x");
@@ -121,6 +123,7 @@ wss.on("connection", (ws: WebSocket, user: User) => {
     fresh.lastSeen = Date.now();
 
     if (socialMessage(client, fresh, msg)) return;
+    if (pokerMessage(client, fresh, msg)) return;
     switch (msg.t) {
       case "arena": arenaHook(fresh, msg); break;
       case "history": {
@@ -199,7 +202,7 @@ wss.on("connection", (ws: WebSocket, user: User) => {
 
   ws.on("close", () => {
     clients.delete(client);
-    socialClose(client);
+    socialClose(client); pokerClose(client.user.id);
     user.lastSeen = Date.now();
     saveDb();
     broadcast({ t: "presence", online: onlineList() });
