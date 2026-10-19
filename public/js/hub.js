@@ -75,7 +75,7 @@ function achHtml() {
 function trustHtml() {
   if (!T) return "";
   const n = T.need, row = (label, v, goal, ok, txt) => `<div class="mission ${ok ? "done" : ""}"><div class="mtop"><b>${label}</b><span class="mono">${txt}</span></div><div class="xpbar sm"><i style="width:${Math.min(100, (v / goal) * 100)}%"></i></div></div>`;
-  return `<div class="card glass"><h3>Trusted member <span class="chip ${T.trusted ? "ok" : ""}">${T.trusted ? (T.staff ? "staff" : "trusted") : "not yet"}</span></h3>
+  return `<div class="card glass"><h3>Trusted member <span class="chip ${T.trusted ? "ok" : ""}">${T.trusted ? (state.me.role === "owner" ? "trusted · owner" : state.me.role === "coowner" ? "trusted · co-owner" : T.staff ? "trusted · staff" : "trusted") : "not yet"}</span></h3>
     <p class="note" style="margin:-4px 0 10px">${T.trusted ? "You can post GIFs and chat in #trusted-general." : "Reach all four goals to unlock GIFs and the #trusted-general channel."}</p>
     ${row("Chat messages", T.msgs, n.msgs, T.met.msgs, `${Math.min(T.msgs, n.msgs)} / ${n.msgs}`)}
     ${row("Time on the proxy", T.proxyHours, n.proxyHours, T.met.proxy, `${Math.min(T.proxyHours, n.proxyHours)} / ${n.proxyHours} h`)}
