@@ -197,6 +197,7 @@ export const CUTSCENES = [
   { id: "update", name: "Update incoming" }, { id: "opening", name: "Opening cinematic" }, { id: "halloween", name: "Halloween cinematic" },
   { id: "levelup:1", name: "Level-up: Cadet" }, { id: "levelup:2", name: "Level-up: Pilot" }, { id: "levelup:3", name: "Level-up: Navigator" },
   { id: "levelup:4", name: "Level-up: Captain" }, { id: "levelup:5", name: "Level-up: Voyager" }, { id: "levelup:6", name: "Level-up: Legend" },
+  { id: "levelup:7", name: "Level-up: Nova" }, { id: "levelup:8", name: "Level-up: Quasar" }, { id: "levelup:9", name: "Level-up: Pulsar" }, { id: "levelup:10", name: "Level-up: Singularity" }, { id: "levelup:11", name: "Level-up: Touch Grass" },
 ];
 
 const byId = (list) => new Map(list.map((x) => [x.id, x]));

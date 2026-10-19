@@ -346,7 +346,7 @@ api.post("/owner/event", auth, panelUp, (req, res) => {
   const user = me(req), b = req.body ?? {};
   if (!allow(`ownev:${user.id}`, 6, 30_000)) return void res.status(429).json({ error: "One at a time, commander" });
   const kind = String(b.kind ?? "");
-  if (!/^(launch|eclipse|party|update|opening|halloween|levelup:[1-6])$/.test(kind)) return void res.status(400).json({ error: "Unknown cutscene" });
+  if (!/^(launch|eclipse|party|update|opening|halloween|levelup:([1-9]|1[01]))$/.test(kind)) return void res.status(400).json({ error: "Unknown cutscene" });
   const title = String(b.title ?? "").trim().slice(0, 60) || "LIFTOFF", sub = String(b.sub ?? "").trim().slice(0, 400);
   const reached = broadcastEvent({ kind, title, sub, by: user.username });
   audit(user.username, "event.cutscene", kind); res.json({ ok: true, reached });

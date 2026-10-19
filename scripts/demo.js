@@ -77,7 +77,7 @@ function stats() {
 const log = (action, detail = "") => { const e = { ts: Date.now(), by: me.username, action, detail }; D.audit.unshift(e); push({ t: "audit", entry: e }); };
 
 /* ---------------- crew hub (fake) ---------------- */
-const RANKS = [["Stardust", 0, "#8d96bd"], ["Cadet", 100, "#4cc9f0"], ["Pilot", 300, "#3ddc97"], ["Navigator", 700, "#ffc857"], ["Captain", 1500, "#ff8a5b"], ["Voyager", 3000, "#e879f9"], ["Legend", 6000, "#ffd76a"]].map(([name, xp, color]) => ({ name, xp, color }));
+const RANKS = [["Stardust", 0, "#8d96bd"], ["Cadet", 100, "#4cc9f0"], ["Pilot", 300, "#3ddc97"], ["Navigator", 700, "#ffc857"], ["Captain", 1500, "#ff8a5b"], ["Voyager", 3000, "#e879f9"], ["Legend", 6000, "#ffd76a"], ["Nova", 12000, "#ff7ab8"], ["Quasar", 20000, "#5ad1ff"], ["Pulsar", 35000, "#9d7bff"], ["Singularity", 60000, "#c9d1ff"], ["Touch Grass", 100000, "#58d35a"]].map(([name, xp, color]) => ({ name, xp, color }));
 const MIS = [{ id: "browse", title: "Explore the web", hint: "Open 5 pages in the browser", goal: 5, xp: 40 }, { id: "chat", title: "Radio check", hint: "Send 3 chat messages", goal: 3, xp: 30 }, { id: "play", title: "Run the gauntlet", hint: "Finish one Eclipse Run in the Arcade", goal: 1, xp: 30 }];
 const G = { xp: 20, streak: 1, best: 0, plays: 0, n: { browse: 0, chat: 0, play: 0 }, done: [], stats: {}, ach: {}, earned: 0, lastSpin: 0 };
 const rankOf = (xp) => RANKS.reduce((r, k, i) => (xp >= k.xp ? i : r), 0);

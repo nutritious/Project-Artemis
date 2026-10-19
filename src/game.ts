@@ -10,7 +10,13 @@ export const RANKS = [
   { name: "Captain", xp: 1500, color: "#ff8a5b" },
   { name: "Voyager", xp: 3000, color: "#e879f9" },
   { name: "Legend", xp: 6000, color: "#ffd76a" },
+  { name: "Nova", xp: 12000, color: "#ff7ab8" },
+  { name: "Quasar", xp: 20000, color: "#5ad1ff" },
+  { name: "Pulsar", xp: 35000, color: "#9d7bff" },
+  { name: "Singularity", xp: 60000, color: "#c9d1ff" },
+  { name: "Touch Grass", xp: 100000, color: "#58d35a" },
 ];
+const LEGEND = 6;
 export const MISSIONS = [
   { id: "browse", title: "Explore the web", hint: "Open 5 pages in the browser", goal: 5, xp: 40, coins: 15, cap: 25, per: 1 },
   { id: "chat", title: "Radio check", hint: "Send 3 chat messages", goal: 3, xp: 30, coins: 10, cap: 25, per: 2 },
@@ -93,7 +99,7 @@ function finish(u: User, before: number, gains: Gain[]) {
   const rank = rankIndex(u.game.xp);
   if (rank > before) { const c = 50 * (rank - before); u.coins += c; gains.push({ text: `Rank up: ${RANKS[rank].name}`, xp: 0, coins: c }); }
   checkAch(u); saveDb();
-  if (rank === RANKS.length - 1 && before < rank) legendHook(u);
+  if (rank >= LEGEND && before < LEGEND) legendHook(u);
   notify(u.id, { t: "game", game: publicGame(u), gains, rankUp: rank > before ? RANKS[rank] : null });
 }
 
