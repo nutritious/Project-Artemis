@@ -23,6 +23,8 @@ function sound(ctx, variant = "prism") {
   (CHORDS[variant] ?? CHORDS.prism).forEach((f, i) => { osc("triangle", f, f, HIT + 0.05 + i * 0.07, 3.4, 0.07); osc("sine", f * 2, f * 2, HIT + 0.2 + i * 0.07, 2.6, 0.025); });
   /* sparkles over the tail */
   for (let i = 0; i < 18; i++) osc("sine", 1500 + Math.random() * 2600, 1500 + Math.random() * 2600, HIT + 0.6 + i * 0.22, 0.25, 0.03);
+  osc("sine", 70, 24, HIT + 0.9, 1.2, 0.35); noise(HIT + 0.9, 0.5, 0.25, 5000, 400); osc("sine", 55, 20, HIT + 1.65, 1.2, 0.3);
+  for (let i = 0; i < 6; i++) { noise(HIT + 0.9 + i * 0.75, 0.35, 0.14, 4000, 600); [1046.5, 1318.5, 1568, 2093].forEach((f, j) => osc("triangle", f, f * 1.01, HIT + 0.95 + i * 0.75 + j * 0.05, 0.9, 0.03)); }
   /* resolve */
   [261.63, 329.63, 392, 523.25].forEach((f) => osc("sawtooth", f, f, HIT + 2.2, 3.2, 0.03));
   return () => { try { out.gain.cancelScheduledValues(ctx.currentTime); out.gain.setTargetAtTime(0, ctx.currentTime, 0.08); nodes.forEach((n) => { try { n.stop(ctx.currentTime + 0.4); } catch { /* done */ } }); } catch { /* closed */ } };
@@ -140,9 +142,19 @@ function frame(x, W, H, t, S, item) {
     x.globalAlpha = 1; x.globalCompositeOperation = "source-over";
     glow(x, cx, cy, R * (0.5 + 0.05 * Math.sin(tt * 3)), hue(tt * 70 + 280, 55, 0.55), 1);
     /* confetti shards */
-    S.sh ??= []; if (tt < 1.4) for (let i = 0; i < 14; i++) S.sh.push({ x: cx, y: cy, vx: rnd(-1, 1) * R * 0.9, vy: rnd(-1.1, 0.5) * R * 0.9, h: rnd(360), r: rnd(0, TAU), vr: rnd(-8, 8), s: rnd(5, 13) * k, l: 1 });
+    S.sh ??= []; if (tt < 1.4) for (let i = 0; i < 18; i++) S.sh.push({ x: cx, y: cy, vx: rnd(-1, 1) * R * 0.9, vy: rnd(-1.1, 0.5) * R * 0.9, h: rnd(360), r: rnd(0, TAU), vr: rnd(-8, 8), s: rnd(5, 13) * k, l: 1 });
     S.sh = S.sh.filter((q) => q.l > 0 && q.y < H + 40); x.globalCompositeOperation = "lighter";
     for (const q of S.sh) { q.vy += R * 0.55 * S.dt; q.x += q.vx * S.dt; q.y += q.vy * S.dt; q.vx *= 0.992; q.r += q.vr * S.dt; q.l -= 0.12 * S.dt; x.save(); x.translate(q.x, q.y); x.rotate(q.r); x.fillStyle = hue(q.h + tt * 90, 62, clamp(q.l)); x.fillRect(-q.s, -q.s * 0.35, q.s * 2, q.s * 0.7); x.restore(); }
+    x.globalCompositeOperation = "source-over";
+    /* ENCORE: light pillar, firework bursts, orbiting comets and rising embers */
+    x.globalCompositeOperation = "lighter";
+    { const pw = easeOut(tt / 0.7) * (1 - clamp((tt - 4.5) / 2)); if (pw > 0) { const bw = R * (0.16 + 0.03 * Math.sin(tt * 5)), g = x.createLinearGradient(cx - bw, 0, cx + bw, 0); g.addColorStop(0, "transparent"); g.addColorStop(0.5, hue(tt * 100, 70, 0.34 * pw)); g.addColorStop(1, "transparent"); x.fillStyle = g; x.fillRect(cx - bw, 0, bw * 2, H); } }
+    S.fw ??= []; S.fwN ??= 0;
+    while (S.fwN < 6 && tt > 0.9 + S.fwN * 0.75) { S.fwN++; const fx = cx + rnd(-0.42, 0.42) * W * 0.6, fy = cy + rnd(-0.5, -0.1) * R, base = rnd(360); for (let i = 0; i < 46; i++) { const a = (i / 46) * TAU, v = R * rnd(0.25, 0.65); S.fw.push({ x: fx, y: fy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, h: base + (i % 6) * 55, l: 1, s: rnd(1.8, 3.6) * k }); } }
+    S.fw = S.fw.filter((q) => q.l > 0); for (const q of S.fw) { q.vy += R * 0.22 * S.dt; q.vx *= 0.985; q.vy *= 0.985; q.x += q.vx * S.dt; q.y += q.vy * S.dt; q.l -= 0.55 * S.dt; x.fillStyle = hue(q.h + tt * 60, 65, clamp(q.l)); x.shadowColor = hue(q.h, 60, 1); x.shadowBlur = 8 * k; x.beginPath(); x.arc(q.x, q.y, q.s * clamp(q.l) + 0.4, 0, TAU); x.fill(); } x.shadowBlur = 0;
+    for (let c = 0; c < 5; c++) { for (let tr = 0; tr < 14; tr++) { const a = tt * (1.1 + c * 0.17) * (c % 2 ? -1 : 1) + c * 1.3 - tr * 0.045, rr = R * (0.52 + c * 0.065); x.fillStyle = hue(c * 72 + tt * 110 - tr * 6, 66, (1 - tr / 14) * 0.9 * easeOut(tt / 1.2)); x.beginPath(); x.arc(cx + Math.cos(a) * rr * 1.25, cy + Math.sin(a) * rr * 0.62, (7 - tr * 0.4) * k, 0, TAU); x.fill(); } }
+    S.em ??= []; for (let i = 0; i < 2; i++) S.em.push({ x: rnd(W), y: H + 10, v: R * rnd(0.12, 0.4), h: rnd(360), s: rnd(1.2, 3), w: rnd(TAU) });
+    S.em = S.em.filter((q) => q.y > -10); for (const q of S.em) { q.y -= q.v * S.dt; q.x += Math.sin(tt * 2 + q.w) * 14 * S.dt; x.fillStyle = hue(q.h + tt * 80, 66, 0.7); x.beginPath(); x.arc(q.x, q.y, q.s * k, 0, TAU); x.fill(); }
     x.globalCompositeOperation = "source-over";
     /* the centrepiece is different for every Chroma item */
     const sc = easeOut(tt / 0.9) * (1 + 0.03 * Math.sin(tt * 4)), pr = (CENTER[item.variant] ?? CENTER.prism)(x, cx, cy, k, tt, sc, S, W, H);
@@ -153,7 +165,7 @@ function frame(x, W, H, t, S, item) {
     const ty = cy + pr + 70 * k, word = "CHROMA", reveal = tt * 7;
     x.textAlign = "center"; x.shadowColor = "rgba(0,0,0,.6)"; x.shadowBlur = 16 * k; x.font = `800 ${R * 0.1}px Unbounded, Inter, system-ui, sans-serif`; x.letterSpacing = `${R * 0.012}px`;
     const wd = x.measureText(word).width, g = x.createLinearGradient(cx - wd / 2, 0, cx + wd / 2, 0); for (let s = 0; s <= 6; s++) g.addColorStop(s / 6, hue(s * 60 + tt * 140, 62));
-    x.save(); x.beginPath(); x.rect(0, 0, cx - wd / 2 + wd * clamp(reveal / word.length), H); x.clip(); x.fillStyle = g; x.fillText(word, cx, ty + R * 0.07); x.restore();
+    x.save(); x.beginPath(); x.rect(0, 0, cx - wd / 2 + wd * clamp(reveal / word.length), H); x.clip(); { const sp = Math.max(0, 1 - tt / 2.2) * 9 * k + 1.5 * k; x.globalCompositeOperation = "lighter"; x.fillStyle = "rgba(255,40,90,.55)"; x.fillText(word, cx - sp, ty + R * 0.07); x.fillStyle = "rgba(40,120,255,.55)"; x.fillText(word, cx + sp, ty + R * 0.07); x.globalCompositeOperation = "source-over"; } x.fillStyle = g; x.fillText(word, cx, ty + R * 0.07); x.restore();
     if (tt > 1.1) { const a = ease((tt - 1.1) / 0.7); x.globalAlpha = a; x.shadowBlur = 8 * k; x.fillStyle = "#fff"; x.font = `700 ${R * 0.045}px Inter, system-ui, sans-serif`; x.letterSpacing = "1px"; x.fillText(item.name, cx, ty + R * 0.07 + R * 0.075 + (1 - a) * 12 * k); x.font = `600 ${Math.max(11, R * 0.02)}px 'JetBrains Mono', monospace`; x.letterSpacing = "4px"; x.fillStyle = hue(tt * 120, 75); x.fillText((KIND[item.type] ?? "ITEM") + " · THE RAREST TIER", cx, ty + R * 0.07 + R * 0.12); x.globalAlpha = 1; }
     if (tt > 4.2) { x.globalAlpha = 0.4 + 0.4 * Math.sin(tt * 3); x.shadowBlur = 0; x.fillStyle = "#cfd6ff"; x.font = `500 ${Math.max(11, R * 0.018)}px Inter, system-ui, sans-serif`; x.letterSpacing = "1px"; x.fillText("Tap to continue", cx, H * 0.94); x.globalAlpha = 1; }
     x.shadowBlur = 0;
@@ -161,6 +173,7 @@ function frame(x, W, H, t, S, item) {
   x.restore();
   /* white flash at the hit and a fade-in/out over the whole scene */
   if (t >= HIT - 0.05) { const f = 1 - clamp((t - HIT) / 0.55); if (f > 0) { x.fillStyle = `rgba(255,255,255,${f})`; x.fillRect(0, 0, W, H); } }
+  if (t >= HIT) { const v = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75); v.addColorStop(0, "transparent"); v.addColorStop(1, hue(t * 60, 55, 0.22 + 0.1 * Math.sin(t * 3))); x.fillStyle = v; x.fillRect(0, 0, W, H); const f2 = 1 - clamp((t - HIT - 0.9) / 0.4); if (t > HIT + 0.9 && f2 > 0) { x.fillStyle = `rgba(255,255,255,${0.35 * f2})`; x.fillRect(0, 0, W, H); } }
   if (t < 0.5) { x.fillStyle = `rgba(0,0,0,${1 - t / 0.5})`; x.fillRect(0, 0, W, H); }
 }
 
