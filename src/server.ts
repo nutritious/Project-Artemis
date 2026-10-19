@@ -131,6 +131,7 @@ const need = (perm: Perm) => (req: Request, res: Response, next: NextFunction) =
   if (!can((req as any).user, perm)) return void res.status(403).json({ error: `You need the "${PERM_INFO[perm].title}" power for that` });
   next();
 };
+const OG_MSG = "Only the owner can give the OG title.";
 const ownerOnly = (req: Request, res: Response, next: NextFunction) => {
   if ((req as any).user?.role !== "owner") return void res.status(403).json({ error: "Owner only" });
   next();
@@ -287,7 +288,9 @@ api.put("/equip", auth, (req, res) => {
 });
 api.post("/redeem", auth, (req, res) => { const u = me(req); if (!allow("redeem:" + u.id, 8, 60_000)) return void res.status(429).json({ error: "Slow down. Try again in a minute." }); try { res.json(redeem(u, req.body?.code)); } catch (e: any) { res.status(400).json({ error: e.message }); } });
 api.get("/owner/codes", auth, coownerUp, (_req, res) => res.json({ codes: db.data.codes.map(codeView) }));
-api.post("/owner/codes", auth, coownerUp, (req, res) => { try { const c = makeCode(me(req).username, req.body ?? {}); res.json({ ok: true, code: c.code }); } catch (e: any) { res.status(400).json({ error: e.message }); } });
+api.post("/owner/codes", auth, coownerUp, (req, res) => { try {
+  if (me(req).role !== "owner" && (Array.isArray(req.body?.items) ? req.body.items : []).some((i: any) => i?.type === "tag" && i?.id === "og")) return void res.status(403).json({ error: OG_MSG });
+   const c = makeCode(me(req).username, req.body ?? {}); res.json({ ok: true, code: c.code }); } catch (e: any) { res.status(400).json({ error: e.message }); } });
 api.put("/owner/codes/:code", auth, coownerUp, (req, res) => { const c = db.data.codes.find((x) => x.code === req.params.code); if (!c) return void res.status(404).json({ error: "No such code" }); c.disabled = !c.disabled; saveDb(); logAdmin(req, "code.toggle", c.code); res.json({ ok: true }); });
 api.delete("/owner/codes/:code", auth, coownerUp, (req, res) => { const n = db.data.codes.length; db.data.codes = db.data.codes.filter((x) => x.code !== req.params.code); if (db.data.codes.length === n) return void res.status(404).json({ error: "No such code" }); saveDb(); logAdmin(req, "code.delete", String(req.params.code)); res.json({ ok: true }); });
 api.post("/wheel/spin", auth, (req, res) => { try { res.json(spinWheel(me(req))); } catch (e: any) { res.status(400).json({ error: e.message }); } });
@@ -314,6 +317,7 @@ api.post("/owner/coins", auth, panelUp, (req, res) => {
 });
 api.post("/owner/give", auth, panelUp, (req, res) => {
   const type = String(req.body?.type ?? "");
+  if (type === "tag" && String(req.body?.id ?? "") === "og" && me(req).role !== "owner") return void res.status(403).json({ error: OG_MSG });
   if (type === "pack") { const t = targets(parseTarget(req.body?.target)); for (const u of t) u.freePacks += Math.max(1, Math.min(20, Number(req.body?.count) || 1)); saveDb(); audit(me(req).username, "give.pack", `${t.length} players`); return void res.json({ ok: true, reached: t.length }); }
   try { const n = giveItems(me(req).username, type, String(req.body?.id ?? ""), parseTarget(req.body?.target)); broadcastMembers(); res.json({ ok: true, reached: n }); } catch (e: any) { res.status(400).json({ error: e.message }); }
 });

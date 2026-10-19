@@ -121,7 +121,7 @@ function giveOptions(type) {
   if (type === "effect") return EFFECTS.map((e) => [e.id, `${e.name}${e.limited ? " (limited)" : ""}`]);
   if (type === "theme") return THEMES.map((t) => [t.id, t.name]);
   if (type === "bg") return BGS.map((b) => [b.id, b.name]);
-  return [...TAGS, ...(state.customTags ?? [])].map((t) => [t.id, `${t.name}${t.limited ? " (limited)" : ""}`]);
+  return [...TAGS, ...(state.customTags ?? [])].filter((t) => t.id !== "og" || state.me?.role === "owner").map((t) => [t.id, `${t.name}${t.limited ? " (limited)" : ""}`]);
 }
 function userRows() {
   const q = Q.trim().toLowerCase();
