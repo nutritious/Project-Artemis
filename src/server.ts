@@ -13,7 +13,9 @@ import { activity, progress, addEventPoints, earnedToday, activeBoosts, newGame,
 import { casinoPlay, casinoState } from "./casino.js";
 import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giveItems, giveSelfWholePack, takeItems, joinLive, openPack, spinWheel, pushEventState, quick, startLive, targets } from "./economy.js";
 import { storageInfo, migrate } from "./store.js";
-import { checkExit, exitInfo, exitKey, exitStatus, setExit } from "./exit.js";
+import { checkExit, cloudPass, exitInfo, exitKey, exitStatus, localCloudKey, setExit } from "./exit.js";
+import { attachCloud } from "./cloud-browser.js";
+import { checkExitToken } from "./exit-token.js";
 import { ACHIEVEMENTS, BASE_THEMES, GAMES, PACKS, WHEEL, WHEEL_MS } from "../public/js/cosmetics.js";
 import { answer as answerRound, partyState, setAuto, skipRound, startRound, startRushNow } from "./party.js";
 import { BUILD, broadcast, broadcastCustomTags, checkTrust, notifyOwners, broadcastEvent, broadcastAnnouncement, broadcastChannels, broadcastMembers, broadcastRoles, closeUserSockets, closeAllSockets, deleteMessage, handleChatUpgrade, hasAdminSubscribers, pushSelf, pushSelfAll, pushToAdmins } from "./chat.js";
@@ -224,6 +226,7 @@ api.get("/me", auth, (req, res) => {
   });
 });
 api.get("/proxy-token", auth, (req, res) => res.json({ proxyToken: proxyToken(me(req)), proxyOrigin: proxyOriginFor(req), sjOrigin: PROXY_ORIGIN, ...exitInfo(me(req)) }));
+api.get("/cloud-pass", auth, (req, res) => res.json(cloudPass(me(req))));
 /* the home exit node asks for bans and the blocklist with its secret key */
 api.get("/exit/policy", (req, res) => {
   const k = exitKey(), got = String(req.headers["x-exit-key"] ?? "");
@@ -925,7 +928,9 @@ app.use(express.static(path.resolve("public"), { index: "index.html", maxAge: 0 
 
 /* ---------------- boot ---------------- */
 const server = http.createServer(app);
+const localCloud = attachCloud({ check: (t) => checkExitToken(localCloudKey(), t), banned: () => new Set(db.data.users.filter((u) => u.banned).map((u) => u.id)), maintenance: () => db.data.server.maintenance, blocked: () => db.data.blocklist });
 server.on("upgrade", (req, socket, head) => {
+  if ((req.url ?? "").startsWith("/cb/")) return localCloud(req, socket, head);
   if ((req.url ?? "").startsWith("/pws/")) return handleProxyWsUpgrade(req, socket, head);
   if (isWispPath(req.url)) return handleWispUpgrade(req, socket, head);
   handleChatUpgrade(req, socket, head, (host) => hostRole(host) !== "proxy");

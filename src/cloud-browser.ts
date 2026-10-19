@@ -44,7 +44,7 @@ export function attachCloud(o: Opts) {
     const send = (d: unknown) => { if (ws.readyState === 1) ws.send(JSON.stringify(d)); };
     sessions.get(user)?.close("You opened another cloud browser");
     if (sessions.size >= MAX_TOTAL) { send({ t: "error", message: "All cloud browsers are busy right now. Try again in a few minutes." }); return ws.close(); }
-    let pw: any; try { pw = await import("playwright" as string); } catch { send({ t: "error", message: "The cloud browser isn't set up on the host computer yet. On that computer run: npm i playwright && npx playwright install chromium firefox" }); return ws.close(); }
+    let pw: any = null;
     let browser: any = null, ctx: any = null, page: any = null, cdp: any = null, closed = false, shot: NodeJS.Timeout | null = null, last = Date.now(), kind = "chrome", w = 1100, h = 650, fireLast: Buffer | null = null, startedAt = Date.now(), lastFrame = 0, still = false;
     const sess: Sess = { user, ws, close: (why) => { void end(why); } };
     async function end(why?: string) {
@@ -70,9 +70,10 @@ export function attachCloud(o: Opts) {
     }
     function adopt(p: any) { page = p; p.on("framenavigated", (f: any) => { if (f === p.mainFrame()) void meta(); }); p.on("load", () => void meta()); p.on("close", () => { if (page === p) { const l = ctx.pages().filter((x: any) => x !== p); if (l.length) { adopt(l[l.length - 1]); void stream(); } else void end("The browser closed"); } }); void stream().then(meta); }
     async function launch(url: string, which: string) {
+      if (!pw) { try { pw = await import("playwright" as string); } catch { send({ t: "error", message: "The cloud browser isn't set up on the host computer yet. On that computer run: npm i playwright && npx playwright install chromium firefox" }); return void end("Not set up"); } }
       kind = ["firefox", "edge", "chrome"].includes(which) ? which : "chrome";
       const { chromium, firefox } = pw;
-      browser = await (kind === "firefox" ? firefox : chromium).launch({ headless: true, args: kind === "firefox" ? [] : ["--disable-dev-shm-usage", "--no-first-run", "--disable-features=Translate", "--mute-audio"] });
+      browser = await (kind === "firefox" ? firefox : chromium).launch({ headless: true, args: kind === "firefox" ? [] : ["--disable-dev-shm-usage", "--no-first-run", ...(process.env.CLOUD_NOSANDBOX === "1" ? ["--no-sandbox", "--disable-gpu"] : []), "--disable-features=Translate", "--mute-audio"] });
       const ver = browser.version().split(".")[0];
       const ua = kind === "firefox" ? undefined : `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${browser.version()} Safari/537.36${kind === "edge" ? ` Edg/${browser.version()}` : ""}`;
       void ver;
@@ -107,7 +108,7 @@ export function attachCloud(o: Opts) {
           case "resize": { w = Math.max(320, Math.min(1920, Math.floor(+m.w || w))); h = Math.max(240, Math.min(1200, Math.floor(+m.h || h))); await page.setViewportSize({ width: w, height: h }); await stream(); break; }
           case "close": await end("You closed the browser"); break;
         }
-      } catch { /* page navigating or closed */ }
+      } catch (e: any) { if (!page) { console.error("[cloud] could not start a browser:", e?.message ?? e); send({ t: "error", message: "The cloud browser could not start on the server. " + String(e?.message ?? e).split("\n")[0].slice(0, 140) }); void end("Could not start"); } /* otherwise: page navigating or closed */ }
     });
   }
   return handle;

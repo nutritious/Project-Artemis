@@ -1,5 +1,6 @@
 /* The main site's side of the home exit node: settings, health checks, and passes for browsers. */
 import { db, saveDb, type User } from "./store.js";
+import crypto from "node:crypto";
 import { makeExitToken } from "./exit-token.js";
 import { TOP_TIERS } from "./perms.js";
 
@@ -35,4 +36,13 @@ export function setExit(url: unknown, key: unknown) {
 export function exitInfo(u: User): { exitUrl?: string; exitToken?: string } {
   if (!exitConfigured() || !ok) return {};
   return { exitUrl: db.data.server.exitUrl!.replace(/^http/, "ws"), exitToken: makeExitToken(exitKey(), u.id, undefined, TOP_TIERS.includes(u.role)) };
+}
+
+/** Key for the cloud browser that runs on this server itself (when no home exit node is connected). Follows the signing secret. */
+export const localCloudKey = () => crypto.createHash("sha256").update("cloud:" + db.data.secret).digest("hex");
+/** Where a signed-in browser should open the cloud browser: the home exit node when it is up, otherwise this server. url "" means this site. */
+export function cloudPass(u: User): { url: string; token: string; local: boolean } {
+  const unlimited = TOP_TIERS.includes(u.role);
+  if (exitConfigured() && ok) return { url: db.data.server.exitUrl!.replace(/^http/, "ws"), token: makeExitToken(exitKey(), u.id, undefined, unlimited), local: false };
+  return { url: "", token: makeExitToken(localCloudKey(), u.id, 3600_000, unlimited), local: true };
 }

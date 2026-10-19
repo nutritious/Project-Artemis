@@ -1,5 +1,5 @@
 /* Cloud browser: Chrome, Firefox or Edge running on the host computer, streamed to a canvas. Admins and above are unlimited; everyone else gets 30 minutes. */
-import { esc, hooks, overlay, state, toast, can } from "./util.js";
+import { api, esc, hooks, overlay, state, toast, can } from "./util.js";
 
 const BROWSERS = [["chrome", "Chrome", "#4c8bf5"], ["firefox", "Firefox", "#ff7139"], ["edge", "Edge", "#2fc2a0"]];
 const unlimited = () => ["owner", "coowner", "admin"].includes(state.me?.role);
@@ -8,7 +8,7 @@ let o = null, ws = null;
 export function openCloud(startUrl = "") {
   if (o?.isConnected) return;
   o = overlay(`<div class="cb-launch glass" role="dialog" aria-label="Cloud browser"><button type="button" class="prof-x" data-x aria-label="Close">×</button>
-    <h2>Cloud Browser</h2><p class="sub">Pick Chrome, Firefox or Edge. It runs on the host computer, not yours, and nothing is saved. ${unlimited() ? "You have unlimited time." : "Sessions last 30 minutes."}</p>
+    <h2>Cloud Browser</h2><p class="sub">Pick Chrome, Firefox or Edge. It runs on the server, not your computer, and nothing is saved. ${unlimited() ? "You have unlimited time." : "Sessions last 30 minutes."}</p>
     <label class="cb-l">URL<input id="cbUrl" placeholder="https://example.com or search anything" value="${esc(startUrl)}" autocomplete="off" spellcheck="false"></label>
     <div class="cb-l">Browser<div class="cb-pick">${BROWSERS.map(([id, n, c], i) => `<button type="button" class="cb-b ${i === 0 ? "on" : ""}" data-b="${id}" style="--bc:${c}"><i></i>${n}</button>`).join("")}</div></div>
     <button type="button" class="btn pri cb-go" id="cbGo">Launch Cloud Browser</button><p class="cb-err" id="cbErr"></p></div>`, { center: true });
@@ -19,11 +19,12 @@ export function openCloud(startUrl = "") {
   o.querySelector("#cbUrl").focus();
 }
 
-function launch(browser, url) {
+async function launch(browser, url) {
   const err = (m) => { const e = o?.querySelector("#cbErr"); if (e) e.textContent = m; };
   if (hooks.api) return err("The cloud browser needs the real site with a home computer connected, so it isn't in this preview.");
-  if (!state.exitUrl || !state.exitToken) return err("The cloud browser isn't connected yet. The owner needs to turn on the home exit node (Owner console, Safety).");
-  const u = new URL(state.exitUrl.replace(/\/$/, "") + "/cb/" + encodeURIComponent(state.exitToken));
+  let pass; try { pass = await api("/cloud-pass"); } catch { return err("Couldn't start the cloud browser. Sign in again and retry."); }
+  const base = (pass.url || `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}`).replace(/\/$/, "");
+  const u = new URL(base + "/cb/" + encodeURIComponent(pass.token));
   o.innerHTML = `<div class="cb-view"><div class="cb-bar"><button class="tb" data-c="back" title="Back">‹</button><button class="tb" data-c="forward" title="Forward">›</button><button class="tb" data-c="reload" title="Reload">↻</button>
     <input id="cbAddr" placeholder="Search or enter address" spellcheck="false" autocomplete="off"><span class="chip" id="cbTag">${esc(browser)}</span><button class="btn" data-c="end">End session</button></div>
     <div class="cb-stage" id="cbStage"><canvas id="cbCv" tabindex="0"></canvas><div class="cb-load" id="cbLoad">Starting ${esc(browser)}…</div></div></div>`;

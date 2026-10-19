@@ -4,7 +4,7 @@ services:
   - type: web
     name: project-artemis
     runtime: docker
-    plan: starter            # persistent disks need a paid instance
+    plan: starter            # persistent disks need a paid instance. The cloud browser needs ~400 MB per session: use "standard" for more than one
     healthCheckPath: /
     envVars:
       - key: OWNER_PASSWORD
