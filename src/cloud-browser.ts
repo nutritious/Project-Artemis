@@ -45,6 +45,7 @@ export function attachCloud(o: Opts) {
     sessions.get(user)?.close("You opened another cloud browser");
     if (sessions.size >= MAX_TOTAL) { send({ t: "error", message: "All cloud browsers are busy right now. Try again in a few minutes." }); return ws.close(); }
     let pw: any = null;
+    let pendingMove: { x: number; y: number } | null = null, moving = false;
     let browser: any = null, ctx: any = null, page: any = null, cdp: any = null, closed = false, shot: NodeJS.Timeout | null = null, last = Date.now(), kind = "chrome", w = 1100, h = 650, fireLast: Buffer | null = null, startedAt = Date.now(), lastFrame = 0, still = false;
     const sess: Sess = { user, ws, close: (why) => { void end(why); } };
     async function end(why?: string) {
@@ -61,8 +62,8 @@ export function attachCloud(o: Opts) {
       try { await cdp?.send("Page.stopScreencast").catch(() => 0); await cdp?.detach().catch(() => 0); } catch { /* none */ } cdp = null; if (shot) { clearInterval(shot); shot = null; }
       if (kind !== "firefox") {
         cdp = await ctx.newCDPSession(page);
-        cdp.on("Page.screencastFrame", (f: any) => { if (ws.readyState === 1 && ws.bufferedAmount < 1_500_000) { ws.send(Buffer.from(f.data, "base64")); lastFrame = Date.now(); } void cdp?.send("Page.screencastFrameAck", { sessionId: f.sessionId }).catch(() => 0); });
-        await cdp.send("Page.startScreencast", { format: "jpeg", quality: 60, maxWidth: w, maxHeight: h, everyNthFrame: 1 });
+        cdp.on("Page.screencastFrame", (f: any) => { if (ws.readyState === 1 && ws.bufferedAmount < 400_000) { ws.send(Buffer.from(f.data, "base64")); lastFrame = Date.now(); } void cdp?.send("Page.screencastFrameAck", { sessionId: f.sessionId }).catch(() => 0); });
+        await cdp.send("Page.startScreencast", { format: "jpeg", quality: 50, maxWidth: w, maxHeight: h, everyNthFrame: 2 });
       } else {
         let busy = false;
         shot = setInterval(async () => { if (busy || ws.bufferedAmount > 1_500_000) return; busy = true; try { const b: Buffer = await page.screenshot({ type: "jpeg", quality: 60 }); if (!fireLast || !b.equals(fireLast)) { fireLast = b; ws.send(b); } } catch { /* navigating */ } busy = false; }, 140);
@@ -73,7 +74,7 @@ export function attachCloud(o: Opts) {
       if (!pw) { try { pw = await import("playwright" as string); } catch { send({ t: "error", message: "The cloud browser isn't set up on the host computer yet. On that computer run: npm i playwright && npx playwright install chromium firefox" }); return void end("Not set up"); } }
       kind = ["firefox", "edge", "chrome"].includes(which) ? which : "chrome";
       const { chromium, firefox } = pw;
-      browser = await (kind === "firefox" ? firefox : chromium).launch({ headless: true, args: kind === "firefox" ? [] : ["--disable-dev-shm-usage", "--no-first-run", ...(process.env.CLOUD_NOSANDBOX === "1" ? ["--no-sandbox", "--disable-gpu"] : []), "--disable-features=Translate", "--mute-audio"] });
+      browser = await (kind === "firefox" ? firefox : chromium).launch({ headless: true, args: kind === "firefox" ? [] : ["--disable-dev-shm-usage", "--no-first-run", ...(process.env.CLOUD_NOSANDBOX === "1" ? ["--no-sandbox", "--disable-gpu"] : []), "--disable-features=Translate,BackForwardCache,MediaRouter,OptimizationHints", "--mute-audio", "--disable-extensions", "--disable-sync", "--disable-background-networking", "--disable-renderer-backgrounding", "--disable-background-timer-throttling", "--js-flags=--max-old-space-size=384"] });
       const ver = browser.version().split(".")[0];
       const ua = kind === "firefox" ? undefined : `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${browser.version()} Safari/537.36${kind === "edge" ? ` Edg/${browser.version()}` : ""}`;
       void ver;
@@ -101,7 +102,7 @@ export function attachCloud(o: Opts) {
           case "back": await page.goBack().catch(() => 0); break;
           case "forward": await page.goForward().catch(() => 0); break;
           case "reload": await page.reload().catch(() => 0); break;
-          case "mouse": { const x = +m.x, y = +m.y; if (!Number.isFinite(x) || !Number.isFinite(y)) break; if (m.type === "move") await page.mouse.move(x, y); else if (m.type === "down") { await page.mouse.move(x, y); await page.mouse.down({ button: ["left", "middle", "right"][m.button | 0] ?? "left" }); } else if (m.type === "up") await page.mouse.up({ button: ["left", "middle", "right"][m.button | 0] ?? "left" }); break; }
+          case "mouse": { const x = +m.x, y = +m.y; if (!Number.isFinite(x) || !Number.isFinite(y)) break; if (m.type === "move") { pendingMove = { x, y }; if (!moving) { moving = true; try { while (pendingMove) { const mv = pendingMove; pendingMove = null; await page.mouse.move(mv.x, mv.y); } } finally { moving = false; } } } else if (m.type === "down") { await page.mouse.move(x, y); await page.mouse.down({ button: ["left", "middle", "right"][m.button | 0] ?? "left" }); } else if (m.type === "up") await page.mouse.up({ button: ["left", "middle", "right"][m.button | 0] ?? "left" }); break; }
           case "wheel": await page.mouse.wheel(Math.max(-2000, Math.min(2000, +m.dx || 0)), Math.max(-2000, Math.min(2000, +m.dy || 0))); break;
           case "key": { const k = String(m.key ?? ""); if (!k || NOKEY.has(k)) break; const key = KEYS[k] ?? k; await page.keyboard.press(m.ctrl ? `Control+${key}` : key); break; }
           case "text": await page.keyboard.insertText(String(m.text ?? "").slice(0, 5000)); break;

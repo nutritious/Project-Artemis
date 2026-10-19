@@ -13,6 +13,8 @@ export function openCloud(startUrl = "") {
     <div class="cb-l">Browser<div class="cb-pick">${BROWSERS.map(([id, n, c], i) => `<button type="button" class="cb-b ${i === 0 ? "on" : ""}" data-b="${id}" style="--bc:${c}"><i></i>${n}</button>`).join("")}</div></div>
     <button type="button" class="btn pri cb-go" id="cbGo">Launch Cloud Browser</button><p class="cb-err" id="cbErr"></p></div>`, { center: true });
   let pick = "chrome";
+  const closeAll = () => { try { ws?.close(); } catch { /* already closed */ } ws = null; o?.remove(); o = null; };
+  o.addEventListener("click", (e) => { if (e.target === o || e.target.closest("[data-x]")) closeAll(); });
   o.addEventListener("click", (e) => { const b = e.target.closest("[data-b]"); if (b) { pick = b.dataset.b; o.querySelectorAll("[data-b]").forEach((x) => x.classList.toggle("on", x === b)); } });
   const go = () => launch(pick, o.querySelector("#cbUrl").value.trim());
   o.querySelector("#cbGo").addEventListener("click", go); o.querySelector("#cbUrl").addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
@@ -49,7 +51,7 @@ async function launch(browser, url) {
   function finish(msg) {
     if (dead) return; dead = true; removeEventListener("resize", onResize); try { ws?.close(); } catch { /* done */ } ws = null;
     if (!o?.isConnected) return; o.innerHTML = `<div class="cb-launch glass"><h2>Cloud Browser closed</h2><p class="sub">${esc(msg || "Session ended")}</p><button class="btn pri" data-again>Open another</button> <button class="btn" data-x>Close</button></div>`;
-    o.querySelector("[data-again]").onclick = () => { o.remove(); openCloud(); };
+    o.querySelector("[data-again]").onclick = () => { o.remove(); o = null; openCloud(); };
   }
   let rt = 0; const onResize = () => { clearTimeout(rt); rt = setTimeout(() => { fit(); tx({ t: "resize", w: W, h: H }); }, 250); }; addEventListener("resize", onResize);
   const pos = (e) => { const r = cv.getBoundingClientRect(); return { x: Math.round(e.clientX - r.left), y: Math.round(e.clientY - r.top) }; };
