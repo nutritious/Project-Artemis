@@ -967,3 +967,9 @@ html.has-cd #cdBanner { top: 0; }
 .cb-view { position: fixed; inset: 0; z-index: 99995; background: #07080f; display: flex; flex-direction: column; } .cb-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #151826; border-bottom: 1px solid var(--line); } .cb-bar input { flex: 1; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: rgba(0, 0, 0, .4); color: var(--fg); min-width: 0; }
 .cb-stage { position: relative; flex: 1; min-height: 0; overflow: hidden; background: #000; } .cb-stage canvas { display: block; outline: none; background: #fff; cursor: default; } .cb-load { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); background: #07080f; font-weight: 700; }
 .ladder { flex-wrap: wrap; row-gap: 8px; } .ladder .step { flex: 1 1 56px; }
+
+/* profile card fixes: nothing in the scroll area may shrink (bio and stats were squashed), and the avatar ring is a circle like the picture */
+.pc-scroll > * { flex-shrink: 0; }
+.pc-av .avatar.big { border-radius: 50%; }
+.pc-bio { max-height: none; }
+.profcard { max-height: calc(100dvh - 32px); }
