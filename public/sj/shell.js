@@ -2,12 +2,14 @@
    address / title back to the Artemis browser (the parent window). */
 const hash = new URLSearchParams(location.hash.slice(1));
 let token = hash.get("t") || "";
+let exitBase = hash.get("x") || "", exitTok = hash.get("xt") || ""; /* home exit node, when the owner set one up */
 const boot = document.getElementById("boot"), msg = document.getElementById("msg");
 const tell = (o) => { try { parent.postMessage({ ...o }, "*"); } catch { /* not framed */ } };
 
 let scramjet, frame, conn, wispUrl = "", current = "";
 
 function setWisp() {
+  if (exitBase && exitTok) return `${exitBase}/wisp/${encodeURIComponent(exitTok)}/`;
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   return `${proto}//${location.host}/wisp/${encodeURIComponent(token)}/`;
 }
@@ -75,7 +77,8 @@ window.addEventListener("message", async (e) => {
   const d = e.data;
   if (!d || e.source !== parent) return;
   if (d.artemis === "go" && d.url) {
-    if (d.token && d.token !== token) { token = d.token; try { await setTransport(); } catch { /* retried on next go */ } }
+    const ex = d.exit || "", xt = d.exitToken || "";
+    if ((d.token && d.token !== token) || ex !== exitBase || xt !== exitTok) { if (d.token) token = d.token; exitBase = ex; exitTok = xt; try { await setTransport(); } catch { /* retried on next go */ } }
     go(d.url);
   } else if (d.artemis === "back") frame.back();
   else if (d.artemis === "forward") frame.forward();

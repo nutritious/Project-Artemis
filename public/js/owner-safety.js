@@ -1,5 +1,5 @@
 /* Owner console: launch window (OG title), the ArtemisBot chat moderator, and trusted-member controls. */
-import { $, api, ago, esc, toast, confirmBox } from "./util.js";
+import { $, api, ago, esc, toast, confirmBox, state } from "./util.js";
 
 let S = null, Q = "", repaint = () => {};
 export const bindSafety = (fn) => { repaint = fn; };
@@ -38,7 +38,15 @@ function html() {
     ${warn ? `<p class="note" style="color:var(--warn)"><b>Heads up:</b> this server has no permanent disk, so every deploy or restart erases accounts, chat and coins. Download a backup before you update, then restore it afterwards. A paid Render disk at <code>/data</code> fixes it for good.</p>` : `<p class="note">Everything (accounts, chat, coins, packs, settings) lives in one data file. Download it now and then, and restore it if the server is ever reset.</p>`}
     <p class="note">The backup holds every player's account data, including their password hashes. Keep the file private. Only the owner can download or restore it.</p>
     <div class="inline"><button class="btn primary" data-backup="download">Download backup</button><label class="btn" style="cursor:pointer">Restore from file<input type="file" accept=".json,application/json" data-restore hidden></label></div></div>`;
-  return data + launch + bot + trust;
+  const x = S.exit, exitCard = !x || state.me?.role !== "owner" ? "" : `<div class="card glass"><h3>Home exit node <span class="chip ${x.url ? (x.ok ? "ok" : "warn") : ""}">${x.url ? (x.ok ? "connected" : "not reachable") : "off"}</span></h3>
+    <p class="note">Sites like YouTube block this server because it runs in a data center. An exit node is a small program on a computer at home: while it runs, everyone's browsing leaves from your home internet, which YouTube trusts. If it stops, Artemis quietly goes back to this server's own connection.</p>
+    <ol class="note" style="margin:6px 0 10px 18px;padding:0"><li>On your Mac: <code>EXIT_KEY="pick-a-long-secret" MAIN_URL="${esc(location.origin)}" npx tsx src/exit-node.ts</code></li><li>In another Terminal tab: <code>./cloudflared tunnel --url http://localhost:8090</code>, then copy the https address it prints.</li><li>Paste that address and the same secret below.</li></ol>
+    <form data-exit class="evform"><label>Tunnel address<input name="url" placeholder="https://something.trycloudflare.com" value="${esc(x.url)}" autocomplete="off"></label>
+      <label>Secret key ${x.hasKey ? `<span class="chip ok">${x.keyFromEnv ? "set on the server" : "saved"}</span>` : ""}<input name="key" type="password" placeholder="${x.hasKey ? "Leave empty to keep the saved key" : "The same EXIT_KEY you used above"}" autocomplete="new-password"></label>
+      ${x.error && x.url ? `<p class="note" style="color:var(--warn)">${esc(x.error)}</p>` : ""}
+      <div class="inline"><button class="btn primary">Save and test</button><button class="btn" type="button" data-exittest>Test again</button>${x.url ? `<button class="btn danger" type="button" data-exitoff>Turn off</button>` : ""}</div></form>
+    <p class="note">Everything people browse goes through your home connection, so it uses your home bandwidth, and sites see your home address. Keep the member list small. The free tunnel address changes each time you restart the tunnel; paste the new one here.</p></div>`;
+  return data + exitCard + launch + bot + trust;
 }
 async function downloadBackup() {
   const res = await fetch("/api/owner/backup", { credentials: "same-origin" });
@@ -60,6 +68,8 @@ async function restoreFrom(file) {
 async function click(b) {
   const d = b.dataset;
   if (d.launch) return run(() => api("/owner/launch", "POST", { action: d.launch }), d.launch === "start" ? "OG window started" : "OG window closed");
+  if (b.matches?.("[data-exittest]")) return run(() => api("/owner/exit/test", "POST", {}), "Checked");
+  if (b.matches?.("[data-exitoff]")) return run(() => api("/owner/exit", "PUT", { url: "" }), "Exit node turned off");
   if (d.backup) return run(() => downloadBackup(), "Backup downloaded. Keep it private.");
   if (d.trust) { const [mode, id] = d.trust.split(":"); return run(() => api("/owner/trust", "POST", { id, mode }), mode === "grant" ? "They are trusted now" : "Updated"); }
   return false;
@@ -71,6 +81,7 @@ async function change(el) {
   return run(() => api("/owner/bot", "PUT", { [k]: v }), k === "enabled" ? (v ? "ArtemisBot is on" : "ArtemisBot is off") : "Saved");
 }
 async function submit(f, v) {
+  if (f.matches("[data-exit]")) return run(async () => { const r = await api("/owner/exit", "PUT", { url: v.get("url"), key: v.get("key") }); toast(r.ok ? "Connected. Browsing now leaves from your home." : r.error || "Saved, but it is not reachable yet.", r.ok ? "ok" : true); });
   if (f.matches("[data-botwords]")) return run(() => api("/owner/bot", "PUT", { words: String(v.get("words")).split("\n").map((s) => s.trim()).filter(Boolean) }), "Word list saved");
   return false;
 }

@@ -76,6 +76,15 @@ Sites like YouTube show "sign in to confirm you're not a bot" when traffic comes
 2. To let friends in over the internet with https (Scramjet needs https), use a tunnel so you do not have to open router ports. For example with Cloudflare Tunnel: `brew install cloudflared`, then `cloudflared tunnel --url http://localhost:8080`. It prints an `https://...trycloudflare.com` address. It changes each time you start it; a fixed address needs a free Cloudflare account and a domain.
 3. Heavy video traffic through one home connection can slow your internet and can still trigger YouTube checks sometimes. Keep the member list small.
 
+## Home exit node (YouTube while the site stays on Render)
+Render's servers sit in a data center, so YouTube shows "sign in to confirm you're not a bot". The exit node fixes that without moving the whole site: a small program on a home computer carries everyone's browsing, so sites see your home internet.
+
+1. On the home computer, in this project folder: `EXIT_KEY="pick-a-long-secret" MAIN_URL="https://your-site.onrender.com" npx tsx src/exit-node.ts` (it listens on port 8090).
+2. In a second Terminal tab: `./cloudflared tunnel --url http://localhost:8090` and copy the https address it prints.
+3. On the site: Owner console > Safety > Home exit node. Paste the address and the same secret, then Save and test. It shows "connected" when it works.
+
+If the exit node or tunnel stops, Artemis checks every 20 seconds and quietly goes back to the server's own connection. Bans and the blocklist from the main site apply at the exit node too (that is what `MAIN_URL` is for). Browsing uses your home bandwidth.
+
 ## Limits
 Sites that are heavy on JavaScript, use DRM video, or show CAPTCHAs may not work through any rewriting proxy.
 

@@ -12,6 +12,7 @@ import { runCommand } from "./commands.js";
 import { activity, progress, addEventPoints, earnedToday, activeBoosts, newGame, boards, publicEvent, publicGame, rankIndex, submitRun } from "./game.js";
 import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giveItems, takeItems, joinLive, openPack, spinWheel, pushEventState, quick, startLive, targets } from "./economy.js";
 import { storageInfo } from "./store.js";
+import { checkExit, exitInfo, exitKey, exitStatus, setExit } from "./exit.js";
 import { ACHIEVEMENTS, BASE_THEMES, GAMES, PACKS, WHEEL, WHEEL_MS } from "../public/js/cosmetics.js";
 import { answer as answerRound, partyState, setAuto, skipRound, startRound, startRushNow } from "./party.js";
 import { BUILD, broadcast, broadcastCustomTags, checkTrust, notifyOwners, broadcastEvent, broadcastAnnouncement, broadcastChannels, broadcastMembers, broadcastRoles, closeUserSockets, deleteMessage, handleChatUpgrade, hasAdminSubscribers, pushSelf, pushSelfAll, pushToAdmins } from "./chat.js";
@@ -210,6 +211,7 @@ api.get("/me", auth, (req, res) => {
     permInfo: PERM_INFO,
     proxyOrigin: proxyOriginFor(req),
     sjOrigin: PROXY_ORIGIN,
+    ...exitInfo(user),
     storageWarn: user.role === "owner" && storageInfo().permanent === false,
     proxyToken: proxyToken(user),
     bookmarks: user.bookmarks,
@@ -219,7 +221,18 @@ api.get("/me", auth, (req, res) => {
     engines: engineList(),
   });
 });
-api.get("/proxy-token", auth, (req, res) => res.json({ proxyToken: proxyToken(me(req)), proxyOrigin: proxyOriginFor(req), sjOrigin: PROXY_ORIGIN }));
+api.get("/proxy-token", auth, (req, res) => res.json({ proxyToken: proxyToken(me(req)), proxyOrigin: proxyOriginFor(req), sjOrigin: PROXY_ORIGIN, ...exitInfo(me(req)) }));
+/* the home exit node asks for bans and the blocklist with its secret key */
+api.get("/exit/policy", (req, res) => {
+  const k = exitKey(), got = String(req.headers["x-exit-key"] ?? "");
+  if (!k || got.length !== k.length || !crypto.timingSafeEqual(Buffer.from(got), Buffer.from(k))) return void res.status(403).json({ error: "No" });
+  res.json({ banned: db.data.users.filter((u) => u.banned).map((u) => u.id), blocklist: db.data.blocklist, maintenance: db.data.server.maintenance });
+});
+api.get("/owner/exit", auth, ownerOnly, (_req, res) => res.json(exitStatus()));
+api.put("/owner/exit", auth, ownerOnly, async (req, res) => {
+  try { setExit(req.body?.url, req.body?.key); audit(me(req).username, "exit.set", db.data.server.exitUrl || "(off)"); await checkExit(); res.json(exitStatus()); } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+api.post("/owner/exit/test", auth, ownerOnly, async (_req, res) => { await checkExit(); res.json(exitStatus()); });
 api.get("/ping", (_req, res) => res.json({ t: Date.now() }));
 
 /* ----- crew hub: ranks, coins, missions, arcade ----- */
@@ -657,9 +670,9 @@ const ownerPassword = async (req: Request, res: Response) => {
 };
 /* ----- trust, launch window and the chatbot ----- */
 api.get("/trust", auth, (req, res) => res.json(trustInfo(me(req))));
-api.get("/owner/safety", auth, panelUp, (_req, res) => {
+api.get("/owner/safety", auth, panelUp, (req, res) => {
   const bot = db.data.server.bot!;
-  res.json({ storage: storageInfo(), launchAt: db.data.server.launchAt ?? 0, rules: TRUST, bot: { enabled: bot.enabled, action: bot.action, strikes: bot.strikes, words: bot.words, log: bot.log },
+  res.json({ storage: storageInfo(), exit: me(req).role === "owner" ? exitStatus() : null, launchAt: db.data.server.launchAt ?? 0, rules: TRUST, bot: { enabled: bot.enabled, action: bot.action, strikes: bot.strikes, words: bot.words, log: bot.log },
     users: db.data.users.filter((u) => !u.banned).map((u) => ({ id: u.id, username: u.username, role: u.role, roleId: u.roleId ?? null, ...trustInfo(u) })) });
 });
 api.get("/owner/backup", auth, ownerOnly, (req, res) => {

@@ -145,7 +145,7 @@ $("#replayIntro").addEventListener("click", async () => { $("#auth").classList.a
 /* ------------------------------ shell ------------------------------ */
 let started = false;
 function enterApp(me) {
-  Object.assign(state, { perms: me.perms ?? [], roles: me.roles ?? [], permInfo: me.permInfo ?? {}, me: me.user, proxyOrigin: me.proxyOrigin, sjOrigin: me.sjOrigin ?? "", storageWarn: !!me.storageWarn, proxyToken: me.proxyToken, bookmarks: me.bookmarks, channels: me.channels, engines: me.engines, announcement: me.announcement });
+  Object.assign(state, { perms: me.perms ?? [], roles: me.roles ?? [], permInfo: me.permInfo ?? {}, me: me.user, proxyOrigin: me.proxyOrigin, sjOrigin: me.sjOrigin ?? "", exitUrl: me.exitUrl ?? "", exitToken: me.exitToken ?? "", storageWarn: !!me.storageWarn, proxyToken: me.proxyToken, bookmarks: me.bookmarks, channels: me.channels, engines: me.engines, announcement: me.announcement });
   if (state.storageWarn) setTimeout(() => toast("This server has no permanent disk, so updates erase your data. Download a backup in Owner console, Safety.", true), 3500);
   $("#auth").classList.add("hidden"); $("#app").classList.remove("hidden");
   syncRail();

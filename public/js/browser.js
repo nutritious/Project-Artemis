@@ -15,7 +15,8 @@ let sjWarned = false;
 const cur = () => tabs.find((t) => t.id === active);
 
 /** Scramjet runs in a small shell page; "#t" carries the signed token, "#u" the first address. */
-export const sjSrc = (url) => `${state.sjOrigin || ""}/sj/shell.html#t=${encodeURIComponent(state.proxyToken)}&u=${encodeURIComponent(url)}`;
+const exitQ = () => (state.exitUrl && state.exitToken ? `&x=${encodeURIComponent(state.exitUrl)}&xt=${encodeURIComponent(state.exitToken)}` : "");
+export const sjSrc = (url) => `${state.sjOrigin || ""}/sj/shell.html#t=${encodeURIComponent(state.proxyToken)}${exitQ()}&u=${encodeURIComponent(url)}`;
 export const proxySrc = (url) => `${state.proxyOrigin}/p/${state.proxyToken}/${b64u(url)}`;
 const favicon = (host) => `${state.proxyOrigin}/p/${state.proxyToken}/${b64u("https://" + host + "/favicon.ico")}`;
 
@@ -79,7 +80,7 @@ function prewarmScramjet() {
     const f = document.createElement("iframe");
     f.id = "sjWarm"; f.tabIndex = -1; f.setAttribute("aria-hidden", "true");
     f.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;border:0;visibility:hidden;pointer-events:none";
-    f.src = `${state.sjOrigin || ""}/sj/shell.html#t=${encodeURIComponent(state.proxyToken)}`;
+    f.src = `${state.sjOrigin || ""}/sj/shell.html#t=${encodeURIComponent(state.proxyToken)}${exitQ()}`;
     document.body.append(f);
   };
   (window.requestIdleCallback || ((fn) => setTimeout(fn, 1500)))(go, { timeout: 4000 });
@@ -135,7 +136,7 @@ function loadFrame(t, url) {
   if (hooks.frame) return hooks.frame(t.iframe, url);
   if (t.legacy) { t.iframe.src = proxySrc(url); return; }
   // Scramjet: once the shell is up, just tell it where to go (no page reload, no flicker).
-  if (t.sjReady && t.iframe.contentWindow) t.iframe.contentWindow.postMessage({ artemis: "go", url, token: state.proxyToken }, "*");
+  if (t.sjReady && t.iframe.contentWindow) t.iframe.contentWindow.postMessage({ artemis: "go", url, token: state.proxyToken, exit: state.exitUrl || "", exitToken: state.exitToken || "" }, "*");
   else { t.sjReady = false; t.iframe.src = sjSrc(url); }
   // Safety net: if Scramjet never answers (tunnel blocked, host timing out), switch this tab to the classic proxy.
   clearTimeout(t.watchdog);
@@ -368,9 +369,9 @@ async function toggleBookmark() {
 
 /* ------------------------------ frame messages ------------------------------ */
 async function refreshToken() {
-  try { const r = await api("/proxy-token"); state.proxyToken = r.proxyToken; state.proxyOrigin = r.proxyOrigin; state.sjOrigin = r.sjOrigin ?? ""; } catch { /* ignore */ }
+  try { const r = await api("/proxy-token"); state.proxyToken = r.proxyToken; state.proxyOrigin = r.proxyOrigin; state.sjOrigin = r.sjOrigin ?? ""; state.exitUrl = r.exitUrl ?? ""; state.exitToken = r.exitToken ?? ""; } catch { /* ignore */ }
 }
-export function startTokenRefresh() { setInterval(refreshToken, 60 * 60 * 1000); }
+export function startTokenRefresh() { setInterval(refreshToken, 5 * 60 * 1000); }
 function onFrameMessage(e) {
   const d = e.data;
   if (!d || !d.artemis) return;
