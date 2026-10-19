@@ -45,6 +45,7 @@ export function attachCloud(o: Opts) {
     sessions.get(user)?.close("You opened another cloud browser");
     if (sessions.size >= MAX_TOTAL) { send({ t: "error", message: "All cloud browsers are busy right now. Try again in a few minutes." }); return ws.close(); }
     let pw: any = null;
+    let chain: Promise<unknown> = Promise.resolve(); /* input runs in order: a click is move, down, up, never up before down */
     let pendingMove: { x: number; y: number } | null = null, moving = false;
     let browser: any = null, ctx: any = null, page: any = null, cdp: any = null, closed = false, shot: NodeJS.Timeout | null = null, last = Date.now(), kind = "chrome", w = 1100, h = 650, fireLast: Buffer | null = null, startedAt = Date.now(), lastFrame = 0, still = false;
     const sess: Sess = { user, ws, close: (why) => { void end(why); } };
@@ -97,8 +98,8 @@ export function attachCloud(o: Opts) {
       try {
         if (m.t === "start" && !browser) { w = Math.max(320, Math.min(1920, Math.floor(+m.w || 1100))); h = Math.max(240, Math.min(1200, Math.floor(+m.h || 650))); await launch(String(m.url ?? ""), String(m.browser ?? "chrome")); return; }
         if (!page) return;
-        switch (m.t) {
-          case "nav": { let u = String(m.url ?? "").trim(); if (!/^https?:\/\//i.test(u)) u = /^[\w-]+(\.[\w-]+)+(\/|$)/.test(u) ? "https://" + u : "https://duckduckgo.com/?q=" + encodeURIComponent(u); await page.goto(u, { timeout: 30000 }).catch((e: any) => send({ t: "note", message: String(e.message ?? e).split("\n")[0].slice(0, 160) })); break; }
+        const run = async () => { switch (m.t) {
+          case "nav": { let u = String(m.url ?? "").trim(); if (!/^https?:\/\//i.test(u)) u = /^[\w-]+(\.[\w-]+)+(\/|$)/.test(u) ? "https://" + u : "https://duckduckgo.com/?q=" + encodeURIComponent(u); void page.goto(u, { timeout: 30000 }).catch((e: any) => send({ t: "note", message: String(e.message ?? e).split("\n")[0].slice(0, 160) })); break; }
           case "back": await page.goBack().catch(() => 0); break;
           case "forward": await page.goForward().catch(() => 0); break;
           case "reload": await page.reload().catch(() => 0); break;
@@ -108,7 +109,7 @@ export function attachCloud(o: Opts) {
           case "text": await page.keyboard.insertText(String(m.text ?? "").slice(0, 5000)); break;
           case "resize": { w = Math.max(320, Math.min(1920, Math.floor(+m.w || w))); h = Math.max(240, Math.min(1200, Math.floor(+m.h || h))); await page.setViewportSize({ width: w, height: h }); await stream(); break; }
           case "close": await end("You closed the browser"); break;
-        }
+        } }; chain = chain.then(run).catch(() => 0);
       } catch (e: any) { if (!page) { console.error("[cloud] could not start a browser:", e?.message ?? e); send({ t: "error", message: "The cloud browser could not start on the server. " + String(e?.message ?? e).split("\n")[0].slice(0, 140) }); void end("Could not start"); } /* otherwise: page navigating or closed */ }
     });
   }
