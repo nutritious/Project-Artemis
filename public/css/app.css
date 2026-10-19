@@ -996,3 +996,30 @@ html.has-cd #cdBanner { top: 0; }
 #bmbar button span { overflow: hidden; text-overflow: ellipsis; }
 #bmbar.hidden + #stage { margin-top: 0; }
 body:has(.cb-view) #liveBar { display: none !important; } /* the coin/spin chips sat on top of the cloud browser End button */
+
+/* ---------- Artemis Tube (Invidious-style) ---------- */
+#view-tube { --bg: #121212; --fg: #f2f2f2; --dim: #b4b4b4; --line: rgba(255,255,255,.14); }
+#tube { background: #121212; color: #f2f2f2; border-radius: 18px; padding: 20px 24px 40px; min-height: 100%; font-size: 15px; }
+.tu-head { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; margin-bottom: 18px; }
+.tu-brand { font: 800 22px var(--display, inherit); letter-spacing: .02em; color: #fff; text-decoration: none; }
+.tu-search { flex: 1; max-width: 560px; margin: 0 auto; display: flex; border-bottom: 1px solid #ddd; } .tu-search input { flex: 1; min-width: 0; background: none; border: 0; color: #fff; font-size: 18px; padding: 8px 4px; outline: 0; } .tu-search button { background: none; border: 0; color: #fff; font-size: 22px; padding: 0 6px; }
+.tu-sp { width: 120px; }
+.tu-back { display: flex; flex-wrap: wrap; gap: 4px 0; align-items: center; margin-bottom: 14px; } .tu-back b { margin-right: 8px; font-size: 18px; }
+.tu-back button { background: none; border: 0; color: #cfcfcf; font-size: 17px; padding: 2px 8px; border-left: 1px solid #555; } .tu-back button:first-of-type { border-left: 0; } .tu-back button.sel { text-decoration: underline; color: #fff; }
+.tu-back i { display: inline-block; width: 7px; height: 14px; margin-left: 4px; vertical-align: -1px; background: #666; border-radius: 1px; } .tu-back i.up { background: #36d15a; } .tu-back i.down { background: #e5484d; }
+.tu-back .re { font-size: 14px; color: #9aa; border-left: 1px solid #555; }
+.tu-tabs { display: flex; justify-content: center; gap: 28px; margin: 10px 0 22px; } .tu-tabs button { background: none; border: 0; color: #fff; font-size: 22px; letter-spacing: .02em; opacity: .75; padding: 4px 6px; border-bottom: 2px solid transparent; } .tu-tabs button.on { opacity: 1; border-color: #fff; }
+.tu-note { color: #9a9a9a; font-size: 13px; margin: 8px 0; } .tu-note:empty { display: none; }
+.tu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 30px 26px; }
+.tu-msg { grid-column: 1 / -1; text-align: center; color: #bbb; padding: 50px 10px; }
+.tu-card { display: grid; gap: 8px; align-content: start; color: #f2f2f2; text-decoration: none; min-width: 0; }
+.tu-th { position: relative; display: block; aspect-ratio: 16 / 9; background: #222; overflow: hidden; } .tu-th img { width: 100%; height: 100%; object-fit: cover; display: block; } .tu-th em { position: absolute; right: 6px; bottom: 6px; font: 600 15px inherit; background: rgba(0,0,0,.75); padding: 1px 6px; border-radius: 3px; font-style: normal; }
+.tu-t { font-weight: 400; font-size: 18px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tu-a { color: #ddd; font-size: 17px; } .tu-m { display: flex; justify-content: space-between; gap: 8px; font-weight: 700; font-size: 14px; color: #e8e8e8; }
+.tu-card:hover .tu-t { text-decoration: underline; }
+.tu-watch { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start; } .tu-main { min-width: 0; display: grid; gap: 10px; align-content: start; }
+.tu-player { position: relative; aspect-ratio: 16 / 9; background: #000; } .tu-player iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.tu-watch h2 { margin: 6px 0 0; font-size: 22px; font-weight: 600; } .tu-meta { margin: 0; color: #ddd; }
+.tu-desc summary { cursor: pointer; color: #ccc; } .tu-desc pre { white-space: pre-wrap; word-break: break-word; font: inherit; color: #ccc; max-height: 280px; overflow: auto; }
+.tu-rel { display: grid; gap: 18px; } .tu-rel .tu-t { font-size: 15px; } .tu-rel .tu-a { font-size: 14px; }
+@media (max-width: 900px) { .tu-watch { grid-template-columns: 1fr; } .tu-sp { display: none; } #tube { padding: 14px 12px 30px; } }

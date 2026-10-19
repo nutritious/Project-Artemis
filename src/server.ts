@@ -26,6 +26,7 @@ import compression from "compression";
 import { handleWispUpgrade, isWispPath, mountScramjet } from "./scramjet.js";
 import { snapshot, record } from "./monitor.js";
 import { extendPhase, gotoPhase, resumeDirector, skipPhase } from "./director.js";
+import { ask, card, cards, checkAll, INSTANCES, status as ytStatus, VIDEO_ID } from "./yt.js";
 import { ENGINES, search, suggest, type EngineId } from "./search.js";
 
 const app = express();
@@ -254,6 +255,30 @@ api.get("/img", auth, async (req, res) => {
     res.setHeader("Content-Type", type); res.setHeader("X-Content-Type-Options", "nosniff"); res.setHeader("Cache-Control", "private, max-age=3600"); res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
     res.end(Buffer.concat(chunks));
   } catch { res.status(502).end(); }
+});
+/* Artemis Tube: video lists come from public Invidious servers */
+const ytBackend = (req: Request) => { const n = parseInt(String(req.query.b ?? ""), 10); return Number.isInteger(n) ? n : -1; };
+const ytFail = (res: Response, e: any) => res.status(502).json({ error: String(e?.message ?? "Video servers are not answering") });
+api.get("/yt/backends", auth, (_req, res) => res.json({ backends: ytStatus() }));
+api.post("/yt/backends/check", auth, async (req, res) => { if (!allow(`ytchk:${me(req).id}`, 6, 60_000)) return void res.status(429).json({ error: "Slow down" }); res.json({ backends: await checkAll() }); });
+api.get("/yt/list", auth, async (req, res) => {
+  if (!allow(`yt:${me(req).id}`, 60, 60_000)) return void res.status(429).json({ error: "Slow down" });
+  const tab = req.query.tab === "trending" ? "trending" : "popular";
+  try { const r = await ask(tab === "popular" ? "/api/v1/popular" : "/api/v1/trending", ytBackend(req)); res.json({ videos: cards(r.data), from: r.from, backends: ytStatus() }); } catch (e) { ytFail(res, e); }
+});
+api.get("/yt/search", auth, async (req, res) => {
+  if (!allow(`yt:${me(req).id}`, 60, 60_000)) return void res.status(429).json({ error: "Slow down" });
+  const q = String(req.query.q ?? "").trim().slice(0, 120); if (!q) return void res.json({ videos: [] });
+  try { const r = await ask("/api/v1/search?type=video&q=" + encodeURIComponent(q), ytBackend(req)); res.json({ videos: cards(r.data), from: r.from, backends: ytStatus() }); } catch (e) { ytFail(res, e); }
+});
+api.get("/yt/video/:id", auth, async (req, res) => {
+  if (!allow(`yt:${me(req).id}`, 60, 60_000)) return void res.status(429).json({ error: "Slow down" });
+  const id = String(req.params.id); if (!VIDEO_ID.test(id)) return void res.status(400).json({ error: "Bad video id" });
+  try {
+    const r = await ask("/api/v1/videos/" + id + "?fields=videoId,title,author,authorId,viewCount,likeCount,publishedText,lengthSeconds,description,recommendedVideos", ytBackend(req));
+    const d = r.data ?? {};
+    res.json({ video: { ...card({ ...d, videoId: id }), description: String(d.description ?? "").slice(0, 1500), likes: Number(d.likeCount) || 0 }, related: cards((d.recommendedVideos ?? []).map((x: any) => ({ ...x, viewCount: x.viewCount ?? x.viewCountText }))), base: INSTANCES[r.from], backends: ytStatus() });
+  } catch (e) { ytFail(res, e); }
 });
 api.get("/proxy-token", auth, (req, res) => res.json({ proxyToken: proxyToken(me(req)), proxyOrigin: proxyOriginFor(req), sjOrigin: PROXY_ORIGIN, ...exitInfo(me(req)) }));
 api.get("/cloud-pass", auth, (req, res) => res.json(cloudPass(me(req))));

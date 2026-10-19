@@ -7,6 +7,7 @@ import { buildChat, connectChat, initAnnouncementUi, onChatShown, openChannel } 
 import { buildAdmin, onAdminShown } from "./admin.js";
 import { buildOwner, onOwnerShown } from "./owner.js";
 import { buildHub, onHubShown } from "./hub.js";
+import { buildTube, onTubeShown } from "./youtube.js";
 import { buildArcade, onArcadeLeft, onArcadeShown } from "./arcade.js";
 import { playEvent } from "./event.js";
 import { initFx } from "./fx.js";
@@ -152,11 +153,11 @@ function enterApp(me) {
   applySettings();
   if (started) return;
   started = true;
-  const LABELS = { browse: "Browse", chat: "Chat", hub: "Hub", arcade: "Arcade", packs: "Packs", updates: "Update log", admin: "Mission control", owner: "Owner console", settings: "Settings" };
+  const LABELS = { browse: "Browse", chat: "Chat", hub: "Hub", tube: "Tube", arcade: "Arcade", packs: "Packs", updates: "Update log", admin: "Mission control", owner: "Owner console", settings: "Settings" };
   $$("#rail button[data-view]").forEach((b) => { b.insertAdjacentHTML("afterbegin", icon(b.dataset.view)); b.insertAdjacentHTML("beforeend", `<span class="lbl">${LABELS[b.dataset.view]}</span>`); b.addEventListener("click", () => showView(b.dataset.view)); });
   { const rb = $("#reportBtn"); rb.insertAdjacentHTML("afterbegin", icon("flag")); rb.insertAdjacentHTML("beforeend", `<span class="lbl">Report issue</span>`); rb.addEventListener("click", openReport); }
   initSidebar();
-  buildBrowser(); buildChat(); buildSocial(); buildHub(); buildArcade(); buildShop(); buildSettings(); buildUpdates(); buildAdmin();
+  buildBrowser(); buildChat(); buildSocial(); buildHub(); buildTube(); buildArcade(); buildShop(); buildSettings(); buildUpdates(); buildAdmin();
   buildOwner();
   initAnnouncementUi(); connectChat(); startTokenRefresh(); checkUpdatesDot();
   on("view", showView);
@@ -211,6 +212,7 @@ export function showView(name) {
   if (name === "owner") onOwnerShown();
   if (name === "updates") onUpdatesShown();
   if (name === "hub") onHubShown();
+  if (name === "tube") onTubeShown();
   if (name === "packs") onShopShown();
   if (prev === "arcade" && name !== "arcade") onArcadeLeft();
   if (name === "arcade") onArcadeShown();
