@@ -36,6 +36,7 @@ export function spinWheel(u: User) {
 
 export function openPack(u: User, packId: string, free: boolean) {
   const pack = packMap.get(packId); if (!pack) throw new Error("No such pack");
+  if ((pack as any).until && Date.now() >= (pack as any).until) throw new Error("The Halloween Pack has left the shop. See you next year!");
   if (free) { if (pack.id !== "crate" || u.freePacks < 1) throw new Error("No free crates left"); u.freePacks--; }
   else { if (u.coins < pack.cost) throw new Error("Not enough coins"); u.coins -= pack.cost; }
   const items = rollPack(pack, u.inv, rand);
@@ -61,6 +62,21 @@ export function giveItems(by: string, type: string, id: string, t: Target) {
   let n = 0; const ty = type as ItemType;
   for (const u of targets(t)) { if (addItem(u, ty, id)) { n++; push(u); sendToUser(u.id, { t: "gift", type, id }); } }
   saveDb(); audit(by, "give." + type, `${id} → ${t.type}${t.value ? ":" + t.value : ""} (${n} new)`);
+  return n;
+}
+/** Owner only: take a title, effect, backdrop or theme back from players. It is also unequipped. */
+export function takeItems(by: string, type: string, id: string, t: Target) {
+  if (!validItem(type, id)) throw new Error("Unknown item");
+  let n = 0; const ty = type as ItemType;
+  for (const u of targets(t)) {
+    const l = listFor(u, ty), i = l.indexOf(id); let hit = false;
+    if (i >= 0) { l.splice(i, 1); hit = true; }
+    const eq = u.equip as unknown as Record<string, string>, slot = ty === "theme" ? "" : ty === "tag" ? "tag" : ty === "bg" ? "bg" : "effect";
+    if (slot && eq[slot] === id) { eq[slot] = ""; hit = true; }
+    if (ty === "theme" && u.settings.theme === id) { u.settings.theme = "eclipse"; hit = true; }
+    if (hit) { n++; push(u); sendToUser(u.id, { t: "taken", type, id }); }
+  }
+  saveDb(); audit(by, "take." + type, `${id} from ${t.type}${t.value ? ":" + t.value : ""} (${n})`);
   return n;
 }
 export function giveCoinsTo(by: string, amount: number, t: Target, reason: string) {

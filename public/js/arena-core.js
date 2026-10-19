@@ -11,7 +11,7 @@ const SPAWN_PROT = 2500, CELL = 120;
 
 export class ArenaWorld {
   constructor(io) {
-    this.io = io; this.w = new Map(); this.orbs = new Map(); this.grid = new Map(); this.nid = 1; this.mode = "none"; this.cfg = { bots: 12, loot: "med", boss: "med" };
+    this.io = io; this.w = new Map(); this.orbs = new Map(); this.grid = new Map(); this.nid = 1; this.mode = "none"; this.cfg = { bots: 0, loot: "med", boss: "med" };
     this.rm = []; this.add = []; this.tickN = 0; this.nextPw = 0; this.nextLoot = 0; this.nextCrate = 0; this.boss = null; this.pc = new Map(); this.got = new Map(); this.lastFlush = 0; this.botN = 0;
   }
   /* ---------- orbs ---------- */
@@ -140,7 +140,7 @@ export class ArenaWorld {
     /* drop players that went quiet (tab closed) */
     for (const w of [...this.w.values()]) if (!w.bot && now - w.last > 9000) this.leave(w.id);
     /* keep the arena stocked */
-    const want = Math.max(3, this.cfg.bots - Math.min(this.humans().length, 6)); let nb = 0; for (const w of this.w.values()) if (w.bot && !w.boss) nb++;
+    const want = 0; /* no filler bots: only real players (and the boss worm) are in the arena */ let nb = 0; for (const w of this.w.values()) if (w.bot && !w.boss) nb++;
     if (nb < want && this.tickN % 10 === 0) { const b = this.newWorm("b" + ++this.botN, pick(BOT_NAMES) + rint(1, 99), true); b.spawnAt = now; this.w.set(b.id, b); }
     if (this.tickN % 20 === 0) { let n = this.countK(0) + this.countK(1); for (let i = 0; i < 24 && n < 520; i++, n++) this.addOrb(rnd(40, SIZE - 40), rnd(40, SIZE - 40), n % 26 === 0 ? 5 : 1, n % 26 === 0 ? 1 : 0); }
     if (now > this.nextPw) { this.nextPw = now + 9000; if (this.countK(4) < 6) this.addOrb(rnd(200, SIZE - 200), rnd(200, SIZE - 200), 1, 4, rint(0, 3)); }

@@ -1,6 +1,6 @@
 /* Packs: loot crates and theme packs, a pack-opening reveal, and your collection (equip effects, titles and themes). */
 import { $, $$, api, esc, on, state, titleChip, toast, rarityColor, overlay } from "./util.js";
-import { packContents, EFFECTS, TAGS, THEMES, BGS, RARITY, PACKS, WHEEL, WHEEL_MS, DAILY_CAP, effectMap, themeMap, tagMap, bgMap } from "./cosmetics.js";
+import { packOpen, packContents, EFFECTS, TAGS, THEMES, BGS, RARITY, PACKS, WHEEL, WHEEL_MS, DAILY_CAP, effectMap, themeMap, tagMap, bgMap } from "./cosmetics.js";
 import { saveSettings } from "./settings.js";
 import { playChroma } from "./chroma.js";
 import { emit } from "./util.js";
@@ -39,8 +39,9 @@ export async function onShopShown() { await load(); }
 async function load() { try { S = await api("/shop"); sync(); paint(); } catch (e) { toast(e.message, true); } }
 function sync() { if (!S) return; state.nextSpin = S.nextSpin ?? state.nextSpin; Object.assign(state.me, { coins: S.coins, freePacks: S.freePacks, inv: S.inv, equip: S.equip }); document.querySelectorAll(".coinbal").forEach((el) => (el.textContent = S.coins.toLocaleString())); }
 
-const GLYPH = { gamer: "🎮", hacker: "⌨", backdrops: "🖼", chroma: "🌈" };
+const GLYPH = { halloween: "🎃", gamer: "🎮", hacker: "⌨", backdrops: "🖼", chroma: "🌈" };
 const packGlyph = (p) => GLYPH[p.id] ?? (p.kind === "theme" ? "◐" : "✦");
+const leftText = (t) => { const ms = t - Date.now(); if (ms <= 0) return "Gone"; const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4); return `🎃 Leaves Nov 1 · ${d ? d + "d " : ""}${h}h ${m}m left`; };
 function packCard(p) {
   const can = S.coins >= p.cost;
   return `<article class="pack ${p.kind} ${p.id === "chroma" ? "chroma-pack" : ""}" style="--pc:${p.color}">
@@ -49,6 +50,7 @@ function packCard(p) {
     <div class="pack-odds">${p.guarantee ? `Guaranteed ${esc(p.guarantee)}+` : "Mixed rarities"} · ${p.count} items</div>
     <button class="btn sm ghost peekbtn" data-peek="${p.id}">See what's inside</button>
     <button class="btn ${can ? "" : "ghost"}" data-open="${p.id}" ${can ? "" : "disabled"}>◎ ${p.cost}</button>
+    ${p.until ? `<div class="pack-odds hleft">${leftText(p.until)}</div>` : ""}
     ${p.id === "crate" && S.freePacks > 0 ? `<button class="btn alt" data-open="crate" data-free="1">Free crate (${S.freePacks})</button>` : ""}
   </article>`;
 }
@@ -62,7 +64,7 @@ function grid() {
   return `<div class="cgrid">${[...base, ...THEMES].map((t) => { const own = t.base || inv.themes.includes(t.id); return cell("theme", t, own, cur === t.id); }).join("")}</div>`;
 }
 function cell(type, it, own, on) {
-  const rc = rarityColor(it.rarity), ltd = it.limited ? ` <em>limited</em>` : "";
+  const rc = rarityColor(it.rarity), ltd = it.limited || it.only ? ` <em>limited</em>` : "";
   return `<div class="cell ${own ? "" : "locked"} ${on ? "on" : ""} ${it.rarity === "chroma" ? "chroma" : ""}" style="--rc:${rc}">
     <div class="cvis">${itemVisual(type, it.id, it)}</div>
     <b>${esc(it.name)}${ltd}</b><small>${esc(RARITY[it.rarity]?.name ?? "")}${it.desc ? " · " + esc(it.desc) : ""}</small>
@@ -76,6 +78,7 @@ function paint() {
       <div class="wallet"><span>◎ <b class="coinbal">${S.coins.toLocaleString()}</b></span>${S.freePacks ? `<span class="fp">${S.freePacks} free crate${S.freePacks > 1 ? "s" : ""}</span>` : ""}</div></div>
     ${redeemCard()}
     ${wheelHtml()}
+    ${PACKS.filter((p) => p.until && packOpen(p)).map((p) => `<h3 class="sec">🎃 Limited: Halloween <small>gone on Nov 1</small></h3><div class="packs">${packCard(p)}</div>`).join("")}
     <h3 class="sec">Loot crates</h3><div class="packs">${PACKS.filter((p) => ["crate", "nova", "vault"].includes(p.id)).map(packCard).join("")}</div>
     <h3 class="sec">Themed crates <small>gamer, hacker and backdrops</small></h3><div class="packs">${PACKS.filter((p) => ["gamer", "hacker", "backdrops"].includes(p.id)).map(packCard).join("")}</div>
     <h3 class="sec">Chroma <small>the rarest tier in the game</small></h3><div class="packs">${PACKS.filter((p) => p.id === "chroma").map(packCard).join("")}</div>

@@ -23,7 +23,8 @@ const log = (user: string, action: string, why: string) => { const c = cfg(); c.
 
 export interface Verdict { block: boolean; reply?: Message; ban?: boolean }
 /** Checks a message before it posts. */
-export function moderate(u: User, text: string, channel: string): Verdict {
+export function moderate(u: User, text: string, channel: string | null): Verdict {
+  const say2 = (t: string) => (channel ? say(channel, t) : undefined);
   const c = cfg(); if (!c.enabled || !watched(u)) return { block: false };
   const custom = c.words.map((w) => w.toLowerCase());
   const severe = hit(text, [...SEVERE, ...custom], true), mild = !severe && hit(text, MILD);
@@ -33,8 +34,8 @@ export function moderate(u: User, text: string, channel: string): Verdict {
   if (c.action === "ban" && strikes >= c.strikes) {
     u.banned = true; u.lastBanAt = Date.now(); delete c.strikesBy[u.id];
     log(u.username, "banned", bad ? "severe language" : `${c.strikes} language strikes`); saveDb();
-    return { block: true, ban: true, reply: say(channel, `${u.username} was banned for inappropriate language.`) };
+    return { block: true, ban: true, reply: say2(`${u.username} was banned for inappropriate language.`) };
   }
   log(u.username, "warned", bad ? "severe language" : "language"); saveDb();
-  return { block: true, reply: say(channel, `${u.username}, keep it clean. Strike ${Math.min(strikes, c.strikes)} of ${c.strikes}.`) };
+  return { block: true, reply: say2(`${u.username}, keep it clean. Strike ${Math.min(strikes, c.strikes)} of ${c.strikes}.`) };
 }

@@ -1,5 +1,5 @@
 /* Full profile: big picture and effect, rank, titles, arcade bests, collection. Staff also see coins. Plus the profile lookup. */
-import { $, api, avatar, esc, fmtNum, overlay, roleTags, state, toast, titleChip, rarityColor, isCoOwnerUp } from "./util.js";
+import { $, api, emit, avatar, esc, fmtNum, overlay, roleTags, state, toast, titleChip, rarityColor, isCoOwnerUp } from "./util.js";
 import { EFFECTS, GAMES, BGS, bgMap, effectMap, THEMES, TAGS } from "./cosmetics.js";
 
 const RANK_COL = ["#8d96bd", "#4cc9f0", "#3ddc97", "#ffc857", "#ff8a5b", "#e879f9", "#ffd76a"], RANK_NAME = ["Stardust", "Cadet", "Pilot", "Navigator", "Captain", "Voyager", "Legend"];
@@ -20,6 +20,7 @@ export async function openFullProfile(name) {
       <div><h2>${esc(p.username)}</h2><div class="prof-tags">${roleTags(person)}<span class="rchip" style="--rc:${rc}">${RANK_NAME[p.rank] ?? ""}</span></div>
       ${p.profile?.pronouns ? `<small class="faint">${esc(p.profile.pronouns)}</small>` : ""}
       ${p.profile?.status ? `<p class="dim">${esc(p.profile.status)}</p>` : ""}</div></div>
+    ${p.id !== state.me?.id ? `<div class="prof-act"><button type="button" class="btn sm" data-pm>✉ Message</button><button type="button" class="btn sm" data-pcall>📞 Call</button><button type="button" class="btn sm" data-pvideo>🎥 Video</button></div>` : ""}
     <div class="prof-stats"><div><b>${fmtNum(p.xp)}</b><small>XP</small></div><div><b>${p.streak}</b><small>day streak</small></div><div><b>${p.plays}</b><small>arcade plays</small></div><div><b>${total}</b><small>collected</small></div><div><b>${p.ach ?? 0}</b><small>achievements</small></div>${p.coins != null ? `<div class="staff"><b>◎ ${p.coins.toLocaleString()}</b><small>coins (staff only)</small></div>` : ""}</div>
     ${p.profile?.bio ? `<p class="prof-bio">${esc(p.profile.bio)}</p>` : ""}
     ${eff ? `<p class="prof-eff"><span class="chip" style="--tc:${rarityColor(eff.rarity)}">Effect · ${esc(eff.name)}</span></p>` : ""}
@@ -30,6 +31,9 @@ export async function openFullProfile(name) {
     ${p.inv.tags.length ? `<h4 class="sec">Titles</h4><div class="prof-fx">${p.inv.tags.map((t) => titleChip(t)).join("")}</div>` : ""}
     <p class="faint" style="margin:14px 0 0">Member since ${new Date(p.createdAt).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric" })}</p></div>`, { center: true });
   const close = () => o.remove();
+  o.querySelector("[data-pm]")?.addEventListener("click", () => { close(); emit("dm-open", p.id); });
+  o.querySelector("[data-pcall]")?.addEventListener("click", () => { close(); emit("dm-open", p.id); emit("call-start", { id: p.id, video: false }); });
+  o.querySelector("[data-pvideo]")?.addEventListener("click", () => { close(); emit("dm-open", p.id); emit("call-start", { id: p.id, video: true }); });
   o.querySelector("[data-x]").onclick = close; o.addEventListener("click", (e) => { if (e.target === o) close(); });
   o.querySelector("[data-zoom]").onclick = () => {
     if (!pic) return toast("They haven't set a profile picture", "");

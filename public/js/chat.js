@@ -38,13 +38,14 @@ function setStatus(ok) { $("#chatStatus")?.classList.toggle("bad", !ok); const s
 function handle(m) {
   switch (m.t) {
     case "init":
-      state.channels = m.channels; C.online = m.online; setMembers(m.members); state.roles = m.roles ?? []; applySelf(m.self); setAnnouncement(m.announcement);
+      state.channels = m.channels; C.online = m.online; state.onlineIds = new Set(m.online.map((o) => o.id)); setMembers(m.members); state.roles = m.roles ?? []; applySelf(m.self); setAnnouncement(m.announcement);
       if (state.build && m.build && state.build !== m.build) emit("updatelive"); state.build = m.build ?? state.build; state.countdown = m.countdown ?? null; emit("countdown");
       state.customTags = m.customTags ?? []; state.event = m.event ?? null; state.boosts = m.boosts ?? []; emit("liveevent"); emit("boost");
-      if (!state.channels.some((c) => c.id === C.current)) C.current = state.channels[0]?.id ?? "general";
+      if (!state.channels.some((c) => c.id === C.current && !c.voice)) C.current = state.channels.find((c) => !c.voice)?.id ?? "general";
+      emit("social-init", m);
       renderSide(); renderHead(); C.loaded = {}; loadHistory(C.current);
       break;
-    case "presence": C.online = m.online; renderMembers(); break;
+    case "presence": C.online = m.online; state.onlineIds = new Set(m.online.map((o) => o.id)); renderMembers(); emit("ws", m); break;
     case "members": setMembers(m.members); renderMembers(); renderMsgs("keep"); emit("members"); break;
     case "roles": state.roles = m.roles; renderMembers(); renderMsgs("keep"); emit("roles"); break;
     case "self": applySelf(m); break;
@@ -71,7 +72,7 @@ function handle(m) {
     case "customtags": state.customTags = m.customTags; renderMembers(); renderMsgs("keep"); emit("customtags"); break;
     case "channels":
       state.channels = m.channels;
-      if (!state.channels.some((c) => c.id === C.current)) { C.current = state.channels[0]?.id; loadHistory(C.current); }
+      if (!state.channels.some((c) => c.id === C.current && !c.voice)) { C.current = state.channels.find((c) => !c.voice)?.id; loadHistory(C.current); }
       renderSide(); renderHead(); emit("channels");
       break;
     case "announcement": setAnnouncement(m.announcement, true); break;
@@ -143,7 +144,7 @@ export function initAnnouncementUi() {
 
 /* ------------------------------ sound ------------------------------ */
 let actx;
-function ping(mention) {
+export function ping(mention) {
   try {
     actx ??= new (window.AudioContext || window.webkitAudioContext)();
     const o = actx.createOscillator(), g = actx.createGain();
@@ -189,6 +190,7 @@ export function buildChat() {
   $("#chatTabs").addEventListener("click", onChanClick);
   document.addEventListener("click", (e) => { if (!e.target.closest(".picker, [data-act=react]")) $$(".picker").forEach((p) => p.remove()); });
   document.addEventListener("visibilitychange", () => { if (!document.hidden && state.view === "chat") { C.unread[C.current] = 0; updateBadge(); renderSide(); } });
+  on("dmunread", updateBadge);
   renderSide(); renderHead();
   setInterval(renderTyping, 1500);
 }
@@ -201,7 +203,7 @@ export function onChatShown() {
   setTimeout(() => $("#chatInput")?.focus(), 40);
 }
 function updateBadge() {
-  const n = Object.values(C.unread).reduce((a, b) => a + b, 0);
+  const n = Object.values(C.unread).reduce((a, b) => a + b, 0) + (state.dmUnread ?? 0);
   const b = $("#chatBadge"); b.textContent = n > 99 ? "99+" : n; b.classList.toggle("hidden", !n);
 }
 
@@ -224,8 +226,8 @@ export const channelNames = () => state.channels.map((c) => c.id);
 function renderSide() {
   if (!$("#chanList")) return;
   const admin = can("manage_channels");
-  $("#chanList").innerHTML = `<h4>Channels ${admin ? `<button class="btn sm" data-newchan title="New channel">+</button>` : ""}</h4>` + state.channels.map((c) => `<button class="chan${c.id === C.current ? " on" : ""}" data-chan="${esc(c.id)}"><span class="h">${c.trusted ? "🔒" : "#"}</span>${esc(c.name)}${C.unread[c.id] ? `<span class="u">${C.unread[c.id]}</span>` : ""}</button>`).join("");
-  $("#chatTabs").innerHTML = state.channels.map((c) => `<button class="chan${c.id === C.current ? " on" : ""}" data-chan="${esc(c.id)}">${c.trusted ? "🔒" : "#"} ${esc(c.name)}${C.unread[c.id] ? ` <span class="u">${C.unread[c.id]}</span>` : ""}</button>`).join("");
+  $("#chanList").innerHTML = `<h4>Channels ${admin ? `<button class="btn sm" data-newchan title="New channel">+</button>` : ""}</h4>` + state.channels.filter((c) => !c.voice).map((c) => `<button class="chan${c.id === C.current ? " on" : ""}" data-chan="${esc(c.id)}"><span class="h">${c.trusted ? "🔒" : "#"}</span>${esc(c.name)}${C.unread[c.id] ? `<span class="u">${C.unread[c.id]}</span>` : ""}</button>`).join("");
+  $("#chatTabs").innerHTML = state.channels.filter((c) => !c.voice).map((c) => `<button class="chan${c.id === C.current ? " on" : ""}" data-chan="${esc(c.id)}">${c.trusted ? "🔒" : "#"} ${esc(c.name)}${C.unread[c.id] ? ` <span class="u">${C.unread[c.id]}</span>` : ""}</button>`).join("");
   renderMembers();
 }
 function renderHead() {

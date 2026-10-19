@@ -1,4 +1,5 @@
 /* Settings: themes, search, cloak, panic key, profile, account. */
+import { halloweenOpen, setSpooky, spookyWanted } from "./spooky.js";
 import { $, $$, api, ago, avatar, confirmBox, emit, esc, hostOf, on, promptBox, roleName, roleTags, state, toast } from "./util.js";
 import { openUrl } from "./browser.js";
 import { themeMap } from "./cosmetics.js";
@@ -57,6 +58,7 @@ export function buildSettings() {
         </div></div></div>
     <div class="card glass"><h3>Theme</h3><div class="themes">${[...THEMES, ...(state.me.inv?.themes ?? []).map((id) => themeMap.get(id)).filter(Boolean).map((t) => [t.id, t.name, `linear-gradient(135deg,${t.c[0]},${t.c[1]})`])].map(([id, n, bg]) => `<button class="theme-card${s.theme === id ? " on" : ""}" data-theme="${id}"><i style="background:${bg}"></i>${n}</button>`).join("")}</div>
       <label class="switch"><span>Chat sounds<small>A soft ping for new messages and mentions.</small></span><input type="checkbox" id="setSound" ${s.chatSound ? "checked" : ""}></label>
+      ${halloweenOpen() ? `<label class="switch"><span>Halloween look 🎃<small>Orange glow and floating bats. Ends on Nov 1.</small></span><input type="checkbox" id="setSpooky" ${spookyWanted() ? "checked" : ""}></label>` : ""}
       <label class="switch"><span>Bookmarks bar</span><input type="checkbox" id="setBar" ${s.bookmarksBar ? "checked" : ""}></label></div>
     <div class="card glass"><h3>Search</h3><label>Default engine<select id="setEngine">${state.engines.map((e) => `<option value="${e.id}" ${s.engine === e.id ? "selected" : ""}>${esc(e.name)}</option>`).join("")}</select></label>
       <p class="note">Searches run on the server, so the engine never sees your IP. If one engine blocks or returns nothing, Artemis automatically tries the next.</p></div>
@@ -94,6 +96,7 @@ export function buildSettings() {
   dbn("#setPron", "pronouns"); dbn("#setBio", "bio"); dbn("#setAccent", "accent");
   $("#setPresence").onchange = (e) => saveProfile({ presence: e.target.value });
   $("#setSound").onchange = (e) => saveSettings({ chatSound: e.target.checked });
+  if ($("#setSpooky")) $("#setSpooky").onchange = (e) => setSpooky(e.target.checked);
   $("#setBar").onchange = (e) => saveSettings({ bookmarksBar: e.target.checked });
   $("#setProxy").onchange = (e) => { try { localStorage.setItem("artemis.proxy", e.target.value); } catch {} toast(e.target.value === "classic" ? "Classic engine on. Open a new tab or reload." : "Scramjet on. Open a new tab or reload."); };
   $("#setEngine").onchange = (e) => saveSettings({ engine: e.target.value });

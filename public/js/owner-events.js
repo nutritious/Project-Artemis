@@ -31,8 +31,7 @@ function builderHtml() {
     <div class="inline" style="margin-bottom:8px"><select id="phPreset"><option value="">Load a preset…</option>${Object.entries(EVENTS).map(([k, e]) => EVENT_PRESETS[k] ? `<option value="ev:${k}">${esc(e.name)} (${scheduleMins(EVENT_PRESETS[k])} min)</option>` : "").join("")}${QUICK_PRESETS.map((q) => `<option value="q:${q.id}">${esc(q.name)}</option>`).join("")}</select><button type="button" class="btn sm" data-phadd>+ Add phase</button></div>
     <div class="phlist">${rows}</div>
     <h4 class="sec">Settings</h4>
-    <div class="row2 phset"><label>Arena bots (fill the world)<input type="number" min="0" max="30" value="${c.bots}" data-cfg="bots"></label>
-      <label>Loot drops<select data-cfg="loot">${["low", "med", "high"].map((v) => `<option value="${v}" ${c.loot === v ? "selected" : ""}>${{ low: "Calm (one every 9s)", med: "Normal (every 5s)", high: "Storm (every 3s)" }[v]}</option>`).join("")}</select></label>
+    <div class="row2 phset"><label>Loot drops<select data-cfg="loot">${["low", "med", "high"].map((v) => `<option value="${v}" ${c.loot === v ? "selected" : ""}>${{ low: "Calm (one every 9s)", med: "Normal (every 5s)", high: "Storm (every 3s)" }[v]}</option>`).join("")}</select></label>
       <label>Boss strength<select data-cfg="boss">${["easy", "med", "hard"].map((v) => `<option value="${v}" ${c.boss === v ? "selected" : ""}>${{ easy: "Easy", med: "Normal", hard: "Hard" }[v]}</option>`).join("")}</select></label>
       <label class="switch-row" style="align-self:end"><input type="checkbox" data-cfg="loop" ${c.loop ? "checked" : ""}> <b>Loop the timeline</b> <span class="faint">otherwise the event ends and rewards players when the last phase finishes</span></label></div>
     <p class="note">Rewards: every player gets the event's own limited title and effect. If they already own both from an earlier run they get <b>${DUPE_COINS.toLocaleString()} bonus coins</b> instead.</p>`;
@@ -135,6 +134,8 @@ function economyHtml() {
     <form data-givecoins class="evform"><div class="row2"><label>Amount (negative takes coins back)<input name="amount" type="number" value="100" required></label><label>Reason (they see it)<input name="reason" maxlength="60" placeholder="Event prize"></label></div>${targetUI()}<div class="inline"><button class="btn primary">Give coins</button></div></form></div>
   <div class="card glass"><h3>Gift items and crates</h3><form data-gift class="evform"><div class="row2"><label>Type<select name="type" data-gtype><option value="tag">Title (tag)</option><option value="effect">Profile effect</option><option value="bg">Profile backdrop</option><option value="theme">Theme</option><option value="pack">Free Supply Crates</option></select></label><label class="gitem">Item<select name="id" data-gitem>${giveOptions("tag").map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join("")}</select></label><label class="gcount hidden">How many<input name="count" type="number" min="1" max="20" value="1"></label></div>${targetUI("g")}<div class="inline"><button class="btn primary">Give it</button></div></form>
     <p class="note">Only the owner and co-owners can give titles. "Every account" covers the whole server in one go.</p></div>
+  ${state.me?.role === "owner" ? `<div class="card glass"><h3>Remove a title or item</h3><form data-take class="evform"><div class="row2"><label>Type<select name="type" data-rtype><option value="tag">Title (tag)</option><option value="effect">Profile effect</option><option value="bg">Profile backdrop</option><option value="theme">Theme</option></select></label><label>Item<select name="id" data-ritem>${giveOptions("tag").map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join("")}</select></label></div>${targetUI("r")}<div class="inline"><button class="btn danger">Remove it</button></div></form>
+    <p class="note">Only you, the owner, can do this. The item leaves their collection and is unequipped if they were wearing it. You can give it back any time.</p></div>` : ""}
   <div class="card glass"><h3>Custom titles</h3><form data-newtag class="inline"><input name="name" maxlength="24" placeholder="Title name, e.g. Moon Mayor" required><input name="color" type="color" value="#8b7bff" aria-label="Color" style="width:54px;padding:2px"><button class="btn primary">Create</button></form>
     <div class="tagrow">${custom.map((t) => `<span class="chip title" style="--tc:${esc(t.color)}">${esc(t.name)} <button class="x" data-deltag="${esc(t.id)}" aria-label="Delete ${esc(t.name)}">×</button></span>`).join("") || `<span class="faint">None yet. Create one, then give it above.</span>`}</div></div>
   <div class="card glass"><h3>Everyone's coins</h3><div class="inline"><input id="ecoSearch" type="search" placeholder="Search players…" value="${esc(Q)}" autocomplete="off"></div><div class="mlist" id="ecoList">${userRows()}</div></div>`;
@@ -159,6 +160,7 @@ async function ecoClick(b) {
 }
 function ecoInput(e) { if (e.target.id === "ecoSearch") { Q = e.target.value; $("#ecoList").innerHTML = userRows(); return true; } return false; }
 export function ecoChange(el) {
+  if (el.matches("[data-rtype]")) { el.closest("form").querySelector("[data-ritem]").innerHTML = giveOptions(el.value).map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join(""); return true; }
   if (!el.matches("[data-gtype]")) return false;
   const form = el.closest("form"), t = el.value, item = form.querySelector(".gitem"), count = form.querySelector(".gcount");
   item.classList.toggle("hidden", t === "pack"); count.classList.toggle("hidden", t !== "pack");
@@ -167,6 +169,7 @@ export function ecoChange(el) {
 async function ecoSubmit(f, v) {
   if (f.matches("[data-givecoins]")) { await run(async () => { const r = await api("/owner/coins", "POST", { amount: Number(v.get("amount")), reason: v.get("reason"), target: target(v) }); toast(`Gave coins to ${r.reached} player${r.reached === 1 ? "" : "s"}`, "ok"); }); return true; }
   if (f.matches("[data-gift]")) { const type = v.get("type"); await run(async () => { const r = await api("/owner/give", "POST", { type, id: v.get("id"), count: Number(v.get("count")) || 1, target: target(v, "g") }); toast(`Given to ${r.reached} player${r.reached === 1 ? "" : "s"}`, "ok"); }); return true; }
+  if (f.matches("[data-take]")) { const t = target(v, "r"); if (!(await confirmBox("Remove this?", t.type === "all" ? "It will be taken from every account." : "It will be taken from the selected people.", { ok: "Remove", danger: true }))) return true; await run(async () => { const r = await api("/owner/take", "POST", { type: v.get("type"), id: v.get("id"), target: t }); toast(`Removed from ${r.reached} player${r.reached === 1 ? "" : "s"}`, "ok"); }); return true; }
   if (f.matches("[data-newtag]")) { await run(() => api("/owner/tags", "POST", { name: v.get("name"), color: v.get("color") }), "Title created"); return true; }
   return false;
 }

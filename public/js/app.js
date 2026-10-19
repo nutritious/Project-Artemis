@@ -2,6 +2,7 @@
 import { playIntro } from "./intro.js";
 import { $, $$, api, byLine, esc, hasDash, hasOwnerPanel, icon, isCoOwnerUp, on, emit, overlay, state, toast } from "./util.js";
 import { buildBrowser, newTab, openOmni, openUrl, startTokenRefresh, interpret } from "./browser.js";
+import { buildSocial } from "./social.js";
 import { buildChat, connectChat, initAnnouncementUi, onChatShown, openChannel } from "./chat.js";
 import { buildAdmin, onAdminShown } from "./admin.js";
 import { buildOwner, onOwnerShown } from "./owner.js";
@@ -9,6 +10,7 @@ import { buildHub, onHubShown } from "./hub.js";
 import { buildArcade, onArcadeLeft, onArcadeShown } from "./arcade.js";
 import { playEvent } from "./event.js";
 import { initFx } from "./fx.js";
+import { initSpooky } from "./spooky.js";
 import { initBanners } from "./banners.js";
 import { initArena } from "./arena.js";
 import { initParty } from "./party.js";
@@ -154,12 +156,12 @@ function enterApp(me) {
   $$("#rail button[data-view]").forEach((b) => { b.insertAdjacentHTML("afterbegin", icon(b.dataset.view)); b.insertAdjacentHTML("beforeend", `<span class="lbl">${LABELS[b.dataset.view]}</span>`); b.addEventListener("click", () => showView(b.dataset.view)); });
   { const rb = $("#reportBtn"); rb.insertAdjacentHTML("afterbegin", icon("flag")); rb.insertAdjacentHTML("beforeend", `<span class="lbl">Report issue</span>`); rb.addEventListener("click", openReport); }
   initSidebar();
-  buildBrowser(); buildChat(); buildHub(); buildArcade(); buildShop(); buildSettings(); buildUpdates(); buildAdmin();
+  buildBrowser(); buildChat(); buildSocial(); buildHub(); buildArcade(); buildShop(); buildSettings(); buildUpdates(); buildAdmin();
   buildOwner();
   initAnnouncementUi(); connectChat(); startTokenRefresh(); checkUpdatesDot();
   on("view", showView);
   on("event", playEvent);
-  initFx(); initParty(); initBanners(); initArena();
+  initFx(); initSpooky(); initParty(); initBanners(); initArena();
   on("self", () => { syncRail(); applySettings(); if (state.view === "admin" && !hasDash()) showView("browse"); if (state.view === "owner" && !hasOwnerPanel(state.me)) showView("browse"); });
   on("key", panicCheck);
   on("settings", () => { const s = $("#setEngine"); if (s) s.value = state.me.settings.engine; });

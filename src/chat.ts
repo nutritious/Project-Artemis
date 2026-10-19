@@ -7,9 +7,10 @@ import { can, effectivePerms, publicRoles } from "./perms.js";
 import { publicUser } from "./auth.js";
 import { canSeeChannel, checkTrust, gifUrl, isTrusted, onTrust, trustInfo } from "./trust.js";
 import { moderate, post as botPost } from "./bot.js";
+import { initSocial, socialClose, socialInit, socialMessage } from "./social.js";
 import { activity, grant, onGame, onLegend, progress, publicEvent, activeBoosts, rankIndex } from "./game.js";
 
-interface Client { ws: WebSocket; user: User; adminSub: boolean }
+interface Client { ws: WebSocket; user: User; adminSub: boolean; cid: string; rooms: Set<string> }
 const clients = new Set<Client>();
 const MAX_STORED = 8000;
 const MAX_LEN = 2000;
@@ -36,7 +37,7 @@ const onlineList = () => {
 let arenaHook: (u: User, m: any) => void = () => {};
 export const onArena = (fn: (u: User, m: any) => void) => { arenaHook = fn; };
 export const BUILD = Date.now().toString(36);
-const publicChannels = (u?: User) => db.data.channels.filter((c) => !c.hidden && (!u || canSeeChannel(u, c))).map((c) => ({ id: c.id, name: c.name, topic: c.topic, trusted: !!c.trusted }));
+const publicChannels = (u?: User) => db.data.channels.filter((c) => !c.hidden && (!u || canSeeChannel(u, c))).map((c) => ({ id: c.id, name: c.name, topic: c.topic, trusted: !!c.trusted, voice: !!c.voice }));
 const members = () => db.data.users.filter((u) => !u.banned).map((u) => ({ id: u.id, username: u.username, role: u.role, roleId: u.roleId ?? null, lastSeen: u.lastSeen, createdAt: u.createdAt, profile: u.profile, trusted: isTrusted(u), fx: u.equip.effect, tag: u.equip.tag, bg: u.equip.bg, rank: rankIndex(u.game.xp) }));
 
 export const selfInfo = (u: User) => ({ user: publicUser(u), perms: effectivePerms(u), trusted: isTrusted(u), trust: trustInfo(u) });
@@ -87,7 +88,8 @@ export function deleteMessage(id: string) {
   return true;
 }
 
-const wss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 });
+const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
+initSocial({ clients: () => clients, send, ban: (id) => { closeUserSockets(id, "Banned by ArtemisBot"); broadcast({ t: "members", members: members() }); } });
 
 export function handleChatUpgrade(req: http.IncomingMessage, socket: Duplex, head: Buffer, isAppHost: (host: string) => boolean) {
   const url = new URL(req.url ?? "/", "http://x");
@@ -105,10 +107,10 @@ export function handleChatUpgrade(req: http.IncomingMessage, socket: Duplex, hea
 }
 
 wss.on("connection", (ws: WebSocket, user: User) => {
-  const client: Client = { ws, user, adminSub: false };
+  const client: Client = { ws, user, adminSub: false, cid: uid(), rooms: new Set() };
   clients.add(client);
   user.lastSeen = Date.now();
-  send(ws, { t: "init", channels: publicChannels(user), online: onlineList(), members: members(), announcement: db.data.announcement, roles: publicRoles(), self: selfInfo(user), customTags: db.data.customTags, event: publicEvent(user), boosts: activeBoosts(), build: BUILD, countdown: db.data.server.countdown ?? null });
+  send(ws, { t: "init", channels: publicChannels(user), online: onlineList(), members: members(), announcement: db.data.announcement, roles: publicRoles(), self: selfInfo(user), customTags: db.data.customTags, event: publicEvent(user), boosts: activeBoosts(), build: BUILD, countdown: db.data.server.countdown ?? null, ...socialInit(user) });
   broadcast({ t: "presence", online: onlineList() });
 
   ws.on("message", (raw) => {
@@ -118,6 +120,7 @@ wss.on("connection", (ws: WebSocket, user: User) => {
     if (!fresh || fresh.banned) return ws.close(4001, "Removed");
     fresh.lastSeen = Date.now();
 
+    if (socialMessage(client, fresh, msg)) return;
     switch (msg.t) {
       case "arena": arenaHook(fresh, msg); break;
       case "history": {
@@ -133,7 +136,7 @@ wss.on("connection", (ws: WebSocket, user: User) => {
         const channel = String(msg.channel);
         const text = String(msg.text ?? "").trim().slice(0, MAX_LEN);
         const chs = db.data.channels.find((c) => c.id === channel);
-        if (!text || !chs || !canSeeChannel(fresh, chs)) return;
+        if (!text || !chs || chs.voice || !canSeeChannel(fresh, chs)) return;
         if (!allow(`chat:${user.id}`, 6, 5000)) return send(ws, { t: "error", message: "You're sending messages too fast." });
         if (gifUrl.test(text) && !isTrusted(fresh)) return send(ws, { t: "error", message: "GIFs are for trusted members only. Check your progress in the Hub." });
         const v = moderate(fresh, text, channel);
@@ -196,6 +199,7 @@ wss.on("connection", (ws: WebSocket, user: User) => {
 
   ws.on("close", () => {
     clients.delete(client);
+    socialClose(client);
     user.lastSeen = Date.now();
     saveDb();
     broadcast({ t: "presence", online: onlineList() });

@@ -27,6 +27,11 @@ export const EFFECTS = [
   { id: "holo", name: "Holo Burst", rarity: "chroma", desc: "Rainbow foil rays and a living glow" },
   { id: "opening-night", name: "Opening Night", rarity: "limited", limited: "opening", desc: "Fireworks from the Project Artemis Opening Event" },
   { id: "haunted", name: "Haunted", rarity: "limited", limited: "halloween", desc: "Ghostly wisps from the Halloween Night event" },
+  { id: "bats", name: "Bat Swarm", rarity: "rare", only: "halloween", desc: "Bats circle your picture" },
+  { id: "jack", name: "Jack-o'-Glow", rarity: "rare", only: "halloween", desc: "A flickering pumpkin glow" },
+  { id: "ghostfire", name: "Ghostfire", rarity: "epic", only: "halloween", desc: "Cold green and violet flames" },
+  { id: "cobweb", name: "Cobwebbed", rarity: "epic", only: "halloween", desc: "Spiderwebs creep across your picture" },
+  { id: "witchmoon", name: "Witching Moon", rarity: "legendary", only: "halloween", desc: "A huge orange moon rises behind you" },
 ];
 export const TAGS = [
   { id: "stargazer", name: "Stargazer", color: "#9aa4cf", rarity: "common" },
@@ -49,6 +54,11 @@ export const TAGS = [
   { id: "og", name: "OG", color: "#ffd76a", rarity: "limited", limited: "launch" },
   { id: "opening-26", name: "Opening Night '26", color: "#ffd76a", rarity: "limited", limited: "opening" },
   { id: "halloween-26", name: "Trick or Treat '26", color: "#ff8a2b", rarity: "limited", limited: "halloween" },
+  { id: "h-spooky", name: "Spooky", color: "#ff9a3c", rarity: "common", only: "halloween" },
+  { id: "h-ghoul", name: "Ghoul", color: "#8dff7a", rarity: "common", only: "halloween" },
+  { id: "h-pumpkin-king", name: "Pumpkin King", color: "#ff8a2b", rarity: "rare", only: "halloween" },
+  { id: "h-night-witch", name: "Night Witch", color: "#c084fc", rarity: "epic", only: "halloween" },
+  { id: "h-grim", name: "The Grim", color: "#ff3b3b", rarity: "legendary", only: "halloween" },
 ];
 /* the four original themes are always owned; these unlock from theme packs */
 export const BASE_THEMES = ["eclipse", "lunar", "orion", "aurora"];
@@ -64,6 +74,8 @@ export const THEMES = [
   { id: "terminal", name: "Terminal", rarity: "rare", cat: "hacker", c: ["#000a00", "#33ff33"] },
   { id: "arcade", name: "Arcade Neon", rarity: "epic", cat: "gamer", c: ["#07031a", "#ff3df0"] },
   { id: "prism", name: "Prismatic", rarity: "chroma", c: ["#05030f", "#ff4df0"] },
+  { id: "pumpkin", name: "Pumpkin Night", rarity: "rare", only: "halloween", c: ["#140700", "#ff8a2b"] },
+  { id: "witching", name: "Witching Hour", rarity: "epic", only: "halloween", c: ["#0c0414", "#b46bff"] },
 ];
 /** Profile backgrounds: the banner behind your name on your profile. The look of each lives in the stylesheet as .pbg-<id>. */
 export const BGS = [
@@ -83,7 +95,14 @@ export const BGS = [
   { id: "gold-rush", name: "Gold Rush", rarity: "legendary", desc: "Liquid gold with a moving shine" },
   { id: "spectrum", name: "Spectrum", rarity: "chroma", desc: "Every colour, flowing together" },
   { id: "holo-foil", name: "Holo Foil", rarity: "chroma", desc: "Shimmering rainbow foil" },
+  { id: "haunted-forest", name: "Haunted Forest", rarity: "rare", only: "halloween", desc: "Dead trees and drifting fog" },
+  { id: "pumpkin-patch", name: "Pumpkin Patch", rarity: "rare", only: "halloween", desc: "A glowing field at dusk" },
+  { id: "graveyard", name: "Graveyard", rarity: "epic", only: "halloween", desc: "Tombstones under a pale moon" },
+  { id: "blood-moon", name: "Blood Moon", rarity: "legendary", only: "halloween", desc: "A huge red moon over the hills" },
 ];
+/** Halloween ends (and the Halloween pack leaves) at midnight Pacific time on Nov 1, 2026. */
+export const HALLOWEEN_END = Date.UTC(2026, 10, 1, 7, 0);
+export const packOpen = (p, now = Date.now()) => !p.until || now < p.until;
 export const PACKS = [
   { id: "crate", kind: "loot", name: "Supply Crate", cost: 150, count: 3, boost: 0, desc: "3 random effects, titles or backdrops", color: "#4cc9f0" },
   { id: "nova", kind: "loot", name: "Nova Crate", cost: 400, count: 4, boost: 1, desc: "4 items with better odds of rare finds", color: "#b57bff" },
@@ -93,6 +112,7 @@ export const PACKS = [
   { id: "backdrops", kind: "loot", name: "Backdrop Pack", cost: 300, count: 3, boost: 1, pool: ["bg"], desc: "3 profile backgrounds", color: "#ff8a5b" },
   { id: "chroma", kind: "loot", name: "Chroma Vault", cost: 3000, count: 5, boost: 2, chromaBoost: 25, desc: "5 items and a real shot at Chroma", color: "#ff4df0", guarantee: "epic" },
   { id: "themes", kind: "theme", name: "Theme Pack", cost: 250, count: 2, boost: 0, desc: "2 random themes for your whole app", color: "#ff8fb8" },
+  { id: "halloween", kind: "loot", name: "Halloween Pack", cost: 450, count: 4, boost: 1, pool: ["effect", "tag", "bg", "theme"], only: "halloween", until: HALLOWEEN_END, guarantee: "rare", desc: "Limited: spooky effects, titles, backdrops and themes. Leaves Nov 1", color: "#ff8a2b" },
   { id: "themes-deluxe", kind: "theme", name: "Deep Space Themes", cost: 600, count: 3, boost: 2, desc: "3 themes, better odds of epic and legendary", color: "#8b7bff", guarantee: "rare" },
 ];
 /** Earning rules. Everyday coins (games, chatting, searching, browsing, missions) stop at DAILY_CAP and reset each UTC day. Gifts, events, achievements, the wheel and duplicate refunds are not counted. */
@@ -182,7 +202,7 @@ const order = ["common", "rare", "epic", "legendary", "chroma"];
 export function rollPack(pack, have, rand) {
   const items = [], owned = { effect: new Set(have.effects), tag: new Set(have.tags), theme: new Set([...BASE_THEMES, ...have.themes]), bg: new Set(have.bgs ?? []) };
   const lists = { effect: EFFECTS, tag: TAGS, theme: THEMES, bg: BGS };
-  const pools = (type) => lists[type].filter((x) => x.rarity !== "limited");
+  const pools = (type) => lists[type].filter((x) => x.rarity !== "limited" && (pack.only ? x.only === pack.only : !x.only));
   /* Chroma is its own tiny roll: a little better in bigger packs, far better in the Chroma Vault */
   const pickRarity = (min = 0) => {
     const w = order.map((r, i) => (i < min ? 0 : r === "chroma" ? RARITY.chroma.weight * (1 + pack.boost * 0.5) * (pack.chromaBoost ?? 1) : RARITY[r].weight * Math.pow(1 + 0.9 * pack.boost, i)));
@@ -193,7 +213,7 @@ export function rollPack(pack, have, rand) {
     if (pack.kind === "theme") return "theme";
     const pool = pack.pool ?? ["effect", "tag", "bg"], r = rand();
     if (pool.length === 1) return pool[0];
-    const wt = { effect: 0.45, tag: 0.35, bg: 0.2, theme: 0 }, tot = pool.reduce((a, t) => a + wt[t], 0); let n = r * tot;
+    const wt = { effect: 0.45, tag: 0.35, bg: 0.2, theme: pack.only ? 0.12 : 0 }, tot = pool.reduce((a, t) => a + wt[t], 0); let n = r * tot;
     for (const t of pool) { n -= wt[t]; if (n <= 0) return t; } return pool[0];
   };
   const find = (type, rar) => {
@@ -218,7 +238,7 @@ export function rollPack(pack, have, rand) {
 export function packContents(pack) {
   const types = pack.kind === "theme" ? ["theme"] : pack.pool ?? ["effect", "tag", "bg"];
   const lists = { effect: EFFECTS, tag: TAGS, theme: THEMES, bg: BGS };
-  const items = types.flatMap((t) => lists[t].filter((x) => x.rarity !== "limited").map((x) => ({ ...x, type: t })));
+  const items = types.flatMap((t) => lists[t].filter((x) => x.rarity !== "limited" && (pack.only ? x.only === pack.only : !x.only)).map((x) => ({ ...x, type: t })));
   const w = order.map((r, i) => (r === "chroma" ? RARITY.chroma.weight * (1 + pack.boost * 0.5) * (pack.chromaBoost ?? 1) : RARITY[r].weight * Math.pow(1 + 0.9 * pack.boost, i)));
   const tot = w.reduce((a, b) => a + b, 0), odds = Object.fromEntries(order.map((r, i) => [r, w[i] / tot]));
   const chromaPack = 1 - Math.pow(1 - odds.chroma, pack.count);
@@ -238,7 +258,7 @@ export const EVENT_PRESETS = {
 };
 export const QUICK_PRESETS = [{ id: "short", name: "Short (10 min)", sched: [{ kind: "gulper", mins: 4 }, { kind: "trivia", mins: 3 }, { kind: "boss", mins: 3 }] }, { id: "long", name: "Long (25 min)", sched: [{ kind: "gulper", mins: 5 }, { kind: "trivia", mins: 4 }, { kind: "loot", mins: 3 }, { kind: "boss", mins: 4 }, { kind: "gulper", mins: 4 }, { kind: "trivia", mins: 3 }, { kind: "loot", mins: 2 }] }, { id: "gulper", name: "Gulper only (15 min)", sched: [{ kind: "gulper", mins: 15 }] }];
 export const DUPE_COINS = 2500;
-export const DEFAULT_CFG = { bots: 12, loot: "med", boss: "med", loop: false };
+export const DEFAULT_CFG = { bots: 0, loot: "med", boss: "med", loop: false };
 /** Clean up a timeline that came from the browser. */
 export function cleanSchedule(list) {
   const out = (Array.isArray(list) ? list : []).slice(0, 14).map((p) => ({ kind: String(p?.kind), mins: Math.max(1, Math.min(30, Math.round(Number(p?.mins) || 0))) })).filter((p) => PHASE_KINDS[p.kind]);

@@ -22,6 +22,7 @@ export interface Profile { status: string; presence: "online" | "idle" | "dnd"; 
 export interface Role { id: string; name: string; color: string; position: number; perms: string[] }
 export interface User {
   id: string;
+  dmBlocked?: string[];
   username: string;
   salt: string;
   hash: string;
@@ -52,7 +53,8 @@ export interface Boost { kind: "xp" | "coins"; until: number }
 export const newEconomy = () => ({ coins: 0, inv: { effects: [] as string[], tags: [] as string[], themes: [] as string[], bgs: [] as string[] }, equip: { effect: "", tag: "", bg: "" }, freePacks: 0 });
 export interface Report { id: string; userId: string; username: string; kind: string; text: string; page: string; ts: number; status: "open" | "done" }
 export interface Invite { code: string; createdBy: string; createdAt: number; usedBy?: string }
-export interface Channel { id: string; name: string; topic: string; createdAt: number; trusted?: boolean; hidden?: boolean }
+export interface Channel { id: string; name: string; topic: string; createdAt: number; trusted?: boolean; hidden?: boolean; voice?: boolean }
+export interface DmMsg { id: string; key: string; from: string; to: string; username: string; text: string; ts: number; sys?: boolean }
 export interface BotCfg { enabled: boolean; action: "ban" | "warn"; strikes: number; words: string[]; log: { ts: number; user: string; action: string; why: string }[]; strikesBy: Record<string, number> }
 export interface Message {
   id: string;
@@ -76,6 +78,7 @@ export interface Db {
   invites: Invite[];
   channels: Channel[];
   messages: Message[];
+  dms: DmMsg[];
   blocklist: string[];
   server: ServerSettings;
   announcement: Announcement | null;
@@ -93,6 +96,7 @@ export interface Db {
 const T = (h: number, m: number) => Date.UTC(2026, 9, 15, h + 7, m);
 /** The update log starts with the history of this build. Only the owner can add to or edit it. */
 export const SEED_UPDATES: UpdateEntry[] = [
+  { id: "u25", ts: Date.UTC(2026, 9, 19, 8, 0), by: "Artemis", title: "Direct messages, voice and video calls, and Halloween", body: "- Direct messages: open anyone's profile and tap Message, or use + under Direct messages in Chat. Only the two of you can read them. You can block someone, and bad language is filtered like in channels.\n- Private calls: tap Call or Video in a DM. The other person gets a ringing pop-up and can accept or decline. In a call you can mute, turn your camera on or off, and share your screen. Call lengths and missed calls show up in the DM.\n- Voice channels: the new Voice Lounge is under Voice in Chat. Click it to join, talk, turn on your camera or share your screen with up to 8 people. Staff can add and delete voice channels with the + button.\n- The Halloween Pack is here until Nov 1: 16 limited effects, titles, backdrops and themes you cannot get anywhere else. After Nov 1 it leaves the shop for good, but what you own stays yours.\n- The whole app gets a Halloween look (orange glow, floating bats and pumpkins) until Nov 1. You can turn it off in Settings.\n- The Gulper arena no longer has computer players: it is only real people (and the boss worm during boss hunts).\n- The owner can now remove a title, effect, backdrop or theme from one person, a role or everyone (Owner console, Economy)." },
   { id: "u24", ts: Date.UTC(2026, 9, 19, 6, 0), by: "Artemis", title: "Download and restore your data", body: "- Owner console, Safety tab: a new Data & backup card. The owner can download every account, chat message, coin and setting as one file, and restore it later. Only the owner can do either.\n- If the server is on Render without a permanent disk, the card (and a warning when you sign in) tells you that updates erase data, so you know to download a backup first.\n- Restoring saves a copy of the current data first, then restarts the server on the backup." },
   { id: "u23", ts: Date.UTC(2026, 9, 19, 5, 0), by: "Artemis", title: "Scramjet proxy and a light, easy-to-read browser", body: "- The proxy now runs on Scramjet, a newer engine that handles far more sites (video, logins, heavy web apps). It works in your browser, so pages open faster and Back, Forward and reload feel normal.\n- If your browser cannot run Scramjet (for example on plain http), that tab quietly falls back to the classic proxy, so nothing breaks. The same happens if a page has not started loading after 25 seconds.\n- The browser view now has a bright, light background in every theme: the new tab page, the search results, the tab bar and the address bar are all much easier to read.\n- The owner's blocklist, bans, maintenance mode and the private-network protection still apply to Scramjet traffic.\n- Pages start faster: the engine warms up in the background while you browse the home page, and its big files are now compressed and cached.\n- Reaching Legend now also posts a permanent message from ArtemisBot in #general, and the gold banner stays up for 12 seconds, so nobody misses it." },
   { id: "u22", ts: Date.UTC(2026, 9, 19, 2, 0), by: "Artemis", title: "Event timelines, shared Gulper arena and boss hunt", body: "- Live events now run on a timeline the owner builds: Gulper arena, Loot drop storm, Boss worm hunt and Trivia and word games, each with its own minutes, plus presets and settings (bots, loot rate, boss strength, loop). Everyone sees a phase timer and a leaderboard for the current phase and overall.\n- The Gulper arena is now one shared world: everyone in the event is in the same arena. New power-ups (magnet, shield, speed, double points), a minimap, kill streaks and a kill feed, themed music with a mute button, and a boss worm everyone hunts together by touching its head.\n- Loot drop storm: coins and loot crates drop around the map, with a ping on the minimap.\n- Trivia, scrambles, reaction races and polls now appear only inside the live event instead of popping up over the app.\n- If you already own an event's limited title and effect when it runs again, you get 2,500 bonus coins instead." },
@@ -184,6 +188,7 @@ export const db = new JsonStore<Db>("artemis.json", {
     { id: "trusted-general", name: "trusted-general", topic: "Trusted members only", createdAt: now, trusted: true },
   ],
   messages: [],
+  dms: [],
   blocklist: [],
   server: { openRegistration: true, rateLimit: DEFAULT_RATE_LIMIT, defaultEngine: "ddg", maintenance: false, maintenanceMessage: "" },
   announcement: null,
@@ -211,6 +216,8 @@ if (d.users.length && !d.users.some((u) => u.role === "owner")) {
 for (const c of d.channels) c.topic ??= "";
 if (!d.channels.some((c) => c.id === "trusted-general")) d.channels.push({ id: "trusted-general", name: "trusted-general", topic: "Trusted members only", createdAt: Date.now(), trusted: true });
 if (!d.channels.some((c) => c.id === "live-event")) d.channels.push({ id: "live-event", name: "live-event", topic: "Chat inside live events", createdAt: Date.now(), hidden: true });
+d.dms ??= [];
+if (!d.channels.some((c) => c.voice)) d.channels.push({ id: "voice-lounge", name: "Voice Lounge", topic: "Hang out, talk, share your screen", createdAt: Date.now(), voice: true });
 d.server.bot = Object.assign({ enabled: false, action: "ban" as const, strikes: 3, words: [], log: [], strikesBy: {} }, d.server.bot);
 d.roles ??= [];
 d.updates ??= SEED_UPDATES;

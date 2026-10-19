@@ -10,7 +10,7 @@ import { trustInfo, TRUST, accrueProxy } from "./trust.js";
 import { can, effectivePerms, hasDashboard, outranks, publicRoles, PERMS, PERM_INFO, rank, roleRank, roleTag, type Perm } from "./perms.js";
 import { runCommand } from "./commands.js";
 import { activity, progress, addEventPoints, earnedToday, activeBoosts, newGame, boards, publicEvent, publicGame, rankIndex, submitRun } from "./game.js";
-import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giveItems, joinLive, openPack, spinWheel, pushEventState, quick, startLive, targets } from "./economy.js";
+import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giveItems, takeItems, joinLive, openPack, spinWheel, pushEventState, quick, startLive, targets } from "./economy.js";
 import { storageInfo } from "./store.js";
 import { ACHIEVEMENTS, BASE_THEMES, GAMES, PACKS, WHEEL, WHEEL_MS } from "../public/js/cosmetics.js";
 import { answer as answerRound, partyState, setAuto, skipRound, startRound, startRushNow } from "./party.js";
@@ -304,6 +304,9 @@ api.post("/owner/give", auth, panelUp, (req, res) => {
   if (type === "pack") { const t = targets(parseTarget(req.body?.target)); for (const u of t) u.freePacks += Math.max(1, Math.min(20, Number(req.body?.count) || 1)); saveDb(); audit(me(req).username, "give.pack", `${t.length} players`); return void res.json({ ok: true, reached: t.length }); }
   try { const n = giveItems(me(req).username, type, String(req.body?.id ?? ""), parseTarget(req.body?.target)); broadcastMembers(); res.json({ ok: true, reached: n }); } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
+api.post("/owner/take", auth, ownerOnly, (req, res) => {
+  try { const n = takeItems(me(req).username, String(req.body?.type ?? ""), String(req.body?.id ?? ""), parseTarget(req.body?.target)); broadcastMembers(); pushSelfAll(); res.json({ ok: true, reached: n }); } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
 api.post("/owner/tags", auth, panelUp, (req, res) => {
   const name = String(req.body?.name ?? "").trim().slice(0, 24), color = /^#[0-9a-fA-F]{6}$/.test(String(req.body?.color)) ? String(req.body.color) : "#8b7bff";
   if (name.length < 2) return void res.status(400).json({ error: "Give the tag a name" });
@@ -492,9 +495,9 @@ api.post("/channels", auth, need("manage_channels"), (req, res) => {
   const name = String(req.body?.name ?? "").toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 24);
   if (!name) return void res.status(400).json({ error: "Invalid channel name" });
   if (db.data.channels.some((c) => c.id === name)) return void res.status(409).json({ error: "Channel exists" });
-  db.data.channels.push({ id: name, name, topic: String(req.body?.topic ?? "").slice(0, 120), createdAt: Date.now() });
+  db.data.channels.push({ id: name, name, topic: String(req.body?.topic ?? "").slice(0, 120), createdAt: Date.now(), ...(req.body?.voice ? { voice: true } : {}) });
   saveDb();
-  logAdmin(req, "channel.create", `#${name}`);
+  logAdmin(req, "channel.create", `${req.body?.voice ? "voice " : "#"}${name}`);
   broadcastChannels();
   res.json({ ok: true });
 });
