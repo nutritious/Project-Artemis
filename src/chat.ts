@@ -80,6 +80,10 @@ export function closeUserSockets(userId: string, reason = "Removed") {
   for (const c of clients) if (c.user.id === userId) c.ws.close(4001, reason);
 }
 
+export function closeAllSockets(reason = "Data restored") {
+  for (const c of [...clients]) c.ws.close(4001, reason);
+}
+
 export function deleteMessage(id: string) {
   const i = db.data.messages.findIndex((m) => m.id === id);
   if (i < 0) return false;

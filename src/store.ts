@@ -101,7 +101,7 @@ const T = (h: number, m: number) => Date.UTC(2026, 9, 15, h + 7, m);
 export const SEED_UPDATES: UpdateEntry[] = [
   { id: "u27", ts: Date.UTC(2026, 9, 19, 10, 0), by: "Artemis", title: "Friends and a new profile", body: "- Profiles have a new look: your equipped backdrop fills the whole card, your effect spins around its edge, and your title, role, rank, join date and bio sit on top. Click anyone's name or picture to open it.\n- Friends: press Add friend on a profile. They get a notification and a request in Chat, and choose to accept or decline. You can only message and call friends. Blocking someone also ends the friendship.\n- The owner and co-owners can add a whole pack to their own collection from the Owner console (Economy), with no animation.\n- Only the owner can give the OG title. Co-owners cannot give it directly or through a redeem code." },
   { id: "u28", ts: Date.UTC(2026, 9, 19, 12, 0), by: "Artemis", title: "Halloween Chroma", body: "- The Halloween Pack now has a real shot at Chroma (rainbow) items, only here until Nov 1: Spectral Wraith and Prismatic Jack effects, the NIGHTMARE title, the Witchfire theme and the Spectral Carnival backdrop. Each has its own Chroma reveal.\n- ArtemisBot now leaves private messages alone except for the n-word. Admins, Co-owners and the Owner are still never checked." },
-  { id: "u29", ts: Date.UTC(2026, 9, 19, 14, 0), by: "Artemis", title: "Casino in Games", body: "- Games now has an Arcade tab and a Casino tab. The Casino has Slots, Blackjack, Roulette and Coin Flip, played with your Artemis coins (the same coins you spend on packs). No real money anywhere.\n- Bets are 10 to 500 coins with no daily limit.\n- New: Poker (Texas Hold'em) in the Casino tab. Make a table, invite your friends, and play with real Artemis coins, or practice against bots with free chips.\n- Titles now use their rarity colour.\n- Quick events can now be sent to everyone online, one person, or a whole role. Boosts and the rush still go to everyone.\n- Five new ranks above Legend: Nova (12,000 XP), Quasar (20,000), Pulsar (35,000), Singularity (60,000) and the final rank, Touch Grass (100,000). Each has its own level-up cutscene and sound. Touch Grass sends you to a sunny meadow, because you should probably go outside.\n- New: Cloud Browser (the ☁ button in Browse). Pick Chrome, Firefox or Edge and it runs on the host computer and streams to you. 30 minutes per session; admins and above are unlimited.\n- Chroma reveals got bigger: light pillar, fireworks, orbiting comets, rising embers and a punchier sound.\n- Touch Grass is now a troll rank: its cutscene counts up how many hours you have spent on the website, with a roast to match." },
+  { id: "u29", ts: Date.UTC(2026, 9, 19, 14, 0), by: "Artemis", title: "Casino in Games", body: "- Games now has an Arcade tab and a Casino tab. The Casino has Slots, Blackjack, Roulette and Coin Flip, played with your Artemis coins (the same coins you spend on packs). No real money anywhere.\n- Bets are 10 to 500 coins with no daily limit.\n- New: Poker (Texas Hold'em) in the Casino tab. Make a table, invite your friends, and play with real Artemis coins, or practice against bots with free chips.\n- Titles now use their rarity colour.\n- Quick events can now be sent to everyone online, one person, or a whole role. Boosts and the rush still go to everyone.\n- Five new ranks above Legend: Nova (12,000 XP), Quasar (20,000), Pulsar (35,000), Singularity (60,000) and the final rank, Touch Grass (100,000). Each has its own level-up cutscene and sound. Touch Grass sends you to a sunny meadow, because you should probably go outside.\n- New: Cloud Browser (the ☁ button in Browse). Pick Chrome, Firefox or Edge and it runs on the host computer and streams to you. 30 minutes per session; admins and above are unlimited.\n- Chroma reveals got bigger: light pillar, fireworks, orbiting comets, rising embers and a punchier sound.\n- Touch Grass is now a troll rank: its cutscene counts up how many hours you have spent on the website, with a roast to match.\n- Restoring a backup no longer restarts the server. The data loads live and everyone is reconnected, so there is no 502 while it reboots." },
   { id: "u26", ts: Date.UTC(2026, 9, 19, 9, 0), by: "Artemis", title: "Home exit node for YouTube", body: "- The owner can connect a home computer as an exit node (Owner console, Safety). While it runs, everyone's browsing leaves from the owner's home internet, which sites like YouTube trust, so the YouTube bot check goes away even though the site itself stays on Render.\n- If the exit node stops, the site checks every 20 seconds and goes back to its own connection by itself.\n- Bans and the blocklist still apply on the exit node." },
   { id: "u25", ts: Date.UTC(2026, 9, 19, 8, 0), by: "Artemis", title: "Direct messages, voice and video calls, and Halloween", body: "- Direct messages: open anyone's profile and tap Message, or use + under Direct messages in Chat. Only the two of you can read them. You can block someone, and bad language is filtered like in channels.\n- Private calls: tap Call or Video in a DM. The other person gets a ringing pop-up and can accept or decline. In a call you can mute, turn your camera on or off, and share your screen. Call lengths and missed calls show up in the DM.\n- Voice channels: the new Voice Lounge is under Voice in Chat. Click it to join, talk, turn on your camera or share your screen with up to 8 people. Staff can add and delete voice channels with the + button.\n- The Halloween Pack is here until Nov 1: 16 limited effects, titles, backdrops and themes you cannot get anywhere else. After Nov 1 it leaves the shop for good, but what you own stays yours.\n- The whole app gets a Halloween look (orange glow, floating bats and pumpkins) until Nov 1. You can turn it off in Settings.\n- The Gulper arena no longer has computer players: it is only real people (and the boss worm during boss hunts).\n- The owner can now remove a title, effect, backdrop or theme from one person, a role or everyone (Owner console, Economy)." },
   { id: "u24", ts: Date.UTC(2026, 9, 19, 6, 0), by: "Artemis", title: "Download and restore your data", body: "- Owner console, Safety tab: a new Data & backup card. The owner can download every account, chat message, coin and setting as one file, and restore it later. Only the owner can do either.\n- If the server is on Render without a permanent disk, the card (and a warning when you sign in) tells you that updates erase data, so you know to download a backup first.\n- Restoring saves a copy of the current data first, then restarts the server on the backup." },
@@ -146,12 +146,15 @@ class JsonStore<T extends object> {
   private file: string;
   private timer: NodeJS.Timeout | null = null;
   private frozen = false;
+  private defaults: T;
   get path() { return this.file; }
   /** After a restore the file on disk is the truth: never write memory over it. */
+  /** Swap in restored data without restarting; the caller runs migrate() next. */
+  replace(next: T) { if (this.timer) { clearTimeout(this.timer); this.timer = null; } this.data = { ...structuredClone(this.defaults), ...next }; }
   freeze() { this.frozen = true; if (this.timer) { clearTimeout(this.timer); this.timer = null; } }
   constructor(name: string, defaults: T) {
     this.file = path.join(DATA_DIR, name);
-    this.data = defaults;
+    this.data = defaults; this.defaults = structuredClone(defaults);
     fs.mkdirSync(path.dirname(this.file), { recursive: true });
     /* Never start from empty over a file that exists: try the main file, then the newest backup, and keep a copy of anything unreadable. */
     const bdir = path.join(path.dirname(this.file), "backups"), base = path.basename(this.file, ".json");
@@ -214,46 +217,49 @@ export const db = new JsonStore<Db>("artemis.json", {
 });
 
 /* ---- migrate data written by earlier versions ---- */
+export function migrate() {
 const d = db.data;
-d.server = Object.assign({ openRegistration: true, rateLimit: DEFAULT_RATE_LIMIT, defaultEngine: "ddg" as const, maintenance: false, maintenanceMessage: "" }, d.server);
-/* exactly one owner: the earliest commander if none exists yet */
-if (d.users.length && !d.users.some((u) => u.role === "owner")) {
-  const first = [...d.users].sort((a, b) => a.createdAt - b.createdAt).find((u) => u.role === "admin") ?? [...d.users].sort((a, b) => a.createdAt - b.createdAt)[0];
-  first.role = "owner";
+  d.server = Object.assign({ openRegistration: true, rateLimit: DEFAULT_RATE_LIMIT, defaultEngine: "ddg" as const, maintenance: false, maintenanceMessage: "" }, d.server);
+  /* exactly one owner: the earliest commander if none exists yet */
+  if (d.users.length && !d.users.some((u) => u.role === "owner")) {
+    const first = [...d.users].sort((a, b) => a.createdAt - b.createdAt).find((u) => u.role === "admin") ?? [...d.users].sort((a, b) => a.createdAt - b.createdAt)[0];
+    first.role = "owner";
+  }
+  for (const c of d.channels) c.topic ??= "";
+  if (!d.channels.some((c) => c.id === "trusted-general")) d.channels.push({ id: "trusted-general", name: "trusted-general", topic: "Trusted members only", createdAt: Date.now(), trusted: true });
+  if (!d.channels.some((c) => c.id === "live-event")) d.channels.push({ id: "live-event", name: "live-event", topic: "Chat inside live events", createdAt: Date.now(), hidden: true });
+  d.dms ??= [];
+  d.friendReqs ??= [];
+  if (!d.channels.some((c) => c.voice)) d.channels.push({ id: "voice-lounge", name: "Voice Lounge", topic: "Hang out, talk, share your screen", createdAt: Date.now(), voice: true });
+  d.server.bot = Object.assign({ enabled: false, action: "ban" as const, strikes: 3, words: [], log: [], strikesBy: {} }, d.server.bot);
+  d.roles ??= [];
+  d.updates ??= SEED_UPDATES;
+  /* entries added to the built-in log in newer builds are appended once, so an entry the owner deleted never comes back */
+  { const seen = new Set(d.seededUpdates ?? [...d.updates.map((x) => x.id), ...SEED_UPDATES.filter((x) => !["u17", "u18"].includes(x.id)).map((x) => x.id)]); for (const e of SEED_UPDATES) if (!seen.has(e.id)) d.updates.push(e); d.seededUpdates = SEED_UPDATES.map((x) => x.id); }
+  d.reports ??= [];
+  d.customTags ??= [];
+  d.codes ??= [];
+  d.event ??= null;
+  d.boosts ??= [];
+  for (const u of d.users) {
+    u.profile = Object.assign({ status: "", presence: "online" as const, avatar: "" }, u.profile);
+    if (u.roleId && !d.roles.some((r) => r.id === u.roleId)) delete u.roleId;
+    u.game = Object.assign({ xp: 0, streak: 0, lastDay: "", day: "", best: 0, plays: 0, done: [], bests: {}, runCoins: 0, stats: {}, ach: {}, earnDay: "", earned: 0, lastSpin: 0 }, u.game);
+    u.game.bests ??= {};
+    Object.assign(u, { ...newEconomy(), ...Object.fromEntries(Object.entries(u).filter(([k]) => ["coins", "inv", "equip", "freePacks"].includes(k))) });
+    u.inv = Object.assign({ effects: [], tags: [], themes: [], bgs: [] }, u.inv);
+    u.equip = Object.assign({ effect: "", tag: "", bg: "" }, u.equip);
+    u.equip = Object.assign({ effect: "", tag: "" }, u.equip);
+    u.game.n = Object.assign({ browse: 0, chat: 0, play: 0 }, u.game.n);
+    u.lastSeen ??= u.createdAt;
+    u.banned ??= false;
+    u.stats ??= { requests: 0, bytes: 0 };
+    u.settings = { ...defaultSettings(), ...u.settings };
+    if (!["ddg", "brave", "mojeek"].includes(u.settings.engine)) u.settings.engine = "ddg";
+  }
+  if (!d.secret) d.secret = crypto.randomBytes(32).toString("hex");
 }
-for (const c of d.channels) c.topic ??= "";
-if (!d.channels.some((c) => c.id === "trusted-general")) d.channels.push({ id: "trusted-general", name: "trusted-general", topic: "Trusted members only", createdAt: Date.now(), trusted: true });
-if (!d.channels.some((c) => c.id === "live-event")) d.channels.push({ id: "live-event", name: "live-event", topic: "Chat inside live events", createdAt: Date.now(), hidden: true });
-d.dms ??= [];
-d.friendReqs ??= [];
-if (!d.channels.some((c) => c.voice)) d.channels.push({ id: "voice-lounge", name: "Voice Lounge", topic: "Hang out, talk, share your screen", createdAt: Date.now(), voice: true });
-d.server.bot = Object.assign({ enabled: false, action: "ban" as const, strikes: 3, words: [], log: [], strikesBy: {} }, d.server.bot);
-d.roles ??= [];
-d.updates ??= SEED_UPDATES;
-/* entries added to the built-in log in newer builds are appended once, so an entry the owner deleted never comes back */
-{ const seen = new Set(d.seededUpdates ?? [...d.updates.map((x) => x.id), ...SEED_UPDATES.filter((x) => !["u17", "u18"].includes(x.id)).map((x) => x.id)]); for (const e of SEED_UPDATES) if (!seen.has(e.id)) d.updates.push(e); d.seededUpdates = SEED_UPDATES.map((x) => x.id); }
-d.reports ??= [];
-d.customTags ??= [];
-d.codes ??= [];
-d.event ??= null;
-d.boosts ??= [];
-for (const u of d.users) {
-  u.profile = Object.assign({ status: "", presence: "online" as const, avatar: "" }, u.profile);
-  if (u.roleId && !d.roles.some((r) => r.id === u.roleId)) delete u.roleId;
-  u.game = Object.assign({ xp: 0, streak: 0, lastDay: "", day: "", best: 0, plays: 0, done: [], bests: {}, runCoins: 0, stats: {}, ach: {}, earnDay: "", earned: 0, lastSpin: 0 }, u.game);
-  u.game.bests ??= {};
-  Object.assign(u, { ...newEconomy(), ...Object.fromEntries(Object.entries(u).filter(([k]) => ["coins", "inv", "equip", "freePacks"].includes(k))) });
-  u.inv = Object.assign({ effects: [], tags: [], themes: [], bgs: [] }, u.inv);
-  u.equip = Object.assign({ effect: "", tag: "", bg: "" }, u.equip);
-  u.equip = Object.assign({ effect: "", tag: "" }, u.equip);
-  u.game.n = Object.assign({ browse: 0, chat: 0, play: 0 }, u.game.n);
-  u.lastSeen ??= u.createdAt;
-  u.banned ??= false;
-  u.stats ??= { requests: 0, bytes: 0 };
-  u.settings = { ...defaultSettings(), ...u.settings };
-  if (!["ddg", "brave", "mojeek"].includes(u.settings.engine)) u.settings.engine = "ddg";
-}
-if (!d.secret) d.secret = crypto.randomBytes(32).toString("hex");
+migrate();
 db.flush();
 
 /** Is the data folder on a permanent disk? On Render a missing disk means every deploy erases accounts and chat. */

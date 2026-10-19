@@ -59,11 +59,11 @@ async function downloadBackup() {
 async function restoreFrom(file) {
   let data;
   try { data = JSON.parse(await file.text()); } catch { throw new Error("That file is not a valid backup."); }
-  const ok = await confirmBox("Restore this backup?", `This replaces ALL current data (${data.users?.length ?? "?"} accounts, ${data.messages?.length ?? "?"} messages) with the file's contents and restarts the server. A copy of the current data is saved first. You will be signed out, so sign in with the password from the backup.`, { ok: "Restore and restart", danger: true });
+  const ok = await confirmBox("Restore this backup?", `This replaces ALL current data (${data.users?.length ?? "?"} accounts, ${data.messages?.length ?? "?"} messages) with the file's contents. The server keeps running. A copy of the current data is saved first. You will be signed out, so sign in with the password from the backup.`, { ok: "Restore and restart", danger: true });
   if (!ok) return;
   const r = await api("/owner/restore", "POST", data);
-  toast(`Restored ${r.users} accounts. The server is restarting; reload in a few seconds.`, "ok");
-  setTimeout(() => location.reload(), 9000);
+  toast(`Restored ${r.users} accounts. Reloading...`, "ok");
+  setTimeout(() => location.reload(), 1200);
 }
 async function click(b) {
   const d = b.dataset;

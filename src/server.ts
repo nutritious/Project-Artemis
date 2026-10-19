@@ -12,11 +12,11 @@ import { runCommand } from "./commands.js";
 import { activity, progress, addEventPoints, earnedToday, activeBoosts, newGame, boards, publicEvent, publicGame, rankIndex, submitRun } from "./game.js";
 import { casinoPlay, casinoState } from "./casino.js";
 import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giveItems, giveSelfWholePack, takeItems, joinLive, openPack, spinWheel, pushEventState, quick, startLive, targets } from "./economy.js";
-import { storageInfo } from "./store.js";
+import { storageInfo, migrate } from "./store.js";
 import { checkExit, exitInfo, exitKey, exitStatus, setExit } from "./exit.js";
 import { ACHIEVEMENTS, BASE_THEMES, GAMES, PACKS, WHEEL, WHEEL_MS } from "../public/js/cosmetics.js";
 import { answer as answerRound, partyState, setAuto, skipRound, startRound, startRushNow } from "./party.js";
-import { BUILD, broadcast, broadcastCustomTags, checkTrust, notifyOwners, broadcastEvent, broadcastAnnouncement, broadcastChannels, broadcastMembers, broadcastRoles, closeUserSockets, deleteMessage, handleChatUpgrade, hasAdminSubscribers, pushSelf, pushSelfAll, pushToAdmins } from "./chat.js";
+import { BUILD, broadcast, broadcastCustomTags, checkTrust, notifyOwners, broadcastEvent, broadcastAnnouncement, broadcastChannels, broadcastMembers, broadcastRoles, closeUserSockets, closeAllSockets, deleteMessage, handleChatUpgrade, hasAdminSubscribers, pushSelf, pushSelfAll, pushToAdmins } from "./chat.js";
 import { encodeTarget, errorPage, handleProxy, handleProxyWsUpgrade, isBlocked, realFromProxyUrl } from "./proxy.js";
 import compression from "compression";
 import { handleWispUpgrade, isWispPath, mountScramjet } from "./scramjet.js";
@@ -887,7 +887,7 @@ api.post("/admin/command", auth, need("use_terminal"), async (req, res) => {
 api.use((_req, res) => res.status(404).json({ error: "Not found" }));
 
 /* Restore a backup. It lives outside the API router because backups are far bigger than the normal 100 KB limit.
-   Only the owner can do this. The file is checked, the current data is copied aside, and the server restarts on the restored data. */
+   Only the owner can do this. The file is checked, the current data is copied aside, and the restored data is loaded live, with no restart. */
 app.post("/api/owner/restore", express.json({ limit: "80mb" }), (req, res) => {
   const origin = req.get("origin");
   let okOrigin = false;
@@ -905,16 +905,17 @@ app.post("/api/owner/restore", express.json({ limit: "80mb" }), (req, res) => {
     const bdir = path.join(path.dirname(db.path), "backups");
     fs.mkdirSync(bdir, { recursive: true });
     if (fs.existsSync(db.path)) fs.copyFileSync(db.path, path.join(bdir, `before-restore-${Date.now()}.json`));
-    const tmp = db.path + ".restore";
-    fs.writeFileSync(tmp, JSON.stringify(b));
-    fs.renameSync(tmp, db.path);
-    db.freeze();
+    db.replace(b);
+    migrate();
+    db.flush();
   } catch (e: any) {
-    return void res.status(500).json({ error: "Could not write the backup: " + (e?.message ?? e) });
+    return void res.status(500).json({ error: "Could not apply the backup: " + (e?.message ?? e) });
   }
-  console.log(`[artemis] data restored from a backup by ${user.username}; restarting`);
+  console.log(`[artemis] data restored from a backup by ${user.username}; loaded live`);
+  const me2 = db.data.users.find((x) => x.id === user.id) ?? db.data.users.find((x) => x.role === "owner");
+  if (me2) setSession(req, res, me2);
+  closeAllSockets("Data restored");
   res.json({ ok: true, users: b.users.length, messages: b.messages.length });
-  setTimeout(() => process.exit(0), 700);
 });
 
 app.use("/api", api);
