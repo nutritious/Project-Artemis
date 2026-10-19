@@ -47,7 +47,7 @@ export function buildBrowser() {
       <button class="tb" id="tbFwd" title="Forward (Alt+→)">${icon("fwd")}</button>
       <button class="tb" id="tbReload" title="Reload">${icon("reload")}</button>
       <button class="tb" id="tbHome" title="New search">${icon("home")}</button>
-      <div id="omniWrap">${icon("search")}<input id="omni" placeholder="Search or enter address" autocomplete="off" spellcheck="false" aria-label="Search or enter address"><div id="suggest" class="hidden" role="listbox"></div></div>
+      <div id="omniWrap">${icon("lock")}<input id="omni" placeholder="Search or enter address" autocomplete="off" spellcheck="false" aria-label="Search or enter address"><div id="suggest" class="hidden" role="listbox"></div></div>
       <span id="engTag" class="chip hidden" title="Which proxy engine this tab is using"></span>
       <button class="tb" id="tbCloud" title="Cloud browser: Chrome, Firefox or Edge running on the host computer">☁</button>
       <button class="tb" id="tbStar" title="Bookmark this page (Ctrl+D)">${icon("star")}</button>
@@ -89,7 +89,7 @@ function prewarmScramjet() {
     f.src = sjBase();
     document.body.append(f);
   };
-  (window.requestIdleCallback || ((fn) => setTimeout(fn, 1500)))(go, { timeout: 4000 });
+  setTimeout(go, 250); /* start right away: the first site opens with the engine already warm */
 }
 
 /* ------------------------------ tabs ------------------------------ */
@@ -361,7 +361,8 @@ function renderBmBar() {
   if (!bar) return;
   const show = state.me?.settings.bookmarksBar && state.bookmarks.length;
   bar.classList.toggle("hidden", !show);
-  bar.innerHTML = state.bookmarks.slice(0, 30).map((b) => `<button data-url="${esc(b.url)}" title="${esc(b.url)}"><img src="${esc(favicon(hostOf(b.url)))}" alt="" data-hide>${esc(b.title)}</button>`).join("");
+  bar.innerHTML = state.bookmarks.slice(0, 30).map((b) => `<button data-url="${esc(b.url)}" title="${esc(b.url)}"><img src="${esc(favicon(hostOf(b.url)))}" alt="" data-hide><span>${esc(b.title)}</span></button>`).join("");
+  bar.querySelectorAll("img[data-hide]").forEach((i) => i.addEventListener("error", () => { i.style.visibility = "hidden"; }, { once: true }));
 }
 async function toggleBookmark() {
   const t = cur(); const e = t?.stack[t.idx];

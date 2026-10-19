@@ -26,6 +26,7 @@ async function start() {
   if (!("serviceWorker" in navigator)) throw new Error("This browser can't run service workers here (needs https or localhost).");
   if (useEpoxy) await loadScript("/sj/epoxy/index.js");
   const reg = await navigator.serviceWorker.register("/sj/sw.js", { scope: "/sj/" });
+  fetch("/sj/lib/scramjet.wasm").catch(() => {}); /* warm the cache while the worker starts */
   await navigator.serviceWorker.ready;
   const sw = reg.active || navigator.serviceWorker.controller;
   if (!sw) throw new Error("The service worker did not start. Reload the page.");
