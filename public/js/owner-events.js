@@ -65,7 +65,8 @@ function eventsHtml() {
       <div class="evcards">${Object.entries(EVENTS).map(([k, e]) => `<article class="evcard" style="--ec:${e.color}"><h4>${esc(e.name)}</h4><p>${esc(e.blurb)}</p><small>Reward: ${esc(TAGS.find((t) => t.id === e.tag)?.name ?? e.tag)} title + ${esc(EFFECTS.find((x) => x.id === e.effect)?.name ?? e.effect)} effect</small><div class="inline"><button class="btn primary" data-golive="${k}">Start ${esc(e.name)}</button><button class="btn" data-cine="${k}">Preview</button></div></article>`).join("")}</div></div>`;
   }
   if (!isOwner(state.me)) top = `<div class="card glass"><h3>Live events ${ev ? `<span class="chip ok">${esc(ev.name)} is live</span>` : ""}</h3><p class="note">Only the owner can start or end live events and run their rounds. You can still fire any quick event below${ev ? ", and you can see the event is running" : ""}.</p></div>`;
-  const quick = `<div class="card glass"><h3>Quick events ${boosts.map((b) => `<span class="chip warn">${b.kind === "xp" ? "2× XP" : "2× coins"} live</span>`).join(" ")}</h3><p class="note">One-click moments for everyone online. They work with or without a live event.</p>
+  const quick = `<div class="card glass"><h3>Quick events ${boosts.map((b) => `<span class="chip warn">${b.kind === "xp" ? "2× XP" : "2× coins"} live</span>`).join(" ")}</h3><p class="note">One-click moments. Send them to everyone online, one person, or a whole role. They work with or without a live event. Boosts and the rush always go to everyone.</p>
+    <div id="qTgt">${targetUI("q")}</div>
     <div class="qgrid">${QUICK_EVENTS.map((q) => `<button class="qbtn" data-quick="${q.id}"><span>${q.icon}</span><b>${esc(q.name)}</b><small>${esc(q.desc)}</small></button>`).join("")}</div></div>`;
   const lib = `<div class="card glass"><h3>Cutscene library</h3><p class="note">Preview any cutscene on your own screen, or play it for everyone who is online (it gives them 25 XP for showing up). Press Esc to skip.</p>
     <div class="cgrid2">${CUTSCENES.map((c) => `<div class="cs"><b>${esc(c.name)}</b><div class="inline"><button class="btn sm" data-cine="${c.id}">Preview</button><button class="btn sm primary" data-cineall="${c.id}">Play for everyone</button></div></div>`).join("")}</div>
@@ -99,7 +100,7 @@ async function eventsClick(b) {
   if (b.matches("[data-endlive]")) { if (await confirmBox("End the event?", "Every player who took part gets the limited title, effect, coins and crates right now.", { ok: "End and reward" })) run(async () => { const r = await api("/owner/live", "POST", { action: "end" }); toast(`${r.rewarded} players rewarded`, "ok"); }); return true; }
   if (b.matches("[data-cdclear]")) return run(() => api("/owner/countdown", "DELETE"), "Banner removed");
   if (b.matches("[data-updlive]")) return run(() => api("/owner/updatelive", "POST"), "Everyone online was told");
-  if (d.quick) return run(async () => { const r = await api("/owner/quick", "POST", { kind: d.quick }); toast(r.note ? `Done · ${r.note}` : "Done", "ok"); });
+  if (d.quick) return run(async () => { const sel = $("#qTgt [data-tt]"), tv = $("#qTgt [data-tv]"); const r = await api("/owner/quick", "POST", { kind: d.quick, target: { type: sel?.value ?? "online", value: tv?.value || undefined } }); toast(r.note ? `Done · ${r.note}` : "Done", "ok"); });
   if (b.matches("[data-updprev]")) { const f = new FormData(b.closest("form")); return playEvent({ kind: "update", title: f.get("title"), sub: String(f.get("items")).split("\n").filter(Boolean).join("|"), by: state.me.username }), true; }
   if (b.matches("[data-evprev]")) { const f = new FormData(b.closest("form")); return playEvent({ kind: f.get("kind"), title: f.get("title"), sub: f.get("sub"), by: state.me.username }), true; }
   return false;

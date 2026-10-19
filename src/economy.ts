@@ -161,30 +161,36 @@ export function joinLive(u: User) { const ev = db.data.event; if (!ev) throw new
 
 /* ---------- quick events ---------- */
 const fx = new Map<string, { kind: string; coins: number; until: number; by: Set<string>; single: boolean }>();
-export function quick(by: string, kind: string) {
+export function quick(by: string, kind: string, tg?: Target) {
   if (!QUICK_EVENTS.some((q) => q.id === kind)) throw new Error("Unknown event");
-  const online = onlineUsers(), now = Date.now(); let note = "";
+  const t: Target = tg && ["online", "all", "user", "role"].includes(tg.type) ? tg : { type: "online" };
+  const everyone = t.type === "online" || t.type === "all";
+  const live = new Set(onlineUsers().map((u) => u.id)), online = everyone ? onlineUsers() : targets(t).filter((u) => live.has(u.id));
+  const send = (m: unknown) => { if (everyone) broadcast(m); else for (const u of online) sendToUser(u.id, m); };
+  if (!everyone && !online.length) throw new Error("Nobody in that group is online right now");
+  if (!everyone && ["doublexp", "doublecoins", "rushall"].includes(kind)) throw new Error("That one affects the whole server, so it can only go to everyone");
+  const now = Date.now(); let note = "";
   for (const [k, v] of fx) if (v.until < now) fx.delete(k);
   switch (kind) {
-    case "coinrain": for (const u of online) giveCoins(u, rint(20, 80), "Coin rain"); broadcast({ t: "fx", kind }); note = `${online.length} players`; break;
+    case "coinrain": for (const u of online) giveCoins(u, rint(20, 80), "Coin rain"); send({ t: "fx", kind }); note = `${online.length} players`; break;
     case "meteors": {
       const list = Array.from({ length: 24 }, () => ({ id: uid(), at: rand() * 28, x: 0.05 + rand() * 0.9, coins: rint(5, 15) })).sort((a, b) => a.at - b.at);
       for (const m of list) fx.set(m.id, { kind, coins: m.coins, until: now + 50_000, by: new Set(), single: false });
-      broadcast({ t: "fx", kind, meteors: list }); break;
+      send({ t: "fx", kind, meteors: list }); break;
     }
     case "doublexp": case "doublecoins": {
       const k = kind === "doublexp" ? "xp" : "coins"; db.data.boosts = db.data.boosts.filter((b) => b.kind !== k); db.data.boosts.push({ kind: k, until: now + 15 * 60_000 }); saveDb(); broadcast({ t: "boost", boosts: activeBoosts() }); break;
     }
-    case "packdrop": for (const u of online) { u.freePacks++; push(u); } saveDb(); broadcast({ t: "fx", kind }); note = `${online.length} players`; break;
-    case "jackpot": { if (!online.length) throw new Error("Nobody is online"); const w = online[rint(0, online.length - 1)]; giveCoins(w, 500, "Jackpot!"); broadcast({ t: "fx", kind, winner: w.username, coins: 500 }); note = w.username; break; }
-    case "treasure": { const id = uid(); fx.set(id, { kind, coins: 250, until: now + 30_000, by: new Set(), single: true }); broadcast({ t: "fx", kind, id, x: 0.1 + rand() * 0.8, y: 0.15 + rand() * 0.7, ms: 30_000 }); break; }
-    case "xpgift": for (const u of online) grant(u, 100, "XP gift"); broadcast({ t: "fx", kind }); note = `${online.length} players`; break;
-    case "luckyfive": { if (!online.length) throw new Error("Nobody is online"); const w = [...online].sort(() => rand() - 0.5).slice(0, 5); for (const u of w) giveCoins(u, 150, "Lucky five"); broadcast({ t: "fx", kind, winners: w.map((u) => u.username), coins: 150 }); note = w.map((u) => u.username).join(", "); break; }
+    case "packdrop": for (const u of online) { u.freePacks++; push(u); } saveDb(); send({ t: "fx", kind }); note = `${online.length} players`; break;
+    case "jackpot": { if (!online.length) throw new Error("Nobody is online"); const w = online[rint(0, online.length - 1)]; giveCoins(w, 500, "Jackpot!"); send({ t: "fx", kind, winner: w.username, coins: 500 }); note = w.username; break; }
+    case "treasure": { const id = uid(); fx.set(id, { kind, coins: 250, until: now + 30_000, by: new Set(), single: true }); send({ t: "fx", kind, id, x: 0.1 + rand() * 0.8, y: 0.15 + rand() * 0.7, ms: 30_000 }); break; }
+    case "xpgift": for (const u of online) grant(u, 100, "XP gift"); send({ t: "fx", kind }); note = `${online.length} players`; break;
+    case "luckyfive": { if (!online.length) throw new Error("Nobody is online"); const w = [...online].sort(() => rand() - 0.5).slice(0, 5); for (const u of w) giveCoins(u, 150, "Lucky five"); send({ t: "fx", kind, winners: w.map((u) => u.username), coins: 150 }); note = w.map((u) => u.username).join(", "); break; }
     case "mysterybox": for (const u of online) { const c = rint(10, 200); giveCoins(u, c, "Mystery box"); sendToUser(u.id, { t: "fx", kind, coins: c }); } note = `${online.length} players`; break;
     case "cosmeticdrop": for (const u of online) { const it = rollPack({ ...packMap.get("crate")!, count: 1 }, u.inv, rand)[0]; if (!it) continue; if (it.dupe) u.coins += it.refund; else addItem(u, it.type as ItemType, it.id); announceChroma(u, [it]); saveDb(); push(u); sendToUser(u.id, { t: "fx", kind, item: it }); } note = `${online.length} players`; break;
-    case "rushall": if (!db.data.event) throw new Error("Start a live event first"); startRush("", 3 * 60_000); broadcast({ t: "fx", kind: "rush", game: "", ms: 180_000 }); pushEventState(); break;
-    case "confetti": broadcast({ t: "fx", kind }); break;
-    case "zerog": broadcast({ t: "fx", kind, ms: 20_000 }); break;
+    case "rushall": if (!db.data.event) throw new Error("Start a live event first"); startRush("", 3 * 60_000); send({ t: "fx", kind: "rush", game: "", ms: 180_000 }); pushEventState(); break;
+    case "confetti": send({ t: "fx", kind }); break;
+    case "zerog": send({ t: "fx", kind, ms: 20_000 }); break;
   }
   audit(by, "event.quick", `${kind} ${note}`.trim());
   return note;

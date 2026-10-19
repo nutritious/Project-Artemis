@@ -362,7 +362,7 @@ api.post("/owner/phase", auth, ownerOnly, (req, res) => {
 });
 api.post("/owner/quick", auth, panelUp, (req, res) => {
   if (!allow(`quick:${me(req).id}`, 20, 30_000)) return void res.status(429).json({ error: "One at a time, commander" });
-  try { res.json({ ok: true, note: quick(me(req).username, String(req.body?.kind ?? "")) }); } catch (e: any) { res.status(400).json({ error: e.message }); }
+  try { res.json({ ok: true, note: quick(me(req).username, String(req.body?.kind ?? ""), req.body?.target) }); } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
 /* ----- issue reports: anyone can send one, owner and co-owners read them ----- */
