@@ -93,14 +93,8 @@ Sites that are heavy on JavaScript, use DRM video, or show CAPTCHAs may not work
 
 ## Cloud browser
 
-The ☁ button in Browse opens a real Chrome, Firefox or Edge-style browser that runs on your exit-node computer and is streamed to the site. Everyone gets one private 30-minute session; admins and above are unlimited.
+The cloud button in Browse opens a real Chrome or Firefox style browser that runs on the **server itself** and is streamed to the site. Nothing to set up: the Docker image installs Chromium and Firefox. Everyone gets one private 30-minute session; admins and above are unlimited.
 
-On the computer that runs the exit node:
-
-```
-npm i                                   # installs playwright as an optional dependency
-npx playwright install chromium firefox
-EXIT_KEY="a-long-secret" MAIN_URL="https://your-site.onrender.com" npx tsx src/exit-node.ts
-```
-
-It uses the same tunnel and key as the home exit node. The browser cannot open localhost or any private/LAN address, and it follows the site's bans and blocklist. Set `CLOUD_MAX` to change how many sessions can run at once (default 4).
+- On Render, `CLOUD_MAX` (default 1 in the Dockerfile) caps how many browsers run at once. A browser needs roughly 400 MB of memory, so the Starter plan (512 MB) handles one and may restart under load. For more at once, use the Standard plan (2 GB) and raise `CLOUD_MAX`.
+- Servers share a data-center address, so YouTube and a few others may still show a bot check. If a home exit node is connected (see above), the cloud browser runs there instead and sites see your home internet.
+- The browser cannot open localhost or any private/LAN address, and it follows the site's bans and blocklist.
