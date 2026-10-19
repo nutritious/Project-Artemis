@@ -143,6 +143,10 @@ hooks.api = async (path, method = "GET", body = {}) => {
   if (p === "/game") return { game: pubGame(), ...boards() };
   if (p === "/game/run") { const sc = Math.floor(body.score); G.plays++; G.best = Math.max(G.best, sc); G.xp += Math.min(30, Math.floor(sc / 40)); X.earn?.(Math.min(60, Math.floor(sc / 60))); gprogress("play"); return { game: pubGame(), ...boards() }; }
   if (p === "/owner/event") { push({ t: "event", kind: body.kind, title: body.title, sub: body.sub, by: me.username }); G.xp += 25; return { ok: true, reached: 1 }; }
+  if (p === "/gifs" && method === "GET") return { library: [], mine: [], search: false };
+  if (p.startsWith("/gifs/")) throw demoErr("GIFs need the real server.");
+  if (p === "/yt/backends") return { backends: [] };
+  if (p.startsWith("/yt/")) throw demoErr("Tube needs the real server.");
   if (p === "/updates" && method === "GET") return { updates: [...D.updates].sort((a, b) => b.ts - a.ts) };
   if (p === "/updates" && method === "POST") { if (me.role !== "owner") throw demoErr("Owner only", 403); const e = { id: uid(), ts: Date.now(), by: me.username, title: String(body.title ?? "").trim(), body: String(body.body ?? "") }; if (!e.title) throw demoErr("Give the update a title"); D.updates.push(e); return { update: e }; }
   if (m(/^\/updates\/([^/]+)$/)) { if (me.role !== "owner") throw demoErr("Owner only", 403); const id = m(/^\/updates\/([^/]+)$/)[1]; if (method === "DELETE") { D.updates = D.updates.filter((x) => x.id !== id); return { ok: true }; } const e = D.updates.find((x) => x.id === id); Object.assign(e, { title: body.title, body: body.body }); return { update: e }; }
