@@ -9,7 +9,7 @@ export const RARITY = {
   secret: { name: "Secret", color: "#ff2e4d", weight: 0, dupe: 5000 },
 };
 /** Secret items never show in a pack's odds or contents. Each item slot has this tiny chance of being one instead. */
-export const SECRET_CHANCE = 1 / 20000;
+export const SECRET_CHANCE = 1 / 200;
 export const EFFECTS = [
   { id: "stardust", name: "Stardust", rarity: "common", desc: "Tiny stars twinkle around you" },
   { id: "ringlet", name: "Ringlet", rarity: "common", desc: "A slim ring that slowly spins" },
