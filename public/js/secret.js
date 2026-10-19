@@ -12,12 +12,18 @@ const KIND = { tag: "TITLE", effect: "PROFILE EFFECT", bg: "BACKDROP", theme: "T
 const GLYPH = "█▓▒░#@%&$?/\\<>[]{}";
 const BEATS = [7.2, 7.95, 8.6, 9.15, 9.55, 9.85, 10.1, 10.3, 10.5];
 /* the terminal that types itself out before everything goes wrong */
-const LINES = [["> opening pack...", 0], ["> reading contents... ok", 0], ["> WARNING: unlisted item detected", 1], ["> item.rarity = ???", 1], ["> item.owner = YOU", 0], ["> this was never supposed to be here", 1]];
+const VARIANTS = {
+  horizon: [["> opening pack...", 0], ["> reading contents... ok", 0], ["> WARNING: unlisted item detected", 1], ["> item.rarity = ???", 1], ["> item.owner = YOU", 0], ["> this was never supposed to be here", 1]],
+  redacted: [["> opening pack...", 0], ["> reading contents... ok", 0], ["> ACCESS: [REDACTED]", 1], ["> authorised by: [REDACTED]", 1], ["> file status = CLASSIFIED", 1], ["> you were not supposed to see this", 1]],
+  rift: [["> opening pack...", 0], ["> reading contents... ok", 0], ["> WARNING: spatial tear detected", 1], ["> source = the other side", 1], ["> something is looking back", 1], ["> do not look into it", 1]],
+};
+const variantOf = (item) => (item?.id === "redacted" ? "redacted" : item?.id === "the-rift" ? "rift" : "horizon");
 const CPS = 26, LINE_GAP = 0.25;
-const typed = LINES.map(([t], i) => ({ t, start: LINES.slice(0, i).reduce((n, [x]) => n + x.length / CPS + LINE_GAP, 0.35) }));
+const typedFor = (V) => VARIANTS[V].map(([t], i, a) => ({ t, start: a.slice(0, i).reduce((n, [x]) => n + x.length / CPS + LINE_GAP, 0.35) }));
 
 /* ------------------------------- sound ------------------------------- */
-function sound(ctx) {
+function sound(ctx, V) {
+  const typed = typedFor(V);
   const out = ctx.createGain(); out.gain.value = 0.9; out.connect(ctx.destination);
   const nbuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), nd = nbuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
   const T0 = ctx.currentTime + 0.05, srcs = [];
@@ -40,8 +46,16 @@ function sound(ctx) {
   BEATS.forEach((b, i) => { const v = 0.55 + i * 0.05; osc("sine", 95, 38, b, 0.28, v); osc("sine", 120, 45, b + 0.12, 0.2, v * 0.6); });
   noise(T.crack - 0.2, 3.4, 0.45, 220, 8000); osc("sawtooth", 60, 900, T.crack, 3.2, 0.09, 1100); /* the riser as the screen cracks */
   for (let i = 0; i < 7; i++) noise(T.crack + 0.4 + i * 0.4, 0.2, 0.2, 2500, 300);             /* the glass breaking */
+  if (V === "horizon") {
   noise(T.hole, 2.2, 0.85, 3000, 55, "lowpass"); osc("sine", 55, 20, T.hole, 4.5, 0.95);        /* impact */
-  osc("sawtooth", 82, 78, T.hole + 0.3, 14, 0.06, 260); osc("sawtooth", 83.5, 79, T.hole + 0.3, 14, 0.06, 260);
+    osc("sawtooth", 82, 78, T.hole + 0.3, 14, 0.06, 260); osc("sawtooth", 83.5, 79, T.hole + 0.3, 14, 0.06, 260);
+  } else if (V === "redacted") {                                                   /* stamps and a typewriter */
+    for (let i = 0; i < 14; i++) { const at = T.hole + i * 0.42; osc("sine", 140, 40, at, 0.22, 0.7); noise(at, 0.12, 0.4, 1800, 300); if (i % 4 === 3) osc("sine", 2400, 2400, at + 0.1, 0.5, 0.05); }
+    osc("sawtooth", 55, 52, T.hole, 14, 0.07, 200);
+  } else {                                                                          /* the tearing of space, then a choir */
+    noise(T.hole - 0.2, 3.2, 0.7, 300, 9000); noise(T.hole, 2, 0.6, 2500, 60, "lowpass"); osc("sine", 50, 18, T.hole, 5, 0.9);
+    [196, 247, 294, 392, 494].forEach((f, i) => { osc("sine", f * 0.99, f * 1.01, T.hole + 1 + i * 0.3, 12, 0.06); osc("sine", f * 1.5, f * 1.52, T.hole + 3 + i * 0.3, 9, 0.025); });
+  }
   osc("sine", 240, 60, T.word, 0.8, 0.55); noise(T.word, 0.6, 0.4, 5000, 400);                  /* SECRET slams */
   osc("sine", 70, 24, T.word, 2.5, 0.8);
   for (let i = 0; i < 9; i++) noise(T.word + 1.2 + i * 0.55, 0.18, 0.18, 6000, 800);          /* lightning */
@@ -57,6 +71,7 @@ const scanPattern = (x) => { if (!scan) { const c = document.createElement("canv
 const crackPts = (cx, cy, len, wd, t, ang, off) => { const pts = []; for (let i = 0; i <= 28; i++) { const u = i / 28 - 0.5, d = u * len; pts.push([cx + Math.sin(ang) * d + Math.cos(ang) * Math.sin(i * 2.3 + off + Math.floor(t * 18)) * wd * 0.9 * (0.4 + Math.cos(u * Math.PI)), cy - Math.cos(ang) * d + Math.sin(ang) * Math.sin(i * 2.3 + off + Math.floor(t * 18)) * wd * 0.9 * (0.4 + Math.cos(u * Math.PI))]); } return pts; };
 
 function frame(x, W, H, t, S, item) {
+  const V = (S.V ??= variantOf(item)), typed = (S.typed ??= typedFor(V)), LINES = VARIANTS[V];
   const R = Math.min(W, H) / 2, cx = W / 2, cy = H / 2, k = R / 380;
   S.dt = Math.min(0.05, t - (S.last ?? t)); S.last = t;
   S.stars ??= Array.from({ length: 150 }, () => ({ a: rnd(TAU), d: rnd(0.15, 1.3), s: rnd(0.6, 2) }));
@@ -108,8 +123,8 @@ function frame(x, W, H, t, S, item) {
     S.sp = S.sp.filter((q) => q.l > 0); x.globalAlpha = 1;
   }
 
-  /* E. the black hole (13s on) */
-  if (t >= T.hole) {
+  /* E. the centrepiece (13s on): a black hole, a redaction, or a rift */
+  if (t >= T.hole && V === "horizon") {
     const tt = t - T.hole, grow = easeOut(tt / 1.5), r0 = R * 0.3 * grow * (1 + 0.025 * Math.sin(tt * 3));
     x.globalCompositeOperation = "lighter";
     for (const s of S.stars) { s.d -= (0.05 + (1.2 / (s.d + 0.15)) * 0.09) * S.dt; s.a += (0.5 / (s.d + 0.2)) * S.dt; if (s.d < 0.07) { s.d = rnd(0.9, 1.3); s.a = rnd(TAU); }
@@ -133,6 +148,49 @@ function frame(x, W, H, t, S, item) {
     x.strokeStyle = "#ff2e4d"; x.lineWidth = 3 * k + 1; x.beginPath(); x.arc(cx, cy, r0, 0, TAU); x.stroke();
   }
 
+
+  if (t >= T.hole && V === "redacted") {
+    const tt = t - T.hole, rows = 18, rh = H / rows, fs = Math.max(8, rh * 0.62);
+    x.fillStyle = "#0d0d0f"; x.fillRect(0, 0, W, H);
+    x.font = mono(fs, 600); x.textAlign = "left"; x.textBaseline = "middle";
+    for (let i = 0; i < rows; i++) {
+      const y = i * rh + rh / 2, seed = i * 97.3;
+      x.fillStyle = "rgba(220,220,230,.35)"; x.fillText("the quick report on item ".repeat(6).slice(0, 90 + (i % 5) * 9), W * 0.04 + ((i * 37) % 30), y);
+      const delay = (i * 0.37) % 4.2, p = easeOut((tt - delay) / 0.35);
+      if (p > 0) { const len = W * (0.55 + 0.42 * ((Math.sin(seed) + 1) / 2)), left = i % 2 ? W - len * p : 0; x.fillStyle = "#000"; x.fillRect(left, y - rh * 0.42, len * p, rh * 0.84); x.strokeStyle = "rgba(255,255,255,.18)"; x.lineWidth = 1; x.strokeRect(left + 0.5, y - rh * 0.42, len * p, rh * 0.84); }
+    }
+    for (const [at, ang, tx, ty, label] of [[0.2, -0.2, 0.5, 0.3, "CLASSIFIED"], [3.2, 0.14, 0.32, 0.68, "TOP SECRET"], [6, -0.1, 0.68, 0.5, "REDACTED"]]) {
+      const q = (t - T.hole - at); if (q <= 0) continue; const sc = 1 + 2.2 * Math.exp(-q * 14), fsz = R * 0.2 * sc;
+      x.save(); x.translate(W * tx, H * ty); x.rotate(ang); x.font = `900 ${fsz}px Impact, "Arial Black", sans-serif`; x.textAlign = "center"; x.globalAlpha = clamp(q * 8) * 0.85; const w = x.measureText(label).width;
+      x.lineWidth = 6 * k + 1; x.strokeStyle = "#ff2e4d"; x.fillStyle = "rgba(20,0,4,.6)"; x.fillRect(-w / 2 - 20 * k, -fsz * 0.65, w + 40 * k, fsz * 1.3); x.strokeRect(-w / 2 - 20 * k, -fsz * 0.65, w + 40 * k, fsz * 1.3); x.fillStyle = "#ff2e4d"; x.fillText(label, 0, 0); x.restore();
+    }
+    x.globalAlpha = 1;
+  }
+  if (t >= T.hole && V === "rift") {
+    const tt = t - T.hole, open = easeOut(tt / 2.6), gw = (6 + 0.42 * W * open) * 0.5 * (1 + 0.03 * Math.sin(tt * 4));
+    x.fillStyle = "#04000a"; x.fillRect(0, 0, W, H);
+    /* the other side, seen through the gap */
+    x.save(); x.beginPath(); x.moveTo(cx, -10);
+    for (let i = 0; i <= 60; i++) { const yy = (i / 60) * (H + 20) - 10; x.lineTo(cx - gw * (0.82 + 0.18 * Math.sin(i * 0.9 + tt * 2)) * Math.sin(Math.PI * i / 60), yy); }
+    for (let i = 60; i >= 0; i--) { const yy = (i / 60) * (H + 20) - 10; x.lineTo(cx + gw * (0.82 + 0.18 * Math.sin(i * 1.1 - tt * 2.4)) * Math.sin(Math.PI * i / 60), yy); }
+    x.closePath(); x.clip();
+    const g = x.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.6); g.addColorStop(0, "#fff"); g.addColorStop(0.25, "#b9a2ff"); g.addColorStop(0.55, "#4b1d9a"); g.addColorStop(1, "#0a0020"); x.fillStyle = g; x.fillRect(0, 0, W, H);
+    x.globalCompositeOperation = "lighter"; x.strokeStyle = "rgba(120,220,255,.35)"; x.lineWidth = 2 * k + 1;
+    for (let i = 0; i < 14; i++) { x.beginPath(); for (let j = 0; j <= 16; j++) { const yy = (j / 16) * H, xx = cx + Math.sin(j * 0.7 + tt * (1 + i * 0.12) + i) * gw * (0.2 + i * 0.05); j ? x.lineTo(xx, yy) : x.moveTo(xx, yy); } x.stroke(); }
+    x.globalCompositeOperation = "source-over"; x.restore();
+    x.strokeStyle = "#c9b8ff"; x.globalAlpha = 0.9; x.lineWidth = 3 * k + 1; x.beginPath(); x.moveTo(cx, 0); for (let i = 0; i <= 60; i++) x.lineTo(cx - gw * (0.82 + 0.18 * Math.sin(i * 0.9 + tt * 2)) * Math.sin(Math.PI * i / 60), (i / 60) * H); x.stroke(); x.globalAlpha = 1;
+    /* something opens its eye */
+    const e = clamp((tt - 3.2) / 1.6), ey = cy - R * 0.66;
+    if (e > 0) {
+      const ew = R * 0.5 * easeOut(e), blink = (tt % 5.5) > 5.2 ? 0.1 : 1, eh = ew * 0.34 * blink, look = Math.sin(tt * 0.7) * ew * 0.12, lookY = Math.cos(tt * 0.5) * eh * 0.15;
+      x.save(); x.beginPath(); x.moveTo(cx - ew, ey); x.quadraticCurveTo(cx, ey - eh * 2, cx + ew, ey); x.quadraticCurveTo(cx, ey + eh * 2, cx - ew, ey); x.clip();
+      x.fillStyle = "#f2ecff"; x.fillRect(cx - ew, ey - eh * 2, ew * 2, eh * 4);
+      const ig = x.createRadialGradient(cx + look, ey + lookY, 0, cx + look, ey + lookY, eh * 1.1); ig.addColorStop(0, "#000"); ig.addColorStop(0.35, "#000"); ig.addColorStop(0.4, "#ff2e4d"); ig.addColorStop(1, "#5a0014"); x.fillStyle = ig; x.beginPath(); x.arc(cx + look, ey + lookY, eh * 1.1, 0, TAU); x.fill();
+      x.restore(); x.strokeStyle = "#000"; x.lineWidth = 3 * k + 1; x.beginPath(); x.moveTo(cx - ew, ey); x.quadraticCurveTo(cx, ey - eh * 2, cx + ew, ey); x.quadraticCurveTo(cx, ey + eh * 2, cx - ew, ey); x.stroke();
+    }
+  }
+
+  if (t >= T.reveal - 0.3 && V !== "horizon") { x.fillStyle = `rgba(0,0,0,${(V === "rift" ? 0.82 : 0.7) * clamp((t - T.reveal + 0.3) / 0.9)})`; x.fillRect(0, 0, W, H); }
   /* the word and the reveal */
   if (t >= T.word) {
     const tt = t - T.word, slam = easeOut(tt / 0.28), lift = easeOut((t - T.reveal) / 0.8), size = R * (0.34 - 0.16 * lift) * (3 - 2 * slam), ty = cy + R * (0.02 - 0.5 * lift);
@@ -174,7 +232,7 @@ export function playSecret(item) {
     fit(); document.body.appendChild(cv); addEventListener("resize", fit);
     const x = cv.getContext("2d");
     let stop = () => {}, ctx;
-    if (state.me?.settings?.chatSound !== false) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); stop = sound(ctx); } catch { /* silent */ } }
+    if (state.me?.settings?.chatSound !== false) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); stop = sound(ctx, variantOf(item)); } catch { /* silent */ } }
     const S = {}, t0 = performance.now(); let raf = 0, done = false;
     const end = () => { if (done) return; done = true; clearTimeout(fail); cancelAnimationFrame(raf); stop(); removeEventListener("resize", fit); removeEventListener("keydown", key, true); cv.classList.add("out"); setTimeout(() => { cv.remove(); try { ctx?.close(); } catch { /* ok */ } }, 450); resolve(); };
     const key = (e) => { if (e.key === "Escape" && (performance.now() - t0) / 1000 > 2) { e.preventDefault(); end(); } };
