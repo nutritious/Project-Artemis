@@ -98,3 +98,8 @@ The cloud button in Browse opens a real Chrome or Firefox style browser that run
 - On Render, `CLOUD_MAX` (default 1 in the Dockerfile) caps how many browsers run at once. A browser needs roughly 400 MB of memory, so the Starter plan (512 MB) handles one and may restart under load. For more at once, use the Standard plan (2 GB) and raise `CLOUD_MAX`.
 - Servers share a data-center address, so YouTube and a few others may still show a bot check. If a home exit node is connected (see above), the cloud browser runs there instead and sites see your home internet.
 - The browser cannot open localhost or any private/LAN address, and it follows the site's bans and blocklist.
+
+### Optional settings added with Tube and the GIF library
+
+- `ARTEMIS_INVIDIOUS`: comma-separated list of https Invidious servers for the Tube page (the default list is built in; servers come and go).
+- `TENOR_API_KEY` or `GIPHY_API_KEY`: turns on the Search tab in the chat GIF library. Without one, the library still has the server library and each person's Saved GIFs.

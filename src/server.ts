@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import express, { type NextFunction, type Request, type Response } from "express";
-import { ALLOW_PRIVATE, HOST, OWNER_PASSWORD, OWNER_USERNAME, PORT, PROXY_HOSTNAME, PROXY_ORIGIN, PROXY_TOKEN_TTL_MS, SESSION_TTL_MS, TRUST_PROXY, UPSTREAM_PROXY } from "./config.js";
+import { GIPHY_API_KEY, TENOR_API_KEY, ALLOW_PRIVATE, HOST, OWNER_PASSWORD, OWNER_USERNAME, PORT, PROXY_HOSTNAME, PROXY_ORIGIN, PROXY_TOKEN_TTL_MS, SESSION_TTL_MS, TRUST_PROXY, UPSTREAM_PROXY } from "./config.js";
 import { allow, checkPassword, clientIp, hashPassword, publicUser, sign, SESSION_COOKIE, userFromRequest } from "./auth.js";
 import { audit, db, defaultSettings, isStaff, newEconomy, saveDb, uid, type Settings, type User } from "./store.js";
 import { trustInfo, TRUST, accrueProxy } from "./trust.js";
@@ -279,6 +279,41 @@ api.get("/yt/video/:id", auth, async (req, res) => {
     const d = r.data ?? {};
     res.json({ video: { ...card({ ...d, videoId: id }), description: String(d.description ?? "").slice(0, 1500), likes: Number(d.likeCount) || 0 }, related: cards((d.recommendedVideos ?? []).map((x: any) => ({ ...x, viewCount: x.viewCount ?? x.viewCountText }))), base: INSTANCES[r.from], backends: ytStatus() });
   } catch (e) { ytFail(res, e); }
+});
+/* GIF library: the server library (owner and co-owners curate it), each person's saved GIFs, and optional search */
+const gifUrl = (raw: unknown) => {
+  let u: URL; try { u = new URL(String(raw ?? "").trim()); } catch { throw new Error("That is not a link"); }
+  if (u.protocol !== "https:" || u.username || u.password || String(raw).length > 500) throw new Error("Use a normal https link");
+  if (db.data.blocklist.some((b) => u.hostname === b || u.hostname.endsWith("." + b))) throw new Error("That site is blocked here");
+  if (!/\.(gif|webp|png|jpe?g|avif)$/i.test(u.pathname) && !/(^|\.)(giphy\.com|tenor\.com|tenor\.googleapis\.com|imgur\.com)$/.test(u.hostname)) throw new Error("That link must go straight to a GIF or image (it should end in .gif)");
+  return u.href;
+};
+const gifView = () => ({ library: db.data.gifs.map((g) => ({ id: g.id, url: g.url, title: g.title })), search: !!(TENOR_API_KEY || GIPHY_API_KEY) });
+api.get("/gifs", auth, (req, res) => res.json({ ...gifView(), mine: me(req).gifs ?? [] }));
+api.post("/gifs/mine", auth, (req, res) => {
+  try { const u = me(req), url = gifUrl(req.body?.url); u.gifs ??= []; if (u.gifs.some((g) => g.url === url)) return void res.json({ mine: u.gifs }); if (u.gifs.length >= 100) throw new Error("You can save up to 100 GIFs"); u.gifs.unshift({ id: uid(), url }); saveDb(); res.json({ mine: u.gifs }); } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+api.delete("/gifs/mine/:id", auth, (req, res) => { const u = me(req); u.gifs = (u.gifs ?? []).filter((g) => g.id !== req.params.id); saveDb(); res.json({ mine: u.gifs }); });
+api.post("/gifs/library", auth, coownerUp, (req, res) => {
+  try { const url = gifUrl(req.body?.url), title = String(req.body?.title ?? "").trim().slice(0, 40); if (db.data.gifs.length >= 400) throw new Error("The library is full (400 GIFs)"); if (db.data.gifs.some((g) => g.url === url)) throw new Error("That GIF is already in the library"); db.data.gifs.unshift({ id: uid(), url, title, by: me(req).username, ts: Date.now() }); saveDb(); logAdmin(req, "gif.add", url.slice(0, 120)); res.json(gifView()); } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+api.delete("/gifs/library/:id", auth, coownerUp, (req, res) => { db.data.gifs = db.data.gifs.filter((g) => g.id !== req.params.id); saveDb(); logAdmin(req, "gif.remove", String(req.params.id)); res.json(gifView()); });
+api.get("/gifs/search", auth, async (req, res) => {
+  if (!allow(`gifs:${me(req).id}`, 40, 60_000)) return void res.status(429).json({ error: "Slow down a little" });
+  if (!TENOR_API_KEY && !GIPHY_API_KEY) return void res.status(501).json({ error: "GIF search is off. The owner can turn it on with a Tenor or Giphy key (TENOR_API_KEY or GIPHY_API_KEY)." });
+  const q = String(req.query.q ?? "").trim().slice(0, 60);
+  try {
+    const url = TENOR_API_KEY
+      ? `https://tenor.googleapis.com/v2/${q ? "search" : "featured"}?key=${encodeURIComponent(TENOR_API_KEY)}&client_key=artemis&limit=24&contentfilter=high&media_filter=gif,tinygif${q ? "&q=" + encodeURIComponent(q) : ""}`
+      : `https://api.giphy.com/v1/gifs/${q ? "search" : "trending"}?api_key=${encodeURIComponent(GIPHY_API_KEY)}&limit=24&rating=pg${q ? "&q=" + encodeURIComponent(q) : ""}`;
+    const r = await undiciRequest(url, { method: "GET", dispatcher: safeDispatcher, headers: { accept: "application/json" }, signal: AbortSignal.timeout(8000) });
+    if (r.statusCode !== 200) { await r.body.dump(); throw new Error("status " + r.statusCode); }
+    const j: any = await r.body.json();
+    const gifs = TENOR_API_KEY
+      ? (j.results ?? []).map((x: any) => ({ url: x.media_formats?.gif?.url, preview: x.media_formats?.tinygif?.url ?? x.media_formats?.gif?.url, title: String(x.content_description ?? "").slice(0, 60) }))
+      : (j.data ?? []).map((x: any) => ({ url: x.images?.original?.url?.split("?")[0], preview: x.images?.fixed_width?.url?.split("?")[0], title: String(x.title ?? "").slice(0, 60) }));
+    res.json({ gifs: gifs.filter((g: any) => typeof g.url === "string" && /^https:\/\//.test(g.url)).slice(0, 24) });
+  } catch { res.status(502).json({ error: "The GIF service did not answer. Try again in a moment." }); }
 });
 api.get("/proxy-token", auth, (req, res) => res.json({ proxyToken: proxyToken(me(req)), proxyOrigin: proxyOriginFor(req), sjOrigin: PROXY_ORIGIN, ...exitInfo(me(req)) }));
 api.get("/cloud-pass", auth, (req, res) => res.json(cloudPass(me(req))));

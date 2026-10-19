@@ -26,3 +26,7 @@ export const HOST_OVERRIDES: Record<string, string> = Object.fromEntries(
 export const OWNER_USERNAME = process.env.OWNER_USERNAME ?? "Warmaster";
 /** Optional: create the owner account at startup so the password never has to travel through the sign-up form. Set it in .env, never in code. */
 export const OWNER_PASSWORD = process.env.OWNER_PASSWORD ?? "";
+
+/** Optional keys for GIF search in chat. Without one, the GIF library still has the server library and each person's saved GIFs. */
+export const TENOR_API_KEY = process.env.TENOR_API_KEY ?? "";
+export const GIPHY_API_KEY = process.env.GIPHY_API_KEY ?? "";

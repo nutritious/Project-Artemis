@@ -1,5 +1,6 @@
 /* Chat: channels, replies, reactions, edit/delete, mentions, embeds, typing, unread. */
 import { openFullProfile } from "./profile.js";
+import { openGifPicker } from "./gif.js";
 import { $, $$, api, avatar, can, confirmBox, emit, esc, byLine, hooks, hue, icon, myRank, personByName, promptBox, rankOf, roleById, roleColor, roleTags, state, timeStr, toast, on, ago } from "./util.js";
 
 const EMOJI = ["👍", "❤️", "😂", "🎉", "🚀", "🌕", "👀", "🔥", "😮", "😢", "🙏", "💯", "✅", "🤝", "🛰️", "✨"];
@@ -180,8 +181,7 @@ export function buildChat() {
   $("#chatSend").onclick = submit;
   $("#chatGif").onclick = async () => {
     if (!state.trusted) return toast("GIFs unlock when you become a trusted member: 300 messages, 3 hours on the proxy, a 10-day-old account and no bans for 14 days. See the Hub for your progress.", true);
-    const url = await promptBox("Post a GIF", { label: "GIF link", placeholder: "https://media.giphy.com/…/giphy.gif", ok: "Post" });
-    if (url && /^https?:\/\//i.test(url.trim())) send({ t: "send", channel: C.current, text: url.trim() });
+    openGifPicker((url) => send({ t: "send", channel: C.current, text: url, replyTo: C.reply?.id }));
   };
   $("#replybar button").onclick = () => setReply(null);
   $("#msgs").addEventListener("click", onMsgClick);
