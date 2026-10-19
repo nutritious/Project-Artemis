@@ -14,10 +14,17 @@ function setWisp() {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   return `${proto}//${location.host}/wisp/${encodeURIComponent(token)}/`;
 }
-const makeTransport = () => { const u = setWisp(); return new LibcurlTransport.LibcurlClient({ wisp: u, websocket: u }); };
+const useEpoxy = hash.get("tr") === "epoxy";
+const makeTransport = () => {
+  const u = setWisp();
+  if (useEpoxy) { const E = globalThis.EpoxyTransport; const C = E?.default ?? E?.EpoxyClient ?? E; return new C({ wisp: u }); }
+  return new LibcurlTransport.LibcurlClient({ wisp: u, websocket: u });
+};
+const loadScript = (src) => new Promise((ok, no) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => no(new Error("Could not load " + src)); document.head.append(s); });
 
 async function start() {
   if (!("serviceWorker" in navigator)) throw new Error("This browser can't run service workers here (needs https or localhost).");
+  if (useEpoxy) await loadScript("/sj/epoxy/index.js");
   const reg = await navigator.serviceWorker.register("/sj/sw.js", { scope: "/sj/" });
   await navigator.serviceWorker.ready;
   const sw = reg.active || navigator.serviceWorker.controller;

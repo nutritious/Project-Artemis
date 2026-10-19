@@ -61,7 +61,7 @@ D.updates = [
 
 const X = { init: () => ({}), ex: () => null };
 const members = () => users.filter((u) => !u.banned).map((u) => { const e = X.ex(u); return { id: u.id, username: u.username, role: u.role, roleId: u.roleId ?? null, lastSeen: u.lastSeen, createdAt: u.createdAt, profile: u.profile, fx: e?.equip?.effect ?? "", tag: e?.equip?.tag ?? "", bg: e?.equip?.bg ?? "", trusted: X.isTrusted ? X.isTrusted(u) : false }; });
-const engines = [{ id: "ddg", name: "DuckDuckGo", home: "https://duckduckgo.com/" }, { id: "brave", name: "Brave Search", home: "https://search.brave.com/" }, { id: "mojeek", name: "Mojeek", home: "https://www.mojeek.com/" }];
+const engines = [{ id: "ddg", name: "DuckDuckGo", home: "https://duckduckgo.com/" }, { id: "brave", name: "Brave Search", home: "https://search.brave.com/" }, { id: "mojeek", name: "Mojeek", home: "https://www.mojeek.com/" }, { id: "google", name: "Google", home: "https://www.google.com/" }];
 const series = (base, jitter) => Array.from({ length: 60 }, (_, i) => Math.max(0, Math.round(base + Math.sin(i / 5) * base * 0.5 + Math.random() * jitter)));
 function stats() {
   const req = series(14, 8), err = req.map((v) => Math.round(v * 0.04 * Math.random()));

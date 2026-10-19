@@ -17,7 +17,10 @@ const cur = () => tabs.find((t) => t.id === active);
 
 /** Scramjet runs in a small shell page; "#t" carries the signed token, "#u" the first address. */
 const exitQ = () => (state.exitUrl && state.exitToken ? `&x=${encodeURIComponent(state.exitUrl)}&xt=${encodeURIComponent(state.exitToken)}` : "");
-export const sjSrc = (url) => `${state.sjOrigin || ""}/sj/shell.html#t=${encodeURIComponent(state.proxyToken)}${exitQ()}&u=${encodeURIComponent(url)}`;
+/** Engine choices live in Settings: "scramjet" (V2, default), "scramjet1" (V1) or "classic"; the tunnel is "libcurl" or "epoxy" (V2 only). */
+const pref = (k, d) => { try { return localStorage.getItem(k) || d; } catch { return d; } };
+const sjBase = () => `${state.sjOrigin || ""}${pref("artemis.proxy", "scramjet") === "scramjet1" ? "/sj1" : "/sj"}/shell.html#t=${encodeURIComponent(state.proxyToken)}${exitQ()}${pref("artemis.proxy", "scramjet") === "scramjet" && pref("artemis.tunnel", "libcurl") === "epoxy" ? "&tr=epoxy" : ""}`;
+export const sjSrc = (url) => `${sjBase()}&u=${encodeURIComponent(url)}`;
 export const proxySrc = (url) => `${state.proxyOrigin}/p/${state.proxyToken}/${b64u(url)}`;
 const favicon = (host) => `${state.proxyOrigin}/p/${state.proxyToken}/${b64u("https://" + host + "/favicon.ico")}`;
 
@@ -83,14 +86,14 @@ function prewarmScramjet() {
     const f = document.createElement("iframe");
     f.id = "sjWarm"; f.tabIndex = -1; f.setAttribute("aria-hidden", "true");
     f.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;border:0;visibility:hidden;pointer-events:none";
-    f.src = `${state.sjOrigin || ""}/sj/shell.html#t=${encodeURIComponent(state.proxyToken)}${exitQ()}`;
+    f.src = sjBase();
     document.body.append(f);
   };
   (window.requestIdleCallback || ((fn) => setTimeout(fn, 1500)))(go, { timeout: 4000 });
 }
 
 /* ------------------------------ tabs ------------------------------ */
-const wantClassic = () => { try { return localStorage.getItem("artemis.proxy") === "classic"; } catch { return false; } };
+const wantClassic = () => pref("artemis.proxy", "scramjet") === "classic";
 export function newTab(entry = { kind: "home" }, activate = true) {
   const t = { id: ++seq, title: "New tab", favicon: "", stack: [], idx: -1, pane: null, iframe: null, loading: false, expect: "", legacy: wantClassic() };
   t.pane = document.createElement("div");
@@ -145,7 +148,7 @@ function loadFrame(t, url) {
   clearTimeout(t.watchdog);
   t.watchdog = setTimeout(() => {
     if (!t.loading || t.legacy || t.expect !== url) return;
-    toast("Scramjet V2 is taking a while. Still trying. If it never loads, switch to Classic in Settings > Proxy engine.", true);
+    toast("The proxy engine is taking a while. Still trying. If it never loads, switch to Classic in Settings > Proxy engine.", true);
   }, 25000);
 }
 function back() { const t = cur(); if (t && t.idx > 0) go(t, t.idx - 1); }
@@ -162,7 +165,8 @@ export function openUrl(url, newTabToo = false) {
   setView("browse");
 }
 export function openSearch(q, newTabToo = false) {
-  const e = { kind: "search", q, engine: state.me?.settings.engine };
+  /* Google can't be read by the server, so it opens as a real page through the proxy */
+  const e = state.me?.settings.engine === "google" ? { kind: "page", url: `https://www.google.com/search?q=${encodeURIComponent(q)}&hl=en` } : { kind: "search", q, engine: state.me?.settings.engine };
   if (newTabToo) newTab(e); else navigate(cur(), e);
   setView("browse");
 }
@@ -196,7 +200,7 @@ function render(light) {
   if (tag) {
     const isPage = e.kind === "page" && !hooks.frame;
     tag.classList.toggle("hidden", !isPage);
-    tag.textContent = t.legacy ? "Classic" : "Scramjet V2";
+    tag.textContent = t.legacy ? "Classic" : pref("artemis.proxy", "scramjet") === "scramjet1" ? "Scramjet V1" : "Scramjet V2";
     tag.classList.toggle("warn", !!t.legacy); tag.classList.toggle("ok", !t.legacy);
   }
 }

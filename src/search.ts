@@ -3,10 +3,11 @@ import { fetch } from "undici";
 import { HOST_OVERRIDES, USER_AGENT } from "./config.js";
 import { plainDispatcher } from "./net.js";
 
-export type EngineId = "ddg" | "brave" | "mojeek";
+export type EngineId = "ddg" | "brave" | "mojeek" | "google";
 export const ENGINES: Record<EngineId, { name: string; home: string; webUrl: (q: string) => string }> = {
   ddg: { name: "DuckDuckGo", home: "https://duckduckgo.com/", webUrl: (q) => `https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}` },
   brave: { name: "Brave Search", home: "https://search.brave.com/", webUrl: (q) => `https://search.brave.com/search?q=${encodeURIComponent(q)}` },
+  google: { name: "Google", home: "https://www.google.com/", webUrl: (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}&hl=en` },
   mojeek: { name: "Mojeek", home: "https://www.mojeek.com/", webUrl: (q) => `https://www.mojeek.com/search?q=${encodeURIComponent(q)}` },
 };
 
@@ -144,13 +145,16 @@ async function mojeek(q: string, next?: string): Promise<{ results: SearchResult
   return { results, next: results.length ? String(start + results.length) : undefined, reason: results.length ? undefined : `no results parsed (HTTP ${r.status})` };
 }
 
+/* Google refuses server-side reading, so it is opened as a real page in the proxy (the browser does that); the server only parses these three. */
 const IMPL = { ddg, brave, mojeek } as const;
+type Native = keyof typeof IMPL;
 const cache = new Map<string, { at: number; value: SearchResponse }>();
 const TTL = 5 * 60_000;
 
 export async function search(q: string, preferred: EngineId, next?: string, nextEngine?: EngineId): Promise<SearchResponse> {
   q = q.trim().slice(0, 300);
-  const order: EngineId[] = nextEngine ? [nextEngine] : [preferred, ...(["ddg", "brave", "mojeek"] as EngineId[]).filter((e) => e !== preferred)];
+  const first: Native = preferred === "google" ? "ddg" : preferred;
+  const order: Native[] = nextEngine && nextEngine !== "google" ? [nextEngine] : [first, ...(["ddg", "brave", "mojeek"] as Native[]).filter((e) => e !== first)];
   const key = `${order[0]}|${q}|${next ?? ""}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL) return hit.value;

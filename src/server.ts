@@ -52,7 +52,7 @@ app.use((req, res, next) => (req.path.startsWith("/p/") || req.path.startsWith("
 
 app.use((req, res, next) => {
   const role = hostRole(req.hostname);
-  const isProxyPath = req.path.startsWith("/p/") || req.path.startsWith("/__artemis/") || req.path.startsWith("/sj/");
+  const isProxyPath = req.path.startsWith("/p/") || req.path.startsWith("/__artemis/") || req.path.startsWith("/sj/") || req.path.startsWith("/sj1/");
   if (role === "proxy" && !isProxyPath) {
     // Fix up scripts that navigate to site-relative paths by using the Referer.
     const real = realFromProxyUrl(req.get("referer"));
@@ -75,7 +75,7 @@ app.use((req, res, next) => {
 
 const IMG_ORIGINS = [PROXY_ORIGIN, "http://127.0.0.1:*"].filter(Boolean).join(" ");
 app.use((req, res, next) => {
-  if (!req.path.startsWith("/p/") && !req.path.startsWith("/sj/")) {
+  if (!req.path.startsWith("/p/") && !req.path.startsWith("/sj/") && !req.path.startsWith("/sj1/")) {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "SAMEORIGIN");
     res.setHeader("Referrer-Policy", "same-origin");
@@ -426,7 +426,7 @@ api.delete("/owner/reports/:id", auth, coownerUp, (req, res) => {
 });
 
 /* ----- search ----- */
-const isEngine = (v: unknown): v is EngineId => v === "ddg" || v === "brave" || v === "mojeek";
+const isEngine = (v: unknown): v is EngineId => v === "ddg" || v === "brave" || v === "mojeek" || v === "google";
 api.get("/search", auth, async (req, res) => {
   const user = me(req);
   if (!allow(`search:${user.id}`, 40, 60_000)) return void res.status(429).json({ error: "Searching too fast" });

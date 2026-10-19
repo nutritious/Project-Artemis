@@ -23,6 +23,11 @@ export function mountScramjet(app: Express) {
   app.use("/sj/lib", express.static(mod("@mercuryworkshop/scramjet/dist"), opts));
   app.use("/sj/ctl", express.static(mod("@mercuryworkshop/scramjet-controller/dist"), opts));
   app.use("/sj/curl", express.static(mod("@mercuryworkshop/libcurl-transport/dist"), opts));
+  app.use("/sj/epoxy", express.static(mod("@mercuryworkshop/epoxy-transport/dist"), opts));
+  /* Scramjet V1, kept as a fallback engine (Settings > Proxy engine) */
+  app.use("/sj1/lib", express.static(mod("scramjet-v1/dist"), opts));
+  app.use("/sj1/mux", express.static(mod("bare-mux-v1/dist"), opts));
+  app.use("/sj1/curl", express.static(mod("libcurl-transport-v1/dist"), opts));
 }
 
 logging.set_level(logging.ERROR);
