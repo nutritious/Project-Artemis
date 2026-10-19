@@ -44,6 +44,29 @@ const CENTER = {
     for (let ring = 0; ring < 3; ring++) { const n = 24 + ring * 6, ro = pr * (1 - ring * 0.22), ri = ro * 0.55, rot = tt * (ring % 2 ? -0.7 : 0.9) + ring; x.beginPath(); for (let i = 0; i < n * 2; i++) { const a = (i / (n * 2)) * TAU + rot, r = i % 2 ? ri : ro; x.lineTo(Math.cos(a) * r, Math.sin(a) * r); } x.closePath(); x.fillStyle = spectrum(x.createLinearGradient(-ro, 0, ro, 0), 5, tt * 140 + ring * 90, 62, 0.5); x.fill(); x.strokeStyle = hue(tt * 100 + ring * 120, 80, 0.9); x.lineWidth = 2 * k; x.stroke(); }
     x.restore(); x.globalCompositeOperation = "source-over"; return pr;
   },
+  /* Prismatic Jack (effect): a carved pumpkin lit from inside by a rainbow flame */
+  jack(x, cx, cy, k, tt, sc) {
+    const pr = 150 * k * sc; x.save(); x.translate(cx, cy + Math.sin(tt * 2) * 6 * k);
+    x.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 14; i++) { const a = (i / 14) * TAU + tt * 0.6, r = pr * (1.05 + 0.18 * Math.sin(tt * 5 + i)); x.beginPath(); x.moveTo(Math.cos(a) * pr * 0.8, Math.sin(a) * pr * 0.8); x.lineTo(Math.cos(a + 0.12) * r, Math.sin(a + 0.12) * r); x.lineTo(Math.cos(a + 0.24) * pr * 0.8, Math.sin(a + 0.24) * pr * 0.8); x.fillStyle = hue(i * 26 + tt * 160, 60, 0.55); x.fill(); }
+    x.globalCompositeOperation = "source-over";
+    x.beginPath(); x.ellipse(0, 0, pr * 0.9, pr * 0.78, 0, 0, TAU); x.fillStyle = spectrum(x.createLinearGradient(-pr, -pr, pr, pr), 6, tt * 90, 48, 1); x.fill();
+    x.strokeStyle = "rgba(0,0,0,.35)"; x.lineWidth = 3 * k; for (let i = -2; i <= 2; i++) { x.beginPath(); x.ellipse(0, 0, pr * (0.9 - Math.abs(i) * 0.2), pr * 0.78, 0, -1.2, 1.2 + Math.PI * 0.0); x.stroke(); }
+    x.fillStyle = "#0a0510"; x.beginPath(); x.moveTo(-pr * 0.5, -pr * 0.1); x.lineTo(-pr * 0.15, -pr * 0.1); x.lineTo(-pr * 0.32, -pr * 0.42); x.closePath(); x.fill(); x.beginPath(); x.moveTo(pr * 0.5, -pr * 0.1); x.lineTo(pr * 0.15, -pr * 0.1); x.lineTo(pr * 0.32, -pr * 0.42); x.closePath(); x.fill();
+    x.beginPath(); x.moveTo(-pr * 0.55, pr * 0.18); for (let i = 0; i <= 8; i++) x.lineTo(-pr * 0.55 + i * pr * 0.1375, pr * (i % 2 ? 0.42 : 0.2)); x.lineTo(pr * 0.55, pr * 0.18); x.closePath(); x.fill();
+    x.fillStyle = hue(tt * 200, 70, 0.9); x.shadowColor = hue(tt * 200, 60, 1); x.shadowBlur = 24 * k; x.beginPath(); x.arc(-pr * 0.32, -pr * 0.2, 6 * k, 0, TAU); x.arc(pr * 0.32, -pr * 0.2, 6 * k, 0, TAU); x.fill(); x.shadowBlur = 0;
+    x.fillStyle = "#3a7a2a"; x.fillRect(-8 * k, -pr * 0.95, 16 * k, pr * 0.22); x.restore(); return pr;
+  },
+  /* Spectral Wraith (effect): a rainbow ghost drifting through its own light */
+  ghost(x, cx, cy, k, tt, sc) {
+    const pr = 160 * k * sc; x.save(); x.translate(cx, cy + Math.sin(tt * 2.2) * 10 * k);
+    for (let t = 5; t >= 0; t--) { x.globalAlpha = 0.07 * (6 - t); x.beginPath(); x.ellipse(Math.sin(tt * 2 - t * 0.5) * 14 * k, pr * 0.1 + t * 22 * k, pr * 0.9, pr * 0.3, 0, 0, TAU); x.fillStyle = hue(tt * 120 + t * 40, 62, 1); x.fill(); }
+    x.globalAlpha = 0.92; x.beginPath(); x.moveTo(-pr * 0.62, pr * 0.62); x.lineTo(-pr * 0.62, -pr * 0.1); x.bezierCurveTo(-pr * 0.62, -pr * 0.95, pr * 0.62, -pr * 0.95, pr * 0.62, -pr * 0.1); x.lineTo(pr * 0.62, pr * 0.62);
+    for (let i = 0; i < 5; i++) { const bx = pr * 0.62 - (i + 1) * pr * 0.248, by = pr * 0.62 + (i % 2 ? -1 : 1) * 16 * k * Math.sin(tt * 6 + i); x.quadraticCurveTo(bx + pr * 0.124, by + (i % 2 ? 22 : -22) * k, bx, pr * 0.62); }
+    x.closePath(); x.fillStyle = spectrum(x.createLinearGradient(-pr * 0.6, -pr, pr * 0.6, pr * 0.6), 6, tt * 110, 78, 0.95); x.shadowColor = hue(tt * 110, 70, 1); x.shadowBlur = 34 * k; x.fill(); x.shadowBlur = 0;
+    x.globalAlpha = 1; x.fillStyle = "#0a0510"; x.beginPath(); x.ellipse(-pr * 0.24, -pr * 0.2, pr * 0.09, pr * 0.14, 0, 0, TAU); x.ellipse(pr * 0.24, -pr * 0.2, pr * 0.09, pr * 0.14, 0, 0, TAU); x.fill(); x.beginPath(); x.ellipse(0, pr * 0.1, pr * 0.1, pr * 0.15 + Math.sin(tt * 5) * 4 * k, 0, 0, TAU); x.fill();
+    x.restore(); return pr;
+  },
   /* CHROMA (title): jagged rainbow lightning around an orb with orbiting sparks */
   prime(x, cx, cy, k, tt, sc, S) {
     const pr = 120 * k * sc; x.save(); x.translate(cx, cy); x.globalCompositeOperation = "lighter"; x.lineJoin = "round";
@@ -78,8 +101,8 @@ const CENTER = {
     S.fs ??= Array.from({ length: 26 }, () => ({ x: rnd(-0.5, 0.5), y: rnd(-0.5, 0.5), p: rnd(TAU) })); for (const f of S.fs) { x.globalAlpha = Math.max(0, Math.sin(tt * 4 + f.p)); x.fillStyle = "#fff"; x.beginPath(); x.arc(f.x * w, f.y * h, 3 * k, 0, TAU); x.fill(); } x.globalAlpha = 1; x.restore(); return pr;
   },
 };
-const VARIANT = { "effect:prism": "prism", "effect:holo": "holo", "tag:chroma-prime": "prime", "tag:spectrum": "ribbon", "theme:prism": "wipe", "bg:spectrum": "panel", "bg:holo-foil": "foil" };
-const CHORDS = { prism: [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568, 2093], holo: [587.33, 740, 880, 1174.7, 1480, 1760, 2349], prime: [440, 554.4, 659.25, 880, 1108.7, 1318.5, 1760], ribbon: [392, 493.9, 587.33, 783.99, 987.8, 1174.7, 1568], wipe: [349.2, 440, 523.25, 698.5, 880, 1046.5, 1396.9], panel: [466.2, 587.33, 698.5, 932.3, 1174.7, 1396.9, 1864.7], foil: [622.25, 783.99, 932.3, 1244.5, 1568, 1864.7, 2489] };
+const VARIANT = { "effect:wraith": "ghost", "effect:prismjack": "jack", "tag:h-nightmare": "prime", "theme:witchfire": "wipe", "bg:carnival": "foil", "effect:prism": "prism", "effect:holo": "holo", "tag:chroma-prime": "prime", "tag:spectrum": "ribbon", "theme:prism": "wipe", "bg:spectrum": "panel", "bg:holo-foil": "foil" };
+const CHORDS = { jack: [293.66, 349.23, 440, 587.33, 698.46, 880, 1174.7], ghost: [329.63, 392, 493.88, 659.25, 783.99, 987.77, 1318.5], prism: [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568, 2093], holo: [587.33, 740, 880, 1174.7, 1480, 1760, 2349], prime: [440, 554.4, 659.25, 880, 1108.7, 1318.5, 1760], ribbon: [392, 493.9, 587.33, 783.99, 987.8, 1174.7, 1568], wipe: [349.2, 440, 523.25, 698.5, 880, 1046.5, 1396.9], panel: [466.2, 587.33, 698.5, 932.3, 1174.7, 1396.9, 1864.7], foil: [622.25, 783.99, 932.3, 1244.5, 1568, 1864.7, 2489] };
 export const chromaVariant = (type, id) => VARIANT[`${type}:${id}`] ?? "prism";
 
 function glow(x, cx, cy, r, col, a = 1) { const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, col); g.addColorStop(1, "transparent"); x.globalAlpha = a; x.fillStyle = g; x.fillRect(cx - r, cy - r, r * 2, r * 2); x.globalAlpha = 1; }

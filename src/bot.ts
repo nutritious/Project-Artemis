@@ -26,8 +26,10 @@ export interface Verdict { block: boolean; reply?: Message; ban?: boolean }
 export function moderate(u: User, text: string, channel: string | null): Verdict {
   const say2 = (t: string) => (channel ? say(channel, t) : undefined);
   const c = cfg(); if (!c.enabled || !watched(u)) return { block: false };
-  const custom = c.words.map((w) => w.toLowerCase());
-  const severe = hit(text, [...SEVERE, ...custom], true), mild = !severe && hit(text, MILD);
+  /* DMs are private: the bot only steps in for the n-word, nothing else */
+  const dm = channel === null;
+  const custom = dm ? [] : c.words.map((w) => w.toLowerCase());
+  const severe = hit(text, dm ? [SEVERE[1]] : [...SEVERE, ...custom], true), mild = !dm && !severe && hit(text, MILD);
   if (!severe && !mild) return { block: false };
   const bad = !!severe;
   const strikes = (c.strikesBy[u.id] = (c.strikesBy[u.id] ?? 0) + (bad ? c.strikes : 1));

@@ -1,11 +1,11 @@
 /* Full profile: big picture and effect, rank, titles, arcade bests, collection. Staff also see coins. Plus the profile lookup. */
 import { $, api, avatar, confirmBox, emit, esc, fmtNum, on, overlay, roleTags, state, toast, titleChip, rarityColor } from "./util.js";
-import { EFFECTS, GAMES, BGS, bgMap, effectMap, THEMES, TAGS } from "./cosmetics.js";
+import { RARITY, EFFECTS, GAMES, BGS, bgMap, effectMap, THEMES, TAGS } from "./cosmetics.js";
 
 const RANK_COL = ["#8d96bd", "#4cc9f0", "#3ddc97", "#ffc857", "#ff8a5b", "#e879f9", "#ffd76a"], RANK_NAME = ["Stardust", "Cadet", "Pilot", "Navigator", "Captain", "Voyager", "Legend"];
 
 /* Each profile effect gives the whole card a spinning edge in its own colors. */
-const FXC = { stardust: ["#cfe0ff", "#ffffff"], ringlet: ["#cfe0ff", "#8b7bff"], aurora: ["#3dffb5", "#b57bff"], neon: ["#ff3df0", "#4cc9f0"], orbit: ["#e8ecff", "#4cc9f0"], glitch: ["#ff3b6b", "#3be8ff"], flare: ["#ff7a2b", "#ffd76a"], comet: ["#4cc9f0", "#ffffff"], halo: ["#ff8a5b", "#ffd0a8"], supernova: ["#ffd76a", "#ff8a5b"], crown: ["#ffd76a", "#fff6d0"], pixel: ["#3dff7a", "#ff3df0"], hud: ["#ff3b3b", "#ffffff"], code: ["#33ff33", "#0a8a0a"], scan: ["#3dff7a", "#3be8ff"], prism: ["#ff4df0", "#3be8ff"], holo: ["#ff4df0", "#ffd76a"], "opening-night": ["#ffd76a", "#ff5d9e"], haunted: ["#7dff6a", "#b46bff"], bats: ["#ff8a2b", "#7b2cbf"], jack: ["#ff8a2b", "#ffd76a"], ghostfire: ["#7dff6a", "#b46bff"], cobweb: ["#ffffff", "#9aa4cf"], witchmoon: ["#ffb347", "#ff6a1a"] };
+const FXC = { stardust: ["#cfe0ff", "#ffffff"], ringlet: ["#cfe0ff", "#8b7bff"], aurora: ["#3dffb5", "#b57bff"], neon: ["#ff3df0", "#4cc9f0"], orbit: ["#e8ecff", "#4cc9f0"], glitch: ["#ff3b6b", "#3be8ff"], flare: ["#ff7a2b", "#ffd76a"], comet: ["#4cc9f0", "#ffffff"], halo: ["#ff8a5b", "#ffd0a8"], supernova: ["#ffd76a", "#ff8a5b"], crown: ["#ffd76a", "#fff6d0"], pixel: ["#3dff7a", "#ff3df0"], hud: ["#ff3b3b", "#ffffff"], code: ["#33ff33", "#0a8a0a"], scan: ["#3dff7a", "#3be8ff"], prism: ["#ff4df0", "#3be8ff"], holo: ["#ff4df0", "#ffd76a"], "opening-night": ["#ffd76a", "#ff5d9e"], haunted: ["#7dff6a", "#b46bff"], bats: ["#ff8a2b", "#7b2cbf"], jack: ["#ff8a2b", "#ffd76a"], ghostfire: ["#7dff6a", "#b46bff"], cobweb: ["#ffffff", "#9aa4cf"], witchmoon: ["#ffb347", "#ff6a1a"], wraith: ["#4dd2ff", "#ff4de0"], prismjack: ["#ff8a2b", "#a64dff"] };
 const PRES = { online: ["Online", "#3ddc97"], idle: ["Idle", "#ffc857"], dnd: ["Do not disturb", "#ff5d6e"], invisible: ["Offline", "#8d96bd"] };
 const fmtJoin = (t) => new Date(t).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" });
 
@@ -27,7 +27,8 @@ export async function openFullProfile(name) {
   const rc = RANK_COL[p.rank] ?? "#8d96bd", pic = p.profile?.avatar, eff = effectMap.get(p.equip.effect);
   const [c1, c2] = FXC[p.equip.effect] ?? [rc, rc];
   const bests = GAMES.map((g) => [g.name, p.bests?.[g.id] ?? 0]).filter((x) => x[1] > 0);
-  const owned = EFFECTS.filter((e) => p.inv.effects.includes(e.id));
+  const cnt = {}; for (const [list, ids] of [[EFFECTS, p.inv.effects], [TAGS, p.inv.tags], [THEMES, p.inv.themes], [BGS, p.inv.bgs ?? []]]) for (const it of list) if (ids.includes(it.id)) cnt[it.rarity] = (cnt[it.rarity] ?? 0) + 1;
+  const counts = ["chroma", "legendary", "epic", "rare", "common", "limited"].filter((r) => cnt[r]).map((r) => `<span class="chip" style="--tc:${rarityColor(r)}">${cnt[r]} ${RARITY[r].name}</span>`).join("");
   const total = p.inv.effects.length + p.inv.tags.length + p.inv.themes.length + (p.inv.bgs?.length ?? 0), ownedBgs = BGS.filter((b) => p.inv.bgs?.includes(b.id)), bgi = bgMap.get(p.equip.bg);
   const online = (state.onlineIds ?? new Set()).has(p.id), pr = PRES[p.profile?.presence] ?? PRES.online, accent = p.profile?.accent;
   const bgStyle = p.equip.bg ? "" : `style="background:linear-gradient(150deg,${esc(accent || rc)},color-mix(in srgb,${esc(accent || rc)} 22%,#05060d) 70%)"`;
@@ -44,11 +45,10 @@ export async function openFullProfile(name) {
       ${eff || bgi ? `<div class="pc-fxline">${eff ? `<span class="chip" style="--tc:${rarityColor(eff.rarity)}">Effect · ${esc(eff.name)}</span>` : ""}${bgi ? `<span class="chip" style="--tc:${rarityColor(bgi.rarity)}">Backdrop · ${esc(bgi.name)}</span>` : ""}</div>` : ""}
       <details class="pc-more"><summary>Collection and stats · ${total} items · ${p.ach ?? 0} achievements${p.coins != null ? ` · ◎ ${fmtNum(p.coins)}` : ""}</summary>
         ${bests.length ? `<h4 class="sec">Arcade bests</h4><div class="prof-bests">${bests.map(([n, v]) => `<span><small>${esc(n)}</small><b>${fmtNum(v)}</b></span>`).join("")}</div>` : ""}
-        ${owned.length ? `<h4 class="sec">Profile effects</h4><div class="prof-fx">${owned.map((e) => `<span class="chip" style="--tc:${rarityColor(e.rarity)}" title="${esc(e.desc)}">${esc(e.name)}</span>`).join("")}</div>` : ""}
-        ${ownedBgs.length ? `<h4 class="sec">Backdrops</h4><div class="prof-bgs">${ownedBgs.map((b) => `<span class="bgp" title="${esc(b.name)}"><i class="bgprev pbg-${esc(b.id)}"></i><small>${esc(b.name)}</small></span>`).join("")}</div>` : ""}
-        ${p.inv.tags.length ? `<h4 class="sec">Titles</h4><div class="prof-fx">${p.inv.tags.map((t) => titleChip(t)).join("")}</div>` : ""}
+        ${counts ? `<h4 class="sec">Collection</h4><div class="prof-fx rcount">${counts}</div>` : ""}
       </details></div>
     <div class="pc-actions" id="pcActions">${actionBar(p)}</div></div>`, { center: true });
+  { const av = o.querySelector(".pc-av .avatar"); if (av && eff) { av.classList.add("fx", "fx-" + eff.id); if (!av.querySelector(".fxa")) av.insertAdjacentHTML("afterbegin", '<i class="fxa"></i><i class="fxb"></i>'); } }
   on("friends", () => { if (!o.isConnected) return; const a = o.querySelector("#pcActions"); if (a) a.innerHTML = actionBar(p); });
   const close = () => { o.remove(); };
   o.addEventListener("click", async (e) => {

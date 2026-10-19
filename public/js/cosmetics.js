@@ -32,6 +32,8 @@ export const EFFECTS = [
   { id: "ghostfire", name: "Ghostfire", rarity: "epic", only: "halloween", desc: "Cold green and violet flames" },
   { id: "cobweb", name: "Cobwebbed", rarity: "epic", only: "halloween", desc: "Spiderwebs creep across your picture" },
   { id: "witchmoon", name: "Witching Moon", rarity: "legendary", only: "halloween", desc: "A huge orange moon rises behind you" },
+  { id: "wraith", name: "Spectral Wraith", rarity: "chroma", only: "halloween", desc: "A rainbow ghost haunts your picture" },
+  { id: "prismjack", name: "Prismatic Jack", rarity: "chroma", only: "halloween", desc: "A pumpkin lit by every colour at once" },
 ];
 export const TAGS = [
   { id: "stargazer", name: "Stargazer", color: "#9aa4cf", rarity: "common" },
@@ -59,6 +61,7 @@ export const TAGS = [
   { id: "h-pumpkin-king", name: "Pumpkin King", color: "#ff8a2b", rarity: "rare", only: "halloween" },
   { id: "h-night-witch", name: "Night Witch", color: "#c084fc", rarity: "epic", only: "halloween" },
   { id: "h-grim", name: "The Grim", color: "#ff3b3b", rarity: "legendary", only: "halloween" },
+  { id: "h-nightmare", name: "NIGHTMARE", color: "#ff4df0", rarity: "chroma", only: "halloween" },
 ];
 /* the four original themes are always owned; these unlock from theme packs */
 export const BASE_THEMES = ["eclipse", "lunar", "orion", "aurora"];
@@ -76,6 +79,7 @@ export const THEMES = [
   { id: "prism", name: "Prismatic", rarity: "chroma", c: ["#05030f", "#ff4df0"] },
   { id: "pumpkin", name: "Pumpkin Night", rarity: "rare", only: "halloween", c: ["#140700", "#ff8a2b"] },
   { id: "witching", name: "Witching Hour", rarity: "epic", only: "halloween", c: ["#0c0414", "#b46bff"] },
+  { id: "witchfire", name: "Witchfire", rarity: "chroma", only: "halloween", c: ["#0a0214", "#ff4df0"] },
 ];
 /** Profile backgrounds: the banner behind your name on your profile. The look of each lives in the stylesheet as .pbg-<id>. */
 export const BGS = [
@@ -99,6 +103,7 @@ export const BGS = [
   { id: "pumpkin-patch", name: "Pumpkin Patch", rarity: "rare", only: "halloween", desc: "A glowing field at dusk" },
   { id: "graveyard", name: "Graveyard", rarity: "epic", only: "halloween", desc: "Tombstones under a pale moon" },
   { id: "blood-moon", name: "Blood Moon", rarity: "legendary", only: "halloween", desc: "A huge red moon over the hills" },
+  { id: "carnival", name: "Spectral Carnival", rarity: "chroma", only: "halloween", desc: "A haunted fairground in every colour" },
 ];
 /** Halloween ends (and the Halloween pack leaves) at midnight Pacific time on Nov 1, 2026. */
 export const HALLOWEEN_END = Date.UTC(2026, 10, 1, 7, 0);
@@ -112,7 +117,7 @@ export const PACKS = [
   { id: "backdrops", kind: "loot", name: "Backdrop Pack", cost: 300, count: 3, boost: 1, pool: ["bg"], desc: "3 profile backgrounds", color: "#ff8a5b" },
   { id: "chroma", kind: "loot", name: "Chroma Vault", cost: 3000, count: 5, boost: 2, chromaBoost: 25, desc: "5 items and a real shot at Chroma", color: "#ff4df0", guarantee: "epic" },
   { id: "themes", kind: "theme", name: "Theme Pack", cost: 250, count: 2, boost: 0, desc: "2 random themes for your whole app", color: "#ff8fb8" },
-  { id: "halloween", kind: "loot", name: "Halloween Pack", cost: 450, count: 4, boost: 1, pool: ["effect", "tag", "bg", "theme"], only: "halloween", until: HALLOWEEN_END, guarantee: "rare", desc: "Limited: spooky effects, titles, backdrops and themes. Leaves Nov 1", color: "#ff8a2b" },
+  { id: "halloween", kind: "loot", name: "Halloween Pack", cost: 450, count: 4, boost: 1, pool: ["effect", "tag", "bg", "theme"], only: "halloween", until: HALLOWEEN_END, guarantee: "rare", chromaBoost: 14, desc: "Limited: spooky effects, titles, backdrops and themes, with a real shot at Halloween Chroma. Leaves Nov 1", color: "#ff8a2b" },
   { id: "themes-deluxe", kind: "theme", name: "Deep Space Themes", cost: 600, count: 3, boost: 2, desc: "3 themes, better odds of epic and legendary", color: "#8b7bff", guarantee: "rare" },
 ];
 /** Earning rules. Everyday coins (games, chatting, searching, browsing, missions) stop at DAILY_CAP and reset each UTC day. Gifts, events, achievements, the wheel and duplicate refunds are not counted. */

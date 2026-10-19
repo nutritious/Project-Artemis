@@ -906,3 +906,16 @@ html.has-cd #cdBanner { top: 0; }
 .frrow { display: flex; align-items: center; gap: 8px; padding: 4px 6px; } .frrow b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; font-weight: 600; }
 .dmgate { align-self: center; margin: 12px auto; max-width: 420px; padding: 18px; border-radius: 16px; background: color-mix(in srgb, var(--accent) 14%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); display: grid; gap: 8px; text-align: center; } .dmgate span { color: var(--dim); }
 @media (prefers-reduced-motion: reduce) { .pc-edge { animation: none; } }
+
+/* ---------- Halloween Chroma (limited with the pack) ---------- */
+.fx-wraith .fxa { inset: -9px; border-radius: 50%; background: conic-gradient(#ff4d4d, #ffd24d, #4dff88, #4dd2ff, #a64dff, #ff4de0, #ff4d4d); filter: blur(6px); opacity: .85; animation: fxspin 3s linear infinite; } .fx-wraith .fxb { inset: -10px; border-radius: 50%; animation: fxspin 7s linear infinite reverse; } .fx-wraith .fxb::before { content: "👻"; position: absolute; top: -8px; left: calc(50% - 8px); font-size: 16px; filter: hue-rotate(0deg) drop-shadow(0 0 6px #fff); animation: cxhue 4s linear infinite; }
+.fx-prismjack .fxa { inset: -6px; border-radius: 50%; background: conic-gradient(#ff4d4d, #ffd24d, #4dff88, #4dd2ff, #a64dff, #ff4de0, #ff4d4d); -webkit-mask: radial-gradient(circle, transparent 62%, #000 64%); mask: radial-gradient(circle, transparent 62%, #000 64%); animation: fxspin 2.4s linear infinite; } .fx-prismjack .fxb { inset: auto; right: -10px; bottom: -9px; width: 18px; height: 18px; } .fx-prismjack .fxb::before { content: "🎃"; position: absolute; inset: 0; font-size: 17px; animation: fxpulse 1.4s infinite, cxhue 5s linear infinite; }
+.pbg-carnival { background: linear-gradient(rgba(14, 0, 28, .58), rgba(14, 0, 28, .4)), radial-gradient(circle at 50% 125%, rgba(255, 138, 43, .9), transparent 55%), linear-gradient(100deg, #ff4d4d, #ffd24d, #4dff88, #4dd2ff, #a64dff, #ff4de0, #ff4d4d) 0 0/300% 100% !important; animation: cxrain 6s linear infinite; }
+:root[data-theme="witchfire"] { --bg: #0a0214; --bg2: #16062a; --panel: rgba(22,12,48,.62); --panel-solid: #140a2c; --line: rgba(255,255,255,.14); --fg: #fbf6ff; --dim: #b9a9d9; --faint: #7b6c9e; --accent: hsl(calc(20 + var(--hue) / 1deg) 95% 65%); --accent2: hsl(calc(290 + var(--hue) / 1deg) 95% 65%); --accent-ink: #12001a; --glow: 0 0 0 1px rgba(255,77,240,.45), 0 8px 40px -8px rgba(77,200,255,.45); animation: cxhue 12s linear infinite; }
+
+/* Profile effect worn on the picture, like an avatar decoration */
+.pc-top { padding: 22px 22px 0; margin: -48px 0 12px; overflow: visible; }
+.pc-av { overflow: visible; } .pc-av .avatar.big { isolation: isolate; overflow: visible; }
+.pc-av .avatar.big > img, .pc-av .avatar.big > .av-l { border-radius: 50%; }
+.pc-av .avatar.big .fxa, .pc-av .avatar.big .fxb { transform: scale(1.14); z-index: 2; }
+.pc-av .avatar.big > img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: cover; }
