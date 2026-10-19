@@ -25,7 +25,7 @@ export function buildArcade() {
   cv.addEventListener("pointermove", (e) => { const [px, py] = pos(e); inp.x = px; inp.y = py; if (sw) { const dx = px - sx, dy = py - sy; if (Math.hypot(dx, dy) > 26) { inp.swipe = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "r" : "l") : dy > 0 ? "d" : "u"; sx = px; sy = py; } } });
   cv.addEventListener("pointerdown", (e) => { cv.setPointerCapture(e.pointerId); const [px, py] = pos(e); inp.x = px; inp.y = py; inp.down = true; inp.taps.push({ x: px, y: py }); sw = true; sx = px; sy = py; });
   const up = () => { inp.down = false; sw = false; }; cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
-  cv.addEventListener("pointerleave", () => { if (cur !== "lander") inp.x = inp.x; });
+  cv.addEventListener("pointerleave", () => { /* keep the current input on pointer leave */ });
   addEventListener("keydown", (e) => {
     if (state.view !== "arcade" || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
     const k = e.key === " " ? "space" : e.key.toLowerCase().replace("arrow", "");

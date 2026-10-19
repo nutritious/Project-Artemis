@@ -178,7 +178,13 @@ function onDm(m) {
 
 /* ============================== calls ============================== */
 const C = { ring: null, timer: 0 };
-function startCall(id, video) {
+async function startCall(id, video) {
+  /* calls go straight between the two browsers, which can show each person's IP address to the other */
+  let warned = false; try { warned = localStorage.getItem("artemis.callwarn") === "1"; } catch { /* storage off */ }
+  if (!warned) {
+    if (!(await confirmBox("Call this friend?", "Calls connect your devices directly, so the other person's device can see your IP address. Only call people you trust.", { ok: "Call" }))) return;
+    try { localStorage.setItem("artemis.callwarn", "1"); } catch { /* storage off */ }
+  }
   if (!navigator.mediaDevices?.getUserMedia) return toast("Calls need a secure page (https or localhost).", true);
   if (!isFriend(id)) return toast("You need to be friends to call each other.", true);
   if (R) return toast("Leave your current call first.", true);

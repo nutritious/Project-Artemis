@@ -15,6 +15,8 @@ import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giv
 import { storageInfo, migrate } from "./store.js";
 import { checkExit, cloudPass, exitInfo, exitKey, exitStatus, localCloudKey, setExit } from "./exit.js";
 import { attachCloud } from "./cloud-browser.js";
+import { request as undiciRequest } from "undici";
+import { literalIpBlocked, safeDispatcher } from "./net.js";
 import { checkExitToken } from "./exit-token.js";
 import { ACHIEVEMENTS, BASE_THEMES, GAMES, PACKS, WHEEL, WHEEL_MS } from "../public/js/cosmetics.js";
 import { answer as answerRound, partyState, setAuto, skipRound, startRound, startRushNow } from "./party.js";
@@ -71,14 +73,17 @@ app.use((req, res, next) => {
   next();
 });
 
+const IMG_ORIGINS = [PROXY_ORIGIN, "http://127.0.0.1:*"].filter(Boolean).join(" ");
 app.use((req, res, next) => {
   if (!req.path.startsWith("/p/") && !req.path.startsWith("/sj/")) {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "SAMEORIGIN");
     res.setHeader("Referrer-Policy", "same-origin");
+    res.setHeader("Permissions-Policy", "geolocation=(), payment=(), usb=(), interest-cohort=()");
+    if (req.secure) res.setHeader("Strict-Transport-Security", "max-age=15552000");
     res.setHeader(
       "Content-Security-Policy",
-      "default-src 'self'; img-src 'self' data: blob: https: http:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'; connect-src 'self' ws: wss:; frame-src *; object-src 'none'; base-uri 'self'",
+      `default-src 'self'; img-src 'self' data: blob: ${IMG_ORIGINS}; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'; connect-src 'self' ws: wss:; frame-src *; object-src 'none'; base-uri 'self'`,
     );
   }
   next();
@@ -224,6 +229,31 @@ api.get("/me", auth, (req, res) => {
     maintenance: db.data.server.maintenance,
     engines: engineList(),
   });
+});
+/* Image proxy: chat images are fetched by the server, so a poster's website never sees the viewer's IP address or device. */
+const IMG_OK = /^image\/(png|jpe?g|gif|webp|avif|x-icon|vnd\.microsoft\.icon)$/i;
+api.get("/img", auth, async (req, res) => {
+  const u = me(req);
+  if (!allow(`img:${u.id}`, 120, 60_000)) return void res.status(429).end();
+  let target: URL;
+  try { target = new URL(String(req.query.u ?? "")); } catch { return void res.status(400).end(); }
+  if (!/^https?:$/.test(target.protocol) || target.username || target.password || (!ALLOW_PRIVATE && target.port && !["80", "443"].includes(target.port))) return void res.status(400).end();
+  try {
+    let url = target, r: Awaited<ReturnType<typeof undiciRequest>> | null = null;
+    for (let hop = 0; hop < 4; hop++) {
+      if (literalIpBlocked(url.hostname) || db.data.blocklist.some((b) => url.hostname === b || url.hostname.endsWith("." + b))) return void res.status(403).end();
+      r = await undiciRequest(url.href, { method: "GET", dispatcher: safeDispatcher, headers: { "user-agent": "Mozilla/5.0 ArtemisImage", accept: "image/*" }, signal: AbortSignal.timeout(8000) });
+      if (r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) { await r.body.dump(); url = new URL(String(r.headers.location), url); if (!/^https?:$/.test(url.protocol)) return void res.status(400).end(); r = null; continue; }
+      break;
+    }
+    if (!r || r.statusCode !== 200) return void res.status(404).end();
+    const type = String(r.headers["content-type"] ?? "").split(";")[0].trim();
+    if (!IMG_OK.test(type)) { await r.body.dump(); return void res.status(415).end(); }
+    const chunks: Buffer[] = []; let size = 0;
+    for await (const c of r.body) { size += (c as Buffer).length; if (size > 5_000_000) { r.body.destroy(); return void res.status(413).end(); } chunks.push(c as Buffer); }
+    res.setHeader("Content-Type", type); res.setHeader("X-Content-Type-Options", "nosniff"); res.setHeader("Cache-Control", "private, max-age=3600"); res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
+    res.end(Buffer.concat(chunks));
+  } catch { res.status(502).end(); }
 });
 api.get("/proxy-token", auth, (req, res) => res.json({ proxyToken: proxyToken(me(req)), proxyOrigin: proxyOriginFor(req), sjOrigin: PROXY_ORIGIN, ...exitInfo(me(req)) }));
 api.get("/cloud-pass", auth, (req, res) => res.json(cloudPass(me(req))));

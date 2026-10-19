@@ -96,7 +96,6 @@ async function go() {
     ball.className = "rball"; ball.textContent = r.n; ball.dataset.c = r.color; busy = false; paintBet(); outcome(r.win, r.payout, b0);
   } else {
     const r = await call("bj", { act: "deal", bet: b0 }); if (!r) return; bj = r.bj; paintBj(); paintBet();
-    if (bj.done) { bj = bj; }
   }
 }
 async function bjMove(act) {

@@ -284,7 +284,7 @@ function fmtText(raw) {
 function embeds(raw) {
   const urls = [...new Set(raw.match(/https?:\/\/[^\s<]+/g) ?? [])].slice(0, 2);
   return urls.map((u) => {
-    if (/\.(png|jpe?g|gif|webp|avif)(\?[^\s]*)?$/i.test(u)) return `<div class="embed"><img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-hide></div>`;
+    if (/\.(png|jpe?g|gif|webp|avif)(\?[^\s]*)?$/i.test(u)) return `<div class="embed"><img src="/api/img?u=${encodeURIComponent(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-hide></div>`;
     return "";
   }).join("");
 }
