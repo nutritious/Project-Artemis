@@ -1,5 +1,6 @@
 /* Owner console: the live party (events, rounds, quick events, cutscene library) and the economy (coins, gifts, titles). */
 import { $, api, ago, esc, isCoOwnerUp, isOwner, state, toast, promptBox, confirmBox } from "./util.js";
+import { playSecret } from "./secret.js";
 import { EVENTS, EFFECTS, TAGS, THEMES, BGS, QUICK_EVENTS, CUTSCENES, GAMES, PACKS, PHASE_KINDS, EVENT_PRESETS, QUICK_PRESETS, DEFAULT_CFG, DUPE_COINS, scheduleMins } from "./cosmetics.js";
 import { playEvent } from "./event.js";
 
@@ -69,7 +70,7 @@ function eventsHtml() {
     <div id="qTgt">${targetUI("q")}</div>
     <div class="qgrid">${QUICK_EVENTS.map((q) => `<button class="qbtn" data-quick="${q.id}"><span>${q.icon}</span><b>${esc(q.name)}</b><small>${esc(q.desc)}</small></button>`).join("")}</div></div>`;
   const lib = `<div class="card glass"><h3>Cutscene library</h3><p class="note">Preview any cutscene on your own screen, or play it for everyone who is online (it gives them 25 XP for showing up). Press Esc to skip.</p>
-    <div class="cgrid2">${CUTSCENES.map((c) => `<div class="cs"><b>${esc(c.name)}</b><div class="inline"><button class="btn sm" data-cine="${c.id}">Preview</button><button class="btn sm primary" data-cineall="${c.id}">Play for everyone</button></div></div>`).join("")}</div>
+    <div class="cgrid2">${CUTSCENES.map((c) => `<div class="cs"><b>${esc(c.name)}</b><div class="inline"><button class="btn sm" data-cine="${c.id}">Preview</button><button class="btn sm primary" data-cineall="${c.id}">Play for everyone</button></div></div>`).join("")}<div class="cs"><b>Secret pull</b><div class="inline"><button class="btn sm" data-secret="play">Preview</button><button class="btn sm primary" data-secret="all">Test the announcement</button></div></div></div>
     <h4 class="sec">Update cutscene text</h4><form data-upd class="evform"><label>Version or title<input name="title" maxlength="40" value="UPDATE 1.8" required></label><label>What's new (one line each, up to 7)<textarea name="items" rows="4" maxlength="500" placeholder="Packs and profile effects&#10;Live events&#10;Four new arcade games"></textarea></label><div class="inline"><button type="button" class="btn" data-updprev>Preview</button><button class="btn primary">Play for everyone</button></div></form>
     <h4 class="sec">Custom announcement cutscene</h4><form data-event class="evform"><label>Style<select name="kind"><option value="launch">Launch (purple and blue warp)</option><option value="eclipse">Eclipse (amber corona)</option><option value="party">Party (confetti)</option></select></label><label>Big title<input name="title" maxlength="60" value="LIFTOFF" required></label><label>Line underneath<input name="sub" maxlength="140" placeholder="Something new just landed in Artemis"></label><div class="inline"><button class="btn primary">Start for everyone online</button><button type="button" class="btn" data-evprev>Preview on my screen</button></div></form></div>`;
   const c = state.countdown, cdv = c ? new Date(c.at - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16) : "";
@@ -92,6 +93,8 @@ async function eventsClick(b) {
   if (d.phgo != null && d.phgo !== "") return run(() => api("/owner/phase", "POST", { action: "goto", idx: +d.phgo }), "Jumped");
   if (b.matches("[data-phskip]")) return run(() => api("/owner/phase", "POST", { action: "skip" }), "Next phase");
   if (d.phext) return run(() => api("/owner/phase", "POST", { action: "extend", mins: +d.phext }), `+${d.phext} min`);
+  if (d.secret === "play") { playSecret({ name: "Event Horizon", type: "effect" }); return true; }
+  if (d.secret === "all") return run(async () => { await api("/owner/secret-announce", "POST", {}); toast("Announcement sent to everyone online", "ok"); });
   if (d.cine) { const c = CUTSCENES.find((x) => x.id === d.cine), e = EVENTS[d.cine]; return playEvent({ kind: d.cine, title: (e?.name ?? c?.name ?? "Preview").toUpperCase(), sub: e?.blurb ?? "Preview of this cutscene|Added a new feature|Fixed a few bugs", by: state.me.username }), true; }
   if (d.cineall) { const c = CUTSCENES.find((x) => x.id === d.cineall), e = EVENTS[d.cineall]; return run(async () => { const r = await api("/owner/event", "POST", { kind: d.cineall, title: (e?.name ?? c.name).toUpperCase(), sub: e?.blurb ?? "" }); toast(`Playing for ${r.reached} online`, "ok"); }); }
   if (d.round) return run(() => api("/owner/round", "POST", { kind: d.round }));

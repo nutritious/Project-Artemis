@@ -41,7 +41,7 @@ async function start() {
   const el = frame.element;
   el.allow = "fullscreen; autoplay; clipboard-write; encrypted-media; picture-in-picture";
   document.body.append(el);
-  el.addEventListener("load", () => report());
+  el.addEventListener("load", () => { report(); applyCookie(); });
   poll = setInterval(() => report(true), 700); /* pages that change address without loading (YouTube, SPAs) */
   boot.remove();
 }
@@ -67,6 +67,14 @@ function report(quiet) {
     lastTitle = title;
     tell({ artemis: "nav", url: current, title, favicon: icon });
   } catch { /* cross-document race: next load event fixes it */ }
+}
+
+/** Optional: the opener can ask for one cookie to be set on the site it is opening (used by Tube to turn on the server's \"proxy videos\" setting). */
+const wantCookie = hash.get("pc") || "";
+let cookieSet = false;
+function applyCookie() {
+  if (!wantCookie || cookieSet) return;
+  try { const w = frame.element.contentWindow; if (!w || !realUrl().startsWith("http")) return; w.eval("document.cookie=" + JSON.stringify(wantCookie)); cookieSet = true; } catch { /* retried on the next load */ }
 }
 
 function go(url) {

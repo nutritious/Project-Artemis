@@ -55,6 +55,7 @@ function handle(m) {
     case "legend": emit("legend", m); break;
     case "trusted": toast(m.trusted ? "You are now a trusted member! GIFs and #trusted-general are unlocked." : "Your trusted status was removed.", m.trusted ? "ok" : true); break;
     case "chroma": emit("chroma", m); break;
+    case "secret": emit("secret", m); break;
     case "ach": emit("ach", m); break;
     case "liveevent": state.event = m.event; renderHead(); emit("liveevent"); break;
     case "arena": emit("arena", m); break;

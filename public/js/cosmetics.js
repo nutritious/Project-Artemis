@@ -6,7 +6,10 @@ export const RARITY = {
   legendary: { name: "Legendary", color: "#ffc857", weight: 2, dupe: 300 },
   chroma: { name: "Chroma", color: "#ff4df0", weight: 0.2, dupe: 800 },
   limited: { name: "Limited", color: "#ff5d9e", weight: 0, dupe: 0 },
+  secret: { name: "Secret", color: "#ff2e4d", weight: 0, dupe: 5000 },
 };
+/** Secret items never show in a pack's odds or contents. Each item slot has this tiny chance of being one instead. */
+export const SECRET_CHANCE = 1 / 20000;
 export const EFFECTS = [
   { id: "stardust", name: "Stardust", rarity: "common", desc: "Tiny stars twinkle around you" },
   { id: "ringlet", name: "Ringlet", rarity: "common", desc: "A slim ring that slowly spins" },
@@ -34,6 +37,7 @@ export const EFFECTS = [
   { id: "witchmoon", name: "Witching Moon", rarity: "legendary", only: "halloween", desc: "A huge orange moon rises behind you" },
   { id: "wraith", name: "Spectral Wraith", rarity: "chroma", only: "halloween", desc: "A rainbow ghost haunts your picture" },
   { id: "prismjack", name: "Prismatic Jack", rarity: "chroma", only: "halloween", desc: "A pumpkin lit by every colour at once" },
+  { id: "horizon", name: "Event Horizon", rarity: "secret", desc: "A black hole that should not be here" },
 ];
 export const TAGS = [
   { id: "stargazer", name: "Stargazer", color: "#9aa4cf", rarity: "common" },
@@ -43,6 +47,7 @@ export const TAGS = [
   { id: "eclipse-chaser", name: "Eclipse Chaser", color: "#ff8a5b", rarity: "epic" },
   { id: "deep-diver", name: "Deep Space Diver", color: "#b57bff", rarity: "epic" },
   { id: "starborn", name: "Starborn", color: "#ffc857", rarity: "legendary" },
+  { id: "redacted", name: "[REDACTED]", color: "#ff2e4d", rarity: "secret" },
   { id: "respawn", name: "Respawn", color: "#9aa4cf", rarity: "common", cat: "gamer" },
   { id: "pro-gamer", name: "Pro Gamer", color: "#3dff7a", rarity: "rare", cat: "gamer" },
   { id: "clutch", name: "Clutch King", color: "#ff5d9e", rarity: "epic", cat: "gamer" },
@@ -104,6 +109,7 @@ export const BGS = [
   { id: "graveyard", name: "Graveyard", rarity: "epic", only: "halloween", desc: "Tombstones under a pale moon" },
   { id: "blood-moon", name: "Blood Moon", rarity: "legendary", only: "halloween", desc: "A huge red moon over the hills" },
   { id: "carnival", name: "Spectral Carnival", rarity: "chroma", only: "halloween", desc: "A haunted fairground in every colour" },
+  { id: "the-rift", name: "The Rift", rarity: "secret", desc: "Something on the other side is looking back" },
 ];
 /** Halloween ends (and the Halloween pack leaves) at midnight Pacific time on Nov 1, 2026. */
 export const HALLOWEEN_END = Date.UTC(2026, 10, 1, 7, 0);
@@ -208,7 +214,7 @@ const order = ["common", "rare", "epic", "legendary", "chroma"];
 export function rollPack(pack, have, rand) {
   const items = [], owned = { effect: new Set(have.effects), tag: new Set(have.tags), theme: new Set([...BASE_THEMES, ...have.themes]), bg: new Set(have.bgs ?? []) };
   const lists = { effect: EFFECTS, tag: TAGS, theme: THEMES, bg: BGS };
-  const pools = (type) => lists[type].filter((x) => x.rarity !== "limited" && (pack.only ? x.only === pack.only : !x.only));
+  const pools = (type) => lists[type].filter((x) => x.rarity !== "limited" && x.rarity !== "secret" && (pack.only ? x.only === pack.only : !x.only));
   /* Chroma is its own tiny roll: a little better in bigger packs, far better in the Chroma Vault */
   const pickRarity = (min = 0) => {
     const w = order.map((r, i) => (i < min ? 0 : r === "chroma" ? RARITY.chroma.weight * (1 + pack.boost * 0.5) * (pack.chromaBoost ?? 1) : RARITY[r].weight * Math.pow(1 + 0.9 * pack.boost, i)));
@@ -228,6 +234,11 @@ export function rollPack(pack, have, rand) {
     return pool;
   };
   for (let k = 0; k < pack.count; k++) {
+    /* the hidden roll: a very small chance that this slot is a Secret */
+    if (rand() < SECRET_CHANCE) {
+      const secrets = ["effect", "tag", "bg"].flatMap((t) => lists[t].filter((x) => x.rarity === "secret").map((x) => ({ ...x, type: t })));
+      if (secrets.length) { const sx = secrets[Math.floor(rand() * secrets.length)], sd = owned[sx.type].has(sx.id); owned[sx.type].add(sx.id); items.push({ type: sx.type, id: sx.id, name: sx.name, rarity: "secret", dupe: sd, refund: sd ? RARITY.secret.dupe : 0 }); continue; }
+    }
     const type = pickType();
     const need = pack.guarantee && k === pack.count - 1 && !items.some((i) => order.indexOf(i.rarity) >= order.indexOf(pack.guarantee)) ? order.indexOf(pack.guarantee) : 0;
     let rar = pickRarity(need), pool = find(type, rar), guard = 0;
@@ -244,7 +255,7 @@ export function rollPack(pack, have, rand) {
 export function packContents(pack) {
   const types = pack.kind === "theme" ? ["theme"] : pack.pool ?? ["effect", "tag", "bg"];
   const lists = { effect: EFFECTS, tag: TAGS, theme: THEMES, bg: BGS };
-  const items = types.flatMap((t) => lists[t].filter((x) => x.rarity !== "limited" && (pack.only ? x.only === pack.only : !x.only)).map((x) => ({ ...x, type: t })));
+  const items = types.flatMap((t) => lists[t].filter((x) => x.rarity !== "limited" && x.rarity !== "secret" && (pack.only ? x.only === pack.only : !x.only)).map((x) => ({ ...x, type: t })));
   const w = order.map((r, i) => (r === "chroma" ? RARITY.chroma.weight * (1 + pack.boost * 0.5) * (pack.chromaBoost ?? 1) : RARITY[r].weight * Math.pow(1 + 0.9 * pack.boost, i)));
   const tot = w.reduce((a, b) => a + b, 0), odds = Object.fromEntries(order.map((r, i) => [r, w[i] / tot]));
   const chromaPack = 1 - Math.pow(1 - odds.chroma, pack.count);

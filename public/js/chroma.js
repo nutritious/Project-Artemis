@@ -127,7 +127,7 @@ function frame(x, W, H, t, S, item) {
     const beams = 7;
     for (let i = 0; i < beams; i++) { const a = (i / beams) * TAU + t * (0.4 + p * 1.8), len = R * (0.1 + 0.9 * easeOut((t - 1.4) / 2.0)); if (t < 1.4) continue; const g = x.createLinearGradient(cx, cy, cx + Math.cos(a) * len, cy + Math.sin(a) * len); g.addColorStop(0, hue(i * 51 + t * 60, 65, 0.9)); g.addColorStop(1, "transparent"); x.strokeStyle = g; x.lineWidth = (3 + p * 12) * k; x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len); x.stroke(); }
     /* spiral of sparks drawn into the centre */
-    S.sp ??= []; for (let i = 0; i < 4 + Math.floor(p * 10); i++) S.sp.push({ a: rnd(TAU), d: R * rnd(0.45, 0.8), h: rnd(360), s: rnd(1.2, 3.2) });
+    S.sp ??= []; for (let i = 0; i < 3 + Math.floor(p * 5) && S.sp.length < 200; i++) S.sp.push({ a: rnd(TAU), d: R * rnd(0.45, 0.8), h: rnd(360), s: rnd(1.2, 3.2) });
     S.sp = S.sp.filter((q) => q.d > 6 * k); for (const q of S.sp) { q.d -= (R * 0.55 + q.d * 1.2) * S.dt; q.a += (1.5 + 3 / (q.d / R + 0.1) * 0.15) * S.dt; x.fillStyle = hue(q.h + t * 80, 68, 0.9); x.globalAlpha = clamp(1 - q.d / (R * 0.8)) + 0.2; x.beginPath(); x.arc(cx + Math.cos(q.a) * q.d, cy + Math.sin(q.a) * q.d, q.s * k * 1.6, 0, TAU); x.fill(); } x.globalAlpha = 1;
     x.globalCompositeOperation = "source-over";
     x.fillStyle = "#fff"; x.shadowColor = "#fff"; x.shadowBlur = 30 * k; x.beginPath(); x.arc(cx, cy, r, 0, TAU); x.fill(); x.shadowBlur = 0;
@@ -142,7 +142,7 @@ function frame(x, W, H, t, S, item) {
     x.globalAlpha = 1; x.globalCompositeOperation = "source-over";
     glow(x, cx, cy, R * (0.5 + 0.05 * Math.sin(tt * 3)), hue(tt * 70 + 280, 55, 0.55), 1);
     /* confetti shards */
-    S.sh ??= []; if (tt < 1.4) for (let i = 0; i < 18; i++) S.sh.push({ x: cx, y: cy, vx: rnd(-1, 1) * R * 0.9, vy: rnd(-1.1, 0.5) * R * 0.9, h: rnd(360), r: rnd(0, TAU), vr: rnd(-8, 8), s: rnd(5, 13) * k, l: 1 });
+    S.sh ??= []; if (tt < 1.4) for (let i = 0; i < 6 && S.sh.length < 320; i++) S.sh.push({ x: cx, y: cy, vx: rnd(-1, 1) * R * 0.9, vy: rnd(-1.1, 0.5) * R * 0.9, h: rnd(360), r: rnd(0, TAU), vr: rnd(-8, 8), s: rnd(5, 13) * k, l: 1 });
     S.sh = S.sh.filter((q) => q.l > 0 && q.y < H + 40); x.globalCompositeOperation = "lighter";
     for (const q of S.sh) { q.vy += R * 0.55 * S.dt; q.x += q.vx * S.dt; q.y += q.vy * S.dt; q.vx *= 0.992; q.r += q.vr * S.dt; q.l -= 0.12 * S.dt; x.save(); x.translate(q.x, q.y); x.rotate(q.r); x.fillStyle = hue(q.h + tt * 90, 62, clamp(q.l)); x.fillRect(-q.s, -q.s * 0.35, q.s * 2, q.s * 0.7); x.restore(); }
     x.globalCompositeOperation = "source-over";
@@ -150,10 +150,10 @@ function frame(x, W, H, t, S, item) {
     x.globalCompositeOperation = "lighter";
     { const pw = easeOut(tt / 0.7) * (1 - clamp((tt - 4.5) / 2)); if (pw > 0) { const bw = R * (0.16 + 0.03 * Math.sin(tt * 5)), g = x.createLinearGradient(cx - bw, 0, cx + bw, 0); g.addColorStop(0, "transparent"); g.addColorStop(0.5, hue(tt * 100, 70, 0.34 * pw)); g.addColorStop(1, "transparent"); x.fillStyle = g; x.fillRect(cx - bw, 0, bw * 2, H); } }
     S.fw ??= []; S.fwN ??= 0;
-    while (S.fwN < 6 && tt > 0.9 + S.fwN * 0.75) { S.fwN++; const fx = cx + rnd(-0.42, 0.42) * W * 0.6, fy = cy + rnd(-0.5, -0.1) * R, base = rnd(360); for (let i = 0; i < 46; i++) { const a = (i / 46) * TAU, v = R * rnd(0.25, 0.65); S.fw.push({ x: fx, y: fy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, h: base + (i % 6) * 55, l: 1, s: rnd(1.8, 3.6) * k }); } }
+    while (S.fwN < 6 && tt > 0.9 + S.fwN * 0.75) { S.fwN++; const fx = cx + rnd(-0.42, 0.42) * W * 0.6, fy = cy + rnd(-0.5, -0.1) * R, base = rnd(360); for (let i = 0; i < 30; i++) { const a = (i / 46) * TAU, v = R * rnd(0.25, 0.65); S.fw.push({ x: fx, y: fy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, h: base + (i % 6) * 55, l: 1, s: rnd(1.8, 3.6) * k }); } }
     S.fw = S.fw.filter((q) => q.l > 0); for (const q of S.fw) { q.vy += R * 0.22 * S.dt; q.vx *= 0.985; q.vy *= 0.985; q.x += q.vx * S.dt; q.y += q.vy * S.dt; q.l -= 0.55 * S.dt; x.fillStyle = hue(q.h + tt * 60, 65, clamp(q.l)); x.shadowColor = hue(q.h, 60, 1); x.shadowBlur = 8 * k; x.beginPath(); x.arc(q.x, q.y, q.s * clamp(q.l) + 0.4, 0, TAU); x.fill(); } x.shadowBlur = 0;
     for (let c = 0; c < 5; c++) { for (let tr = 0; tr < 14; tr++) { const a = tt * (1.1 + c * 0.17) * (c % 2 ? -1 : 1) + c * 1.3 - tr * 0.045, rr = R * (0.52 + c * 0.065); x.fillStyle = hue(c * 72 + tt * 110 - tr * 6, 66, (1 - tr / 14) * 0.9 * easeOut(tt / 1.2)); x.beginPath(); x.arc(cx + Math.cos(a) * rr * 1.25, cy + Math.sin(a) * rr * 0.62, (7 - tr * 0.4) * k, 0, TAU); x.fill(); } }
-    S.em ??= []; for (let i = 0; i < 2; i++) S.em.push({ x: rnd(W), y: H + 10, v: R * rnd(0.12, 0.4), h: rnd(360), s: rnd(1.2, 3), w: rnd(TAU) });
+    S.em ??= []; for (let i = 0; i < 1 && S.em.length < 110; i++) S.em.push({ x: rnd(W), y: H + 10, v: R * rnd(0.12, 0.4), h: rnd(360), s: rnd(1.2, 3), w: rnd(TAU) });
     S.em = S.em.filter((q) => q.y > -10); for (const q of S.em) { q.y -= q.v * S.dt; q.x += Math.sin(tt * 2 + q.w) * 14 * S.dt; x.fillStyle = hue(q.h + tt * 80, 66, 0.7); x.beginPath(); x.arc(q.x, q.y, q.s * k, 0, TAU); x.fill(); }
     x.globalCompositeOperation = "source-over";
     /* the centrepiece is different for every Chroma item */
@@ -182,17 +182,27 @@ export function playChroma(item) {
   item = { ...item, variant: chromaVariant(item.type, item.id) };
   return new Promise((resolve) => {
     const cv = document.createElement("canvas"); cv.className = "chroma-cut"; cv.setAttribute("role", "img"); cv.setAttribute("aria-label", `Chroma pull: ${item.name}`);
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const fit = () => { cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr); };
+    /* quality steps: the cutscene is heavy, so a slow computer drops resolution and glow instead of freezing the whole page */
+    const LV = [{ sc: Math.min(1, window.devicePixelRatio || 1), sh: 1 }, { sc: 0.7, sh: 0.4 }, { sc: 0.5, sh: 0 }]; let lv = 0, ema = 16, nf = 0, shF = 1;
+    const fit = () => { cv.width = Math.max(2, Math.round(innerWidth * LV[lv].sc)); cv.height = Math.max(2, Math.round(innerHeight * LV[lv].sc)); };
     fit(); document.body.appendChild(cv); addEventListener("resize", fit);
-    const x = cv.getContext("2d"); { const arc = x.arc.bind(x); x.arc = (cx, cy, r, ...q) => arc(cx, cy, Math.max(0, r), ...q); } let stop = () => {}, ctx;
+    const x = cv.getContext("2d"); { const d = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, "shadowBlur"); if (d?.set) Object.defineProperty(x, "shadowBlur", { get() { return d.get.call(this); }, set(v) { d.set.call(this, v * shF); } }); } { const arc = x.arc.bind(x); x.arc = (cx, cy, r, ...q) => arc(cx, cy, Math.max(0, r), ...q); } let stop = () => {}, ctx;
     if (state.me?.settings?.chatSound !== false) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); stop = sound(ctx, item.variant); } catch { /* silent */ } }
     const S = {}, t0 = performance.now(); let raf = 0, done = false;
-    const end = () => { if (done) return; done = true; cancelAnimationFrame(raf); stop(); removeEventListener("resize", fit); removeEventListener("keydown", key, true); cv.classList.add("out"); setTimeout(() => { cv.remove(); try { ctx?.close(); } catch { /* ok */ } }, 450); resolve(); };
+    const end = () => { if (done) return; done = true; clearTimeout(fail); cancelAnimationFrame(raf); stop(); removeEventListener("resize", fit); removeEventListener("keydown", key, true); cv.classList.add("out"); setTimeout(() => { cv.remove(); try { ctx?.close(); } catch { /* ok */ } }, 450); resolve(); };
     const key = (e) => { if (e.key === "Escape" && (performance.now() - t0) / 1000 > 1) { e.preventDefault(); end(); } };
     addEventListener("keydown", key, true);
     cv.addEventListener("click", () => { if ((performance.now() - t0) / 1000 > 1) end(); });
-    const loop = () => { const t = (performance.now() - t0) / 1000; x.setTransform(1, 0, 0, 1, 0, 0); x.scale(dpr, dpr); frame(x, innerWidth, innerHeight, t, S, item); if (t >= DUR) return end(); raf = requestAnimationFrame(loop); };
+    const fail = setTimeout(end, (DUR + 1.5) * 1000); /* never leave the screen covered */
+    let prev = performance.now();
+    const loop = () => {
+      const now = performance.now(), t = (now - t0) / 1000;
+      ema = ema * 0.85 + Math.min(200, now - prev) * 0.15; prev = now;
+      if (++nf % 10 === 0 && ema > 30 && lv < LV.length - 1) { lv++; shF = LV[lv].sh; fit(); ema = 16; }
+      try { x.setTransform(1, 0, 0, 1, 0, 0); x.scale(cv.width / innerWidth, cv.height / innerHeight); frame(x, innerWidth, innerHeight, t, S, item); }
+      catch (e) { console.error("[chroma]", e); return end(); }
+      if (t >= DUR) return end(); raf = requestAnimationFrame(loop);
+    };
     loop();
   });
 }

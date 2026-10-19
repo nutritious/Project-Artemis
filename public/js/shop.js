@@ -3,6 +3,7 @@ import { $, $$, api, esc, on, state, titleChip, toast, rarityColor, overlay } fr
 import { packOpen, packContents, EFFECTS, TAGS, THEMES, BGS, RARITY, PACKS, WHEEL, WHEEL_MS, DAILY_CAP, effectMap, themeMap, tagMap, bgMap } from "./cosmetics.js";
 import { saveSettings } from "./settings.js";
 import { playChroma } from "./chroma.js";
+import { playSecret } from "./secret.js";
 import { emit } from "./util.js";
 import { redeemCard, bindRedeem } from "./redeem.js";
 
@@ -15,7 +16,7 @@ function blip(freq, dur = 0.18, type = "sine", vol = 0.09, when = 0) {
   if (state.me?.settings?.chatSound === false) return;
   try { ac ??= new (window.AudioContext || window.webkitAudioContext)(); const t = ac.currentTime + when, o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.value = freq; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + 0.05); } catch { /* silent */ }
 }
-const REVEAL = { common: [440], rare: [523, 659], epic: [523, 659, 784], legendary: [523, 659, 784, 1047, 1319], limited: [659, 880, 1175], chroma: [523, 659, 784, 1047, 1319, 1568, 2093] };
+const REVEAL = { common: [440], rare: [523, 659], epic: [523, 659, 784], legendary: [523, 659, 784, 1047, 1319], limited: [659, 880, 1175], chroma: [523, 659, 784, 1047, 1319, 1568, 2093], secret: [110, 73, 55] };
 const sfxReveal = (r) => (REVEAL[r] ?? REVEAL.common).forEach((f, i) => blip(f, 0.4, "triangle", 0.1, i * 0.09));
 
 /* ---------- item preview helpers ---------- */
@@ -56,23 +57,23 @@ function packCard(p) {
 }
 function grid() {
   const eq = S.equip, inv = S.inv;
-  if (tab === "effects") return `<div class="cgrid">${EFFECTS.map((e) => { const own = inv.effects.includes(e.id); return cell("effect", e, own, eq.effect === e.id); }).join("")}</div>`;
-  if (tab === "titles") return `<div class="cgrid">${allTags().filter((t) => !t.hidden).map((t) => cell("tag", t, inv.tags.includes(t.id), eq.tag === t.id)).join("")}</div>`;
-  if (tab === "backgrounds") return `<p class="coll-note">Backgrounds show behind your name on your profile card and full profile.</p><div class="cgrid">${BGS.map((b) => cell("bg", b, inv.bgs.includes(b.id), eq.bg === b.id)).join("")}</div>`;
+  if (tab === "effects") return `<div class="cgrid">${EFFECTS.filter((e) => e.rarity !== "secret" || inv.effects.includes(e.id)).map((e) => { const own = inv.effects.includes(e.id); return cell("effect", e, own, eq.effect === e.id); }).join("")}</div>`;
+  if (tab === "titles") return `<div class="cgrid">${allTags().filter((t) => !t.hidden && (t.rarity !== "secret" || inv.tags.includes(t.id))).map((t) => cell("tag", t, inv.tags.includes(t.id), eq.tag === t.id)).join("")}</div>`;
+  if (tab === "backgrounds") return `<p class="coll-note">Backgrounds show behind your name on your profile card and full profile.</p><div class="cgrid">${BGS.filter((b) => b.rarity !== "secret" || inv.bgs.includes(b.id)).map((b) => cell("bg", b, inv.bgs.includes(b.id), eq.bg === b.id)).join("")}</div>`;
   const cur = state.me.settings.theme;
   const base = [["eclipse", "Eclipse", ["#05060d", "#3b2f9e"]], ["lunar", "Lunar", ["#f4f5fa", "#b9bfdc"]], ["orion", "Orion", ["#0c0605", "#c2410c"]], ["aurora", "Aurora", ["#030c0c", "#0d9488"]]].map(([id, name, c]) => ({ id, name, c, rarity: "common", base: true }));
   return `<div class="cgrid">${[...base, ...THEMES].map((t) => { const own = t.base || inv.themes.includes(t.id); return cell("theme", t, own, cur === t.id); }).join("")}</div>`;
 }
 function cell(type, it, own, on) {
   const rc = rarityColor(it.rarity), ltd = it.limited || it.only ? ` <em>limited</em>` : "";
-  return `<div class="cell ${own ? "" : "locked"} ${on ? "on" : ""} ${it.rarity === "chroma" ? "chroma" : ""}" style="--rc:${rc}">
+  return `<div class="cell ${own ? "" : "locked"} ${on ? "on" : ""} ${it.rarity === "chroma" ? "chroma" : ""} ${it.rarity === "secret" ? "secret" : ""}" style="--rc:${rc}">
     <div class="cvis">${itemVisual(type, it.id, it)}</div>
     <b>${esc(it.name)}${ltd}</b><small>${esc(RARITY[it.rarity]?.name ?? "")}${it.desc ? " · " + esc(it.desc) : ""}</small>
     ${own ? `<button class="btn ${on ? "ghost" : ""}" data-eq="${type}:${it.id}">${on ? (type === "theme" ? "In use" : "Unequip") : (type === "theme" ? "Use" : "Equip")}</button>` : `<span class="lockbadge">Locked</span>`}
   </div>`;
 }
 function paint() {
-  const owned = S.inv.effects.length + S.inv.tags.length + S.inv.themes.length + S.inv.bgs.length, total = EFFECTS.length + allTags().length + THEMES.length + BGS.length;
+  const owned = S.inv.effects.length + S.inv.tags.length + S.inv.themes.length + S.inv.bgs.length, total = [...EFFECTS, ...allTags(), ...THEMES, ...BGS].filter((i) => i.rarity !== "secret").length + [...EFFECTS.filter((i) => i.rarity === "secret" && S.inv.effects.includes(i.id)), ...allTags().filter((i) => i.rarity === "secret" && S.inv.tags.includes(i.id)), ...BGS.filter((i) => i.rarity === "secret" && S.inv.bgs.includes(i.id))].length;
   $("#shopPage").innerHTML = `
     <div class="shop-head"><div><h2>Packs</h2><p class="sub" style="margin:4px 0 0">Open crates for profile effects, titles and profile backgrounds, or theme packs that restyle the whole app. Spin the wheel every hour. Everyday earning is capped at ${DAILY_CAP} coins a day.</p></div>
       <div class="wallet"><span>◎ <b class="coinbal">${S.coins.toLocaleString()}</b></span>${S.freePacks ? `<span class="fp">${S.freePacks} free crate${S.freePacks > 1 ? "s" : ""}</span>` : ""}</div></div>
@@ -122,11 +123,12 @@ function reveal(pack, items) {
       if (shown >= items.length) { done.classList.remove("hidden"); hint.textContent = "Added to your collection"; return; }
       const it = items[shown++], info = itemInfo(it.type, it.id) ?? { name: it.name, rarity: it.rarity };
       if (it.rarity === "chroma") await playChroma({ name: info.name, type: it.type, id: it.id });
+      if (it.rarity === "secret") await playSecret({ name: info.name, type: it.type, id: it.id });
       const el = document.createElement("div"); el.className = `rc ${it.rarity}`; el.style.setProperty("--rc", rarityColor(it.rarity));
       el.innerHTML = `<div class="rc-in"><div class="rc-front">?</div><div class="rc-back"><small>${esc(it.type === "tag" ? "Title" : it.type === "effect" ? "Profile effect" : it.type === "bg" ? "Backdrop" : "Theme")}</small><div class="cvis">${itemVisual(it.type, it.id)}</div><b>${esc(info.name)}</b><span class="rar">${esc(RARITY[it.rarity]?.name ?? "")}</span>${it.dupe ? `<em class="dupe">Duplicate · +${it.refund} coins</em>` : `<em class="new">NEW</em>`}</div></div>`;
       cards.appendChild(el);
       requestAnimationFrame(() => requestAnimationFrame(() => { el.classList.add("flip"); sfxReveal(it.rarity); if (["epic", "legendary", "limited"].includes(it.rarity)) stage.classList.add("flash"), setTimeout(() => stage.classList.remove("flash"), 500); if (it.rarity === "chroma") { stage.classList.add("chromaflash"); setTimeout(() => stage.classList.remove("chromaflash"), 1200); } }));
-      setTimeout(showNext, it.rarity === "chroma" ? 2200 : it.rarity === "legendary" ? 1500 : 800);
+      setTimeout(showNext, it.rarity === "secret" ? 3000 : it.rarity === "chroma" ? 2200 : it.rarity === "legendary" ? 1500 : 800);
     };
     const open = () => { if (opened) return; opened = true; hint.textContent = ""; box.classList.add("pop"); [180, 240, 300].forEach((f, i) => blip(f, 0.12, "square", 0.05, i * 0.07)); blip(120, 0.5, "sawtooth", 0.06, 0.25); setTimeout(() => { box.classList.add("gone"); showNext(); }, 650); };
     stage.addEventListener("click", (ev) => { if (!ev.target.closest(".ps-done")) open(); });

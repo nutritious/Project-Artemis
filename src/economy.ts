@@ -22,6 +22,10 @@ const push = (u: User) => sendToUser(u.id, { t: "game", game: publicGame(u), gai
 export function announceChroma(u: User, items: { type: string; id: string; name: string; rarity: string }[]) {
   for (const it of items) if (it.rarity === "chroma") broadcast({ t: "chroma", user: u.username, item: { type: it.type, id: it.id, name: it.name } });
 }
+/** Global banner when anyone pulls a Secret. It says who, never what. */
+export function announceSecret(u: User, items: { rarity: string }[]) {
+  for (const it of items) if (it.rarity === "secret") broadcast({ t: "secret", user: u.username });
+}
 export function spinWheel(u: User) {
   const g = u.game, now = Date.now();
   if (now < g.lastSpin + WHEEL_MS) throw new Error("The wheel is still recharging");
@@ -42,7 +46,7 @@ export function openPack(u: User, packId: string, free: boolean) {
   const items = rollPack(pack, u.inv, rand);
   for (const it of items) { if (it.dupe) u.coins += it.refund; else addItem(u, it.type, it.id); }
   u.game.stats.packs = (u.game.stats.packs ?? 0) + 1;
-  announceChroma(u, items);
+  announceChroma(u, items); announceSecret(u, items);
   stat(u, "chroma", items.filter((i) => i.rarity === "chroma").length);
   saveDb(); push(u);
   return { items, coins: u.coins, freePacks: u.freePacks, inv: u.inv };

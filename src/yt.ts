@@ -8,7 +8,8 @@ export const INSTANCES = fromEnv.length ? fromEnv : DEFAULTS;
 export const VIDEO_ID = /^[\w-]{11}$/;
 
 type Health = { ok: boolean | null; ms: number; at: number };
-const health = new Map<string, Health>(INSTANCES.map((i) => [i, { ok: null, ms: 0, at: 0 }]));
+const health = new Map<string, Health>(INSTANCES.map((i) => [i, { ok: null, ms: 0, at: 0 }])); /* is the website itself up? */
+const apiOk = new Map<string, boolean | null>(INSTANCES.map((i) => [i, null])); /* does its JSON API answer? (many servers switch it off) */
 
 async function get(base: string, path: string, ms = 7000): Promise<any> {
   const t0 = Date.now();
@@ -17,10 +18,10 @@ async function get(base: string, path: string, ms = 7000): Promise<any> {
     const text = await r.body.text();
     if (r.statusCode !== 200 || text.length > 4_000_000) throw new Error("status " + r.statusCode);
     const j = JSON.parse(text);
-    health.set(base, { ok: true, ms: Date.now() - t0, at: Date.now() });
+    apiOk.set(base, true);
     return j;
   } catch (e) {
-    health.set(base, { ok: false, ms: Date.now() - t0, at: Date.now() });
+    apiOk.set(base, false);
     throw e;
   }
 }
@@ -29,8 +30,8 @@ async function get(base: string, path: string, ms = 7000): Promise<any> {
 export async function ask(path: string, prefer = -1): Promise<{ data: any; from: number }> {
   const order = INSTANCES.map((_, i) => i).sort((a, b) => {
     if (a === prefer) return -1; if (b === prefer) return 1;
-    const ha = health.get(INSTANCES[a])!, hb = health.get(INSTANCES[b])!;
-    return (ha.ok === false ? 1 : 0) - (hb.ok === false ? 1 : 0) || ha.ms - hb.ms;
+    const ba = INSTANCES[a], bb = INSTANCES[b], ha = health.get(ba)!, hb = health.get(bb)!;
+    return (apiOk.get(ba) === false ? 1 : 0) - (apiOk.get(bb) === false ? 1 : 0) || (ha.ok === false ? 1 : 0) - (hb.ok === false ? 1 : 0) || ha.ms - hb.ms;
   });
   for (let k = 0; k < Math.min(order.length, 6); k += 2) { /* two servers at a time, so a dead one costs seconds, not a minute */
     try { return await Promise.any(order.slice(k, k + 2).map(async (i) => ({ data: await get(INSTANCES[i], path, 6000), from: i }))); } catch { /* next pair */ }
@@ -45,8 +46,18 @@ export function card(v: any) {
 }
 export const cards = (arr: any) => (Array.isArray(arr) ? arr : []).filter((x) => !x?.type || x.type === "video").map(card).filter(Boolean).slice(0, 48);
 
+/** Is the website itself reachable? This is what Full site mode needs, so it decides the green and red dots. */
+async function checkSite(base: string) {
+  const t0 = Date.now();
+  try {
+    const r = await request(base + "/", { method: "GET", dispatcher: safeDispatcher, headers: { "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36", accept: "text/html" }, headersTimeout: 7000, bodyTimeout: 7000, signal: AbortSignal.timeout(8000) } as any);
+    const text = (await r.body.text()).slice(0, 200_000);
+    const ok = r.statusCode === 200 && text.length > 800 && /<html/i.test(text) && !/just a moment|attention required|checking your browser/i.test(text);
+    health.set(base, { ok, ms: Date.now() - t0, at: Date.now() });
+  } catch { health.set(base, { ok: false, ms: Date.now() - t0, at: Date.now() }); }
+}
 export async function checkAll() {
-  await Promise.allSettled(INSTANCES.map((b) => get(b, "/api/v1/stats", 5000)));
+  await Promise.allSettled(INSTANCES.flatMap((b) => [checkSite(b), get(b, "/api/v1/stats", 5000)]));
   return status();
 }
-export const status = () => INSTANCES.map((b, i) => ({ i, name: "B" + (i + 1), ok: health.get(b)!.ok, ms: health.get(b)!.ms }));
+export const status = () => INSTANCES.map((b, i) => ({ i, name: "B" + (i + 1), host: b.replace(/^https:\/\//, ""), base: b, ok: health.get(b)!.ok, api: apiOk.get(b) ?? null, ms: health.get(b)!.ms }));

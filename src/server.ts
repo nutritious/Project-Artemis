@@ -343,6 +343,7 @@ api.put("/owner/countdown", auth, coownerUp, (req, res) => {
   db.data.server.countdown = { title, about, at, by: me(req).username }; saveDb(); logAdmin(req, "countdown.set", title); broadcast({ t: "countdown", countdown: db.data.server.countdown }); res.json({ ok: true });
 });
 api.delete("/owner/countdown", auth, coownerUp, (req, res) => { db.data.server.countdown = null; saveDb(); logAdmin(req, "countdown.clear", ""); broadcast({ t: "countdown", countdown: null }); res.json({ ok: true }); });
+api.post("/owner/secret-announce", auth, ownerOnly, (req, res) => { logAdmin(req, "secret.test", ""); broadcast({ t: "secret", user: me(req).username }); res.json({ ok: true }); });
 api.post("/owner/updatelive", auth, ownerOnly, (req, res) => { logAdmin(req, "update.live", ""); broadcast({ t: "updatelive" }); res.json({ ok: true }); });
 api.post("/event/join", auth, (req, res) => { try { joinLive(me(req)); res.json(gamePayload(me(req))); } catch (e: any) { res.status(400).json({ error: e.message }); } });
 api.post("/fx/claim", auth, (req, res) => { if (!allow(`claim:${me(req).id}`, 40, 60_000)) return void res.status(429).json({ error: "Easy there" }); try { res.json({ coins: claimFx(me(req), String(req.body?.id ?? "")) }); } catch (e: any) { res.status(400).json({ error: e.message }); } });

@@ -33,6 +33,15 @@ function chromaBanner(m) {
   chord([523.25, 659.25, 783.99, 1046.5, 1318.5, 1568, 2093], 1.1);
   setTimeout(() => el.classList.add("out"), 7000); setTimeout(() => el.remove(), 7900);
 }
+function secretBanner(m) {
+  const mine = m.user === state.me?.username;
+  const fl = document.createElement("div"); fl.className = "secret-flash"; document.body.appendChild(fl); setTimeout(() => fl.remove(), 1200);
+  const el = document.createElement("div"); el.className = "secret-banner";
+  el.innerHTML = `<span class="sb-i">◼</span><div><b>${mine ? "You" : esc(m.user)} pulled a SECRET</b><small>${mine ? "Nobody knows what it is. Nobody else has it." : "██████████ · nobody knows what it is"}</small></div><span class="sb-i">◼</span>`;
+  document.body.appendChild(el);
+  try { chord([55, 58, 110, 116.5], 1.6); } catch { /* sound is optional */ }
+  setTimeout(() => el.classList.add("out"), 8000); setTimeout(() => el.remove(), 8900);
+}
 function achToast(m) {
   const el = document.createElement("div"); el.className = "ach-toast";
   el.innerHTML = `<span class="ai">${esc(m.icon ?? "🏆")}</span><div><small>ACHIEVEMENT UNLOCKED</small><b>${esc(m.name)}</b><small>+${m.coins} coins</small></div>`;
@@ -128,7 +137,7 @@ function eventEnd(m) {
 }
 
 export function initFx() {
-  on("legend", legendBanner); on("chroma", chromaBanner); on("ach", achToast); on("fx", onFx); on("eventend", eventEnd);
+  on("legend", legendBanner); on("chroma", chromaBanner); on("secret", secretBanner); on("ach", achToast); on("fx", onFx); on("eventend", eventEnd);
   on("liveevent", paintBar); on("boost", paintBar); on("self", paintBar);
   on("game", (m) => { state.me.coins = m.game.coins; state.me.freePacks = m.game.freePacks; state.nextSpin = m.game.nextSpin; paintBar(); });
   paintBar();
