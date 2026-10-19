@@ -327,7 +327,7 @@ function renderMsgs(scroll = "keep") {
 
 document.addEventListener("click", (e) => {
   const t = e.target.closest("[data-profile]");
-  if (t) { e.stopPropagation(); openProfile(t.dataset.profile, t); }
+  if (t) { e.stopPropagation(); const who = state.people.get(t.dataset.profile); if (who) openFullProfile(who.username); }
   else if (!e.target.closest(".pcard")) $$(".pcard").forEach((x) => x.remove());
 }, true);
 export function openProfile(id, anchor) {

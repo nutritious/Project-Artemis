@@ -10,7 +10,7 @@ import { trustInfo, TRUST, accrueProxy } from "./trust.js";
 import { can, effectivePerms, hasDashboard, outranks, publicRoles, PERMS, PERM_INFO, rank, roleRank, roleTag, type Perm } from "./perms.js";
 import { runCommand } from "./commands.js";
 import { activity, progress, addEventPoints, earnedToday, activeBoosts, newGame, boards, publicEvent, publicGame, rankIndex, submitRun } from "./game.js";
-import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giveItems, takeItems, joinLive, openPack, spinWheel, pushEventState, quick, startLive, targets } from "./economy.js";
+import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giveItems, giveSelfWholePack, takeItems, joinLive, openPack, spinWheel, pushEventState, quick, startLive, targets } from "./economy.js";
 import { storageInfo } from "./store.js";
 import { checkExit, exitInfo, exitKey, exitStatus, setExit } from "./exit.js";
 import { ACHIEVEMENTS, BASE_THEMES, GAMES, PACKS, WHEEL, WHEEL_MS } from "../public/js/cosmetics.js";
@@ -297,7 +297,7 @@ api.get("/profile/:name", auth, (req, res) => {
   const viewer = me(req), u = db.data.users.find((x) => x.username.toLowerCase() === String(req.params.name).toLowerCase() && !x.banned);
   if (!u) return void res.status(404).json({ error: "No one with that callsign" });
   const staff = viewer.role === "owner" || viewer.role === "coowner";
-  res.json({ id: u.id, username: u.username, role: u.role, roleId: u.roleId ?? null, profile: u.profile, createdAt: u.createdAt, lastSeen: u.lastSeen, xp: u.game.xp, rank: rankIndex(u.game.xp), streak: u.game.streak, plays: u.game.plays, bests: u.game.bests, equip: u.equip, inv: u.inv, ach: Object.keys(u.game.ach).length, ...(staff ? { coins: u.coins } : {}) });
+  res.json({ id: u.id, username: u.username, role: u.role, roleId: u.roleId ?? null, profile: u.profile, createdAt: u.createdAt, lastSeen: u.lastSeen, xp: u.game.xp, rank: rankIndex(u.game.xp), streak: u.game.streak, plays: u.game.plays, bests: u.game.bests, equip: u.equip, inv: u.inv, ach: Object.keys(u.game.ach).length, msgs: (u.game.stats as any)?.msgs ?? 0, ...(staff ? { coins: u.coins } : {}) });
 });
 
 /* ----- owner economy and events ----- */
@@ -316,6 +316,11 @@ api.post("/owner/give", auth, panelUp, (req, res) => {
   const type = String(req.body?.type ?? "");
   if (type === "pack") { const t = targets(parseTarget(req.body?.target)); for (const u of t) u.freePacks += Math.max(1, Math.min(20, Number(req.body?.count) || 1)); saveDb(); audit(me(req).username, "give.pack", `${t.length} players`); return void res.json({ ok: true, reached: t.length }); }
   try { const n = giveItems(me(req).username, type, String(req.body?.id ?? ""), parseTarget(req.body?.target)); broadcastMembers(); res.json({ ok: true, reached: n }); } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+api.post("/owner/selfpack", auth, (req, res) => {
+  const u = me(req);
+  if (u.role !== "owner" && u.role !== "coowner") return void res.status(403).json({ error: "Owner and co-owners only" });
+  try { const r = giveSelfWholePack(u, String(req.body?.pack ?? "")); broadcastMembers(); pushSelf(u.id); res.json({ ok: true, ...r }); } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 api.post("/owner/take", auth, ownerOnly, (req, res) => {
   try { const n = takeItems(me(req).username, String(req.body?.type ?? ""), String(req.body?.id ?? ""), parseTarget(req.body?.target)); broadcastMembers(); pushSelfAll(); res.json({ ok: true, reached: n }); } catch (e: any) { res.status(400).json({ error: e.message }); }

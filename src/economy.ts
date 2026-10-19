@@ -1,7 +1,7 @@
 /* Coins, packs, items, live events and quick events. */
 import crypto from "node:crypto";
 import { audit, db, saveDb, uid, type User } from "./store.js";
-import { cleanSchedule, DEFAULT_CFG, DUPE_COINS, EVENT_PRESETS, QUICK_PRESETS, BASE_THEMES, EVENTS, QUICK_EVENTS, packMap, rollPack, TAGS, EFFECTS, THEMES, BGS, WHEEL, WHEEL_MS } from "../public/js/cosmetics.js";
+import { packContents, cleanSchedule, DEFAULT_CFG, DUPE_COINS, EVENT_PRESETS, QUICK_PRESETS, BASE_THEMES, EVENTS, QUICK_EVENTS, packMap, rollPack, TAGS, EFFECTS, THEMES, BGS, WHEEL, WHEEL_MS } from "../public/js/cosmetics.js";
 import { broadcast, onlineUsers, sendToUser } from "./chat.js";
 import { activeBoosts, grant, giveCoins, publicEvent, publicGame, startRush, stat } from "./game.js";
 
@@ -63,6 +63,14 @@ export function giveItems(by: string, type: string, id: string, t: Target) {
   for (const u of targets(t)) { if (addItem(u, ty, id)) { n++; push(u); sendToUser(u.id, { t: "gift", type, id }); } }
   saveDb(); audit(by, "give." + type, `${id} → ${t.type}${t.value ? ":" + t.value : ""} (${n} new)`);
   return n;
+}
+/** Owner and co-owners: put every item a pack can drop into their own collection. No roll, no animation. */
+export function giveSelfWholePack(u: User, packId: string) {
+  const pack = packMap.get(packId); if (!pack) throw new Error("No such pack");
+  const items = packContents(pack).items; let added = 0;
+  for (const it of items) if (addItem(u, it.type as ItemType, it.id)) added++;
+  saveDb(); audit(u.username, "give.wholepack", `${pack.id} to self (${added} new of ${items.length})`); push(u);
+  return { added, total: items.length, name: pack.name };
 }
 /** Owner only: take a title, effect, backdrop or theme back from players. It is also unequipped. */
 export function takeItems(by: string, type: string, id: string, t: Target) {

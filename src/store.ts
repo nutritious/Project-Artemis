@@ -23,6 +23,7 @@ export interface Role { id: string; name: string; color: string; position: numbe
 export interface User {
   id: string;
   dmBlocked?: string[];
+  friends?: string[];
   username: string;
   salt: string;
   hash: string;
@@ -54,6 +55,7 @@ export const newEconomy = () => ({ coins: 0, inv: { effects: [] as string[], tag
 export interface Report { id: string; userId: string; username: string; kind: string; text: string; page: string; ts: number; status: "open" | "done" }
 export interface Invite { code: string; createdBy: string; createdAt: number; usedBy?: string }
 export interface Channel { id: string; name: string; topic: string; createdAt: number; trusted?: boolean; hidden?: boolean; voice?: boolean }
+export interface FriendReq { id: string; from: string; to: string; ts: number }
 export interface DmMsg { id: string; key: string; from: string; to: string; username: string; text: string; ts: number; sys?: boolean }
 export interface BotCfg { enabled: boolean; action: "ban" | "warn"; strikes: number; words: string[]; log: { ts: number; user: string; action: string; why: string }[]; strikesBy: Record<string, number> }
 export interface Message {
@@ -79,6 +81,7 @@ export interface Db {
   channels: Channel[];
   messages: Message[];
   dms: DmMsg[];
+  friendReqs: FriendReq[];
   blocklist: string[];
   server: ServerSettings;
   announcement: Announcement | null;
@@ -96,6 +99,7 @@ export interface Db {
 const T = (h: number, m: number) => Date.UTC(2026, 9, 15, h + 7, m);
 /** The update log starts with the history of this build. Only the owner can add to or edit it. */
 export const SEED_UPDATES: UpdateEntry[] = [
+  { id: "u27", ts: Date.UTC(2026, 9, 19, 10, 0), by: "Artemis", title: "Friends and a new profile", body: "- Profiles have a new look: your equipped backdrop fills the whole card, your effect spins around its edge, and your title, role, rank, join date and bio sit on top. Click anyone's name or picture to open it.\n- Friends: press Add friend on a profile. They get a notification and a request in Chat, and choose to accept or decline. You can only message and call friends. Blocking someone also ends the friendship.\n- The owner and co-owners can add a whole pack to their own collection from the Owner console (Economy), with no animation." },
   { id: "u26", ts: Date.UTC(2026, 9, 19, 9, 0), by: "Artemis", title: "Home exit node for YouTube", body: "- The owner can connect a home computer as an exit node (Owner console, Safety). While it runs, everyone's browsing leaves from the owner's home internet, which sites like YouTube trust, so the YouTube bot check goes away even though the site itself stays on Render.\n- If the exit node stops, the site checks every 20 seconds and goes back to its own connection by itself.\n- Bans and the blocklist still apply on the exit node." },
   { id: "u25", ts: Date.UTC(2026, 9, 19, 8, 0), by: "Artemis", title: "Direct messages, voice and video calls, and Halloween", body: "- Direct messages: open anyone's profile and tap Message, or use + under Direct messages in Chat. Only the two of you can read them. You can block someone, and bad language is filtered like in channels.\n- Private calls: tap Call or Video in a DM. The other person gets a ringing pop-up and can accept or decline. In a call you can mute, turn your camera on or off, and share your screen. Call lengths and missed calls show up in the DM.\n- Voice channels: the new Voice Lounge is under Voice in Chat. Click it to join, talk, turn on your camera or share your screen with up to 8 people. Staff can add and delete voice channels with the + button.\n- The Halloween Pack is here until Nov 1: 16 limited effects, titles, backdrops and themes you cannot get anywhere else. After Nov 1 it leaves the shop for good, but what you own stays yours.\n- The whole app gets a Halloween look (orange glow, floating bats and pumpkins) until Nov 1. You can turn it off in Settings.\n- The Gulper arena no longer has computer players: it is only real people (and the boss worm during boss hunts).\n- The owner can now remove a title, effect, backdrop or theme from one person, a role or everyone (Owner console, Economy)." },
   { id: "u24", ts: Date.UTC(2026, 9, 19, 6, 0), by: "Artemis", title: "Download and restore your data", body: "- Owner console, Safety tab: a new Data & backup card. The owner can download every account, chat message, coin and setting as one file, and restore it later. Only the owner can do either.\n- If the server is on Render without a permanent disk, the card (and a warning when you sign in) tells you that updates erase data, so you know to download a backup first.\n- Restoring saves a copy of the current data first, then restarts the server on the backup." },
@@ -190,6 +194,7 @@ export const db = new JsonStore<Db>("artemis.json", {
   ],
   messages: [],
   dms: [],
+  friendReqs: [],
   blocklist: [],
   server: { openRegistration: true, rateLimit: DEFAULT_RATE_LIMIT, defaultEngine: "ddg", maintenance: false, maintenanceMessage: "" },
   announcement: null,
@@ -218,6 +223,7 @@ for (const c of d.channels) c.topic ??= "";
 if (!d.channels.some((c) => c.id === "trusted-general")) d.channels.push({ id: "trusted-general", name: "trusted-general", topic: "Trusted members only", createdAt: Date.now(), trusted: true });
 if (!d.channels.some((c) => c.id === "live-event")) d.channels.push({ id: "live-event", name: "live-event", topic: "Chat inside live events", createdAt: Date.now(), hidden: true });
 d.dms ??= [];
+d.friendReqs ??= [];
 if (!d.channels.some((c) => c.voice)) d.channels.push({ id: "voice-lounge", name: "Voice Lounge", topic: "Hang out, talk, share your screen", createdAt: Date.now(), voice: true });
 d.server.bot = Object.assign({ enabled: false, action: "ban" as const, strikes: 3, words: [], log: [], strikesBy: {} }, d.server.bot);
 d.roles ??= [];

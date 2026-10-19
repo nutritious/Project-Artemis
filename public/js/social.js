@@ -18,6 +18,17 @@ const markRead = (id) => { try { const r = lastRead(); r[id] = Date.now(); local
 const totalUnread = () => [...D.unread.values()].reduce((a, b) => a + b, 0);
 function updateDmBadge() { state.dmUnread = totalUnread(); emit("dmunread"); }
 
+/* friends: who is a friend, who asked me, who I asked */
+const F = { friends: new Set(), incoming: [], outgoing: new Set() };
+const setFriends = (m) => { F.friends = new Set(m.friends ?? []); F.incoming = m.incoming ?? []; F.outgoing = new Set(m.outgoing ?? []); emit("friends"); };
+state.friendRel = (id) => (F.friends.has(id) ? "friends" : F.incoming.some((r) => r.id === id) ? "incoming" : F.outgoing.has(id) ? "outgoing" : "none");
+const isFriend = (id) => F.friends.has(id);
+function friendAct({ act, id }) {
+  const m = { add: { t: "fr-send", to: id }, accept: { t: "fr-accept", from: id }, decline: { t: "fr-decline", from: id }, cancel: { t: "fr-cancel", to: id }, remove: { t: "fr-remove", id }, block: { t: "dm-block", id, on: true } }[act];
+  if (m) send(m);
+  if (act === "add") toast("Friend request sent", "ok");
+}
+
 /* ============================== build ============================== */
 export function buildSocial() {
   const chat = $("#chat"); if (!chat || $("#dmMain")) return;
@@ -44,9 +55,9 @@ export function buildSocial() {
   /* leaving to a channel closes the DM view */
   chat.addEventListener("click", (e) => { if (e.target.closest("[data-chan]")) closeDm(); }, true);
   on("ws", onWs);
-  on("social-init", (m) => { D.voice = m.voice ?? {}; D.convs = new Map((m.dms ?? []).map((c) => [c.id, c.last])); const lr = lastRead(); D.unread = new Map(); for (const [id, l] of D.convs) if (l.from !== me().id && !l.sys && l.ts > (lr[id] || 0)) D.unread.set(id, 1); updateDmBadge(); renderList(); });
+  on("social-init", (m) => { setFriends(m); D.voice = m.voice ?? {}; D.convs = new Map((m.dms ?? []).map((c) => [c.id, c.last])); const lr = lastRead(); D.unread = new Map(); for (const [id, l] of D.convs) if (l.from !== me().id && !l.sys && l.ts > (lr[id] || 0)) D.unread.set(id, 1); updateDmBadge(); renderList(); });
   on("channels", renderList); on("members", renderList); on("self", renderList);
-  on("dm-open", (id) => openDm(id));
+  on("dm-open", (id) => openDm(id)); on("fr-act", friendAct); on("friends", () => { renderList(); if (D.open) renderPane(true); });
   on("call-start", ({ id, video }) => startCall(id, !!video));
   on("wsopen", () => { if (R) { toast("Connection dropped, so your call ended.", true); leaveRoom(false); } });
   on("view", (v) => { if (v === "chat" && D.open) markRead(D.open); });
@@ -61,7 +72,8 @@ function renderList() {
   const admin = can("manage_channels");
   const vcs = (state.channels ?? []).filter((c) => c.voice);
   const convs = [...D.convs.entries()].map(([id, last]) => ({ id, last })).concat([...D.tmp].filter((id) => !D.convs.has(id)).map((id) => ({ id, last: null }))).sort((a, b) => (b.last?.ts ?? Infinity) - (a.last?.ts ?? Infinity));
-  el.innerHTML = `<h4>Voice ${admin ? `<button class="btn sm" data-newvoice title="New voice channel">+</button>` : ""}</h4>
+  const reqs = F.incoming.length ? `<h4>Friend requests <span class="u">${F.incoming.length}</span></h4>` + F.incoming.map((r) => `<div class="frrow">${avatar(nameOf(r.id), isOnline(r.id), true)}<b data-frprof="${esc(r.id)}">${esc(nameOf(r.id))}</b><button class="btn sm" data-fra="${esc(r.id)}">Accept</button><button class="btn sm ghost" data-frd="${esc(r.id)}" aria-label="Decline">✕</button></div>`).join("") : "";
+  el.innerHTML = reqs + `<h4>Voice ${admin ? `<button class="btn sm" data-newvoice title="New voice channel">+</button>` : ""}</h4>
     ${vcs.map((c) => { const users = D.voice[c.id] ?? [], here = R?.room === "vc:" + c.id; return `<div class="vc${here ? " on" : ""}"><button class="chan vcbtn" data-vc="${esc(c.id)}"><span class="h">🔊</span><span class="cn">${esc(c.name)}</span>${users.length ? `<span class="u vcn">${users.length}</span>` : ""}</button>${admin ? `<button class="x vcdel" data-delvc="${esc(c.id)}" title="Delete" aria-label="Delete ${esc(c.name)}">×</button>` : ""}${users.map((u) => `<div class="vcu">${avatar(u.username, true, true)}<span>${esc(u.username)}</span></div>`).join("")}</div>`; }).join("") || `<p class="note" style="margin:4px 8px">No voice channels yet.</p>`}
     <h4>Direct messages <button class="btn sm" data-newdm title="New message">+</button></h4>
     ${convs.map(({ id, last }) => { const n = unreadN(id); return `<button class="chan dmrow${D.open === id ? " on" : ""}" data-dm="${esc(id)}">${avatar(nameOf(id), isOnline(id), true)}<span class="mt"><span class="n">${esc(nameOf(id))}</span>${last ? `<span class="ms">${last.from === me().id ? "You: " : ""}${esc(last.text.slice(0, 26))}</span>` : ""}</span>${n ? `<span class="u">${n > 9 ? "9+" : n}</span>` : ""}</button>`; }).join("") || `<p class="note" style="margin:4px 8px">Tap + to message someone.</p>`}`;
@@ -73,12 +85,15 @@ async function onListClick(e) {
   if (del) { if (await confirmBox("Delete this voice channel?", "Everyone in it is disconnected.", { ok: "Delete", danger: true })) try { await api("/channels/" + del.dataset.delvc, "DELETE"); } catch (err) { toast(err.message, true); } return; }
   if (e.target.closest("[data-newvoice]")) { const n = await promptBox("New voice channel", { label: "Name", placeholder: "game-night", ok: "Create" }); if (n) try { await api("/channels", "POST", { name: n, voice: true }); } catch (err) { toast(err.message, true); } return; }
   if (e.target.closest("[data-newdm]")) return void pickPerson();
+  const fa = e.target.closest("[data-fra]"); if (fa) return void friendAct({ act: "accept", id: fa.dataset.fra });
+  const fd = e.target.closest("[data-frd]"); if (fd) return void friendAct({ act: "decline", id: fd.dataset.frd });
+  const fp = e.target.closest("[data-frprof]"); if (fp) return void openFullProfile(nameOf(fp.dataset.frprof));
   const dm = e.target.closest("[data-dm]"); if (dm) openDm(dm.dataset.dm);
 }
 function pickPerson() {
-  const o = overlay(`<div class="modal glass picker-dm" role="dialog" aria-label="New message"><h3>New message</h3><input id="pdq" type="search" placeholder="Search a callsign…" autocomplete="off"><div id="pdl" class="lkr"></div><div class="row end"><button class="btn ghost" data-x>Cancel</button></div></div>`, { center: true });
+  const o = overlay(`<div class="modal glass picker-dm" role="dialog" aria-label="New message"><h3>New message</h3><p class="note" style="margin:0">Friends only</p><input id="pdq" type="search" placeholder="Search your friends…" autocomplete="off"><div id="pdl" class="lkr"></div><div class="row end"><button class="btn ghost" data-x>Cancel</button></div></div>`, { center: true });
   const q = o.querySelector("#pdq"), out = o.querySelector("#pdl");
-  const paint = () => { const s = q.value.trim().toLowerCase(); const l = [...state.people.values()].filter((p) => p.id !== me().id && (!s || p.username.toLowerCase().includes(s))).sort((a, b) => (isOnline(b.id) - isOnline(a.id)) || a.username.localeCompare(b.username)).slice(0, 14); out.innerHTML = l.map((p) => `<button type="button" class="lkrow" data-pd="${esc(p.id)}">${avatar(p.username, isOnline(p.id), true)}<b>${esc(p.username)}</b></button>`).join("") || `<p class="note">No one by that name.</p>`; };
+  const paint = () => { const s = q.value.trim().toLowerCase(); const l = [...state.people.values()].filter((p) => isFriend(p.id) && (!s || p.username.toLowerCase().includes(s))).sort((a, b) => (isOnline(b.id) - isOnline(a.id)) || a.username.localeCompare(b.username)).slice(0, 14); out.innerHTML = l.map((p) => `<button type="button" class="lkrow" data-pd="${esc(p.id)}">${avatar(p.username, isOnline(p.id), true)}<b>${esc(p.username)}</b></button>`).join("") || `<p class="note">${F.friends.size ? "No friend by that name." : "You have no friends yet. Open someone's profile and press Add friend. Once they accept, you can message and call each other."}</p>`; };
   q.addEventListener("input", paint); paint(); setTimeout(() => q.focus(), 30);
   o.addEventListener("click", (e) => { if (e.target === o || e.target.closest("[data-x]")) return o.remove(); const b = e.target.closest("[data-pd]"); if (b) { o.remove(); openDm(b.dataset.pd); } });
 }
@@ -98,14 +113,15 @@ const fmtT = (ts) => new Date(ts).toLocaleTimeString([], { hour: "numeric", minu
 const link = (s) => esc(s).replace(/(https?:\/\/[^\s<]+[^\s<.,;:!?)"'])/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
 function renderPane(keep) {
   const id = D.open; if (!id) return;
-  const name = nameOf(id), blocked = D.blocked.has(id), onl = isOnline(id);
+  const name = nameOf(id), blocked = D.blocked.has(id), onl = isOnline(id), fr = isFriend(id), rel = state.friendRel(id);
   $("#dmHead").innerHTML = `<button class="dmback btn sm ghost" data-dmact="back" aria-label="Back to channels">←</button>${avatar(name, onl, true)}<b data-dmact="profile" style="cursor:pointer">${esc(name)}</b><span class="topic">${onl ? "Online" : "Offline"}</span>
-    <span class="dmacts"><button class="btn sm" data-dmact="voice" ${onl && !blocked ? "" : "disabled"} title="Voice call">📞 Call</button><button class="btn sm" data-dmact="video" ${onl && !blocked ? "" : "disabled"} title="Video call">🎥 Video</button><button class="btn sm ghost" data-dmact="block">${blocked ? "Unblock" : "Block"}</button></span>`;
+    <span class="dmacts"><button class="btn sm" data-dmact="voice" ${onl && !blocked && fr ? "" : "disabled"} title="Voice call">📞 Call</button><button class="btn sm" data-dmact="video" ${onl && !blocked && fr ? "" : "disabled"} title="Video call">🎥 Video</button><button class="btn sm ghost" data-dmact="block">${blocked ? "Unblock" : "Block"}</button></span>`;
   const box = $("#dmMsgs"), list = D.msgs.get(id) ?? [], atBottom = !keep || box.scrollHeight - box.scrollTop - box.clientHeight < 140;
   box.innerHTML = (D.more.get(id) ? `<button class="btn sm ghost dmmore" data-dmact="older">Load earlier</button>` : "") +
     (list.length ? list.map((m) => m.sys ? `<div class="dmsys">${esc(m.text)} · ${fmtT(m.ts)}</div>` : `<div class="dmb ${m.from === me().id ? "mine" : ""}"><div class="dmt">${link(m.text)}</div><small>${fmtT(m.ts)}</small></div>`).join("") : D.loaded.has(id) ? `<div class="chat-empty"><b>${esc(name)}</b><span>This is the start of your private chat. Only the two of you can see it.</span></div>` : "");
   if (atBottom) box.scrollTop = box.scrollHeight;
-  $("#dmInput").disabled = blocked; $("#dmInput").placeholder = blocked ? "You blocked this person" : `Message ${name}`;
+  $("#dmInput").disabled = blocked || !fr; $("#dmInput").placeholder = blocked ? "You blocked this person" : !fr ? "Friends only" : `Message ${name}`;
+  box.insertAdjacentHTML("beforeend", fr ? "" : `<div class="dmgate"><b>You are not friends with ${esc(name)}</b><span>${rel === "outgoing" ? "Your friend request is waiting for them to accept." : rel === "incoming" ? `${esc(name)} sent you a friend request.` : "Add them as a friend to message and call each other."}</span>${rel === "outgoing" ? "" : `<button class="btn primary" data-dmact="${rel === "incoming" ? "accept" : "addfriend"}">${rel === "incoming" ? "Accept request" : "Add friend"}</button>`}</div>`);
 }
 function sendDm() {
   const i = $("#dmInput"), t = i.value.trim(); if (!t || !D.open) return;
@@ -115,6 +131,8 @@ async function onDmClick(e) {
   const a = e.target.closest("[data-dmact]"); if (!a) return;
   const id = D.open, act = a.dataset.dmact;
   if (act === "back") return closeDm();
+  if (act === "addfriend") return friendAct({ act: "add", id });
+  if (act === "accept") return friendAct({ act: "accept", id });
   if (act === "profile") return openFullProfile(nameOf(id));
   if (act === "voice") return startCall(id, false);
   if (act === "video") return startCall(id, true);
@@ -135,6 +153,9 @@ function onWs(m) {
       if (D.open === m.with) renderPane(true); return;
     }
     case "dm-blocked": if (m.on) D.blocked.add(m.id); else D.blocked.delete(m.id); if (D.open === m.id) renderPane(true); toast(m.on ? "Blocked" : "Unblocked", "ok"); return;
+    case "friends": setFriends(m); return;
+    case "fr-new": toast(`${m.from.username} sent you a friend request`, "ok"); if (me().settings.chatSound) ping(true); return;
+    case "fr-ok": toast(`${m.user.username} is now your friend`, "ok"); return;
     case "voice": D.voice = m.state ?? {}; renderList(); return;
     case "presence": renderList(); if (D.open) renderPane(true); return;
     case "call": return onCall(m);
@@ -159,6 +180,7 @@ function onDm(m) {
 const C = { ring: null, timer: 0 };
 function startCall(id, video) {
   if (!navigator.mediaDevices?.getUserMedia) return toast("Calls need a secure page (https or localhost).", true);
+  if (!isFriend(id)) return toast("You need to be friends to call each other.", true);
   if (R) return toast("Leave your current call first.", true);
   if (C.ring) return toast("You already have a call in progress.", true);
   send({ t: "call-invite", to: id, video: !!video });

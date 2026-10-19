@@ -45,7 +45,22 @@ const voiceState = () => {
   return out;
 };
 const broadcastVoice = () => { const raw = { t: "voice", state: voiceState() }; for (const c of X.clients()) X.send(c.ws, raw); };
-export const socialInit = (u: User) => ({ voice: voiceState(), dms: convList(u) });
+/* ------------------------------ friends ------------------------------ */
+const MAX_FRIENDS = 200;
+const areFriends = (a: User, b: User) => !!a.friends?.includes(b.id) && !!b.friends?.includes(a.id);
+const fstate = (u: User) => ({
+  friends: (u.friends ?? []).filter((id) => userById(id)),
+  incoming: db.data.friendReqs.filter((r) => r.to === u.id && userById(r.from)).map((r) => ({ id: r.from, ts: r.ts })),
+  outgoing: db.data.friendReqs.filter((r) => r.from === u.id && userById(r.to)).map((r) => r.to),
+});
+const pushFriends = (...ids: string[]) => { for (const id of ids) { const u = userById(id); if (u) toUser(id, { t: "friends", ...fstate(u) }); } };
+const dropReqs = (a: string, b: string) => { db.data.friendReqs = db.data.friendReqs.filter((r) => !((r.from === a && r.to === b) || (r.from === b && r.to === a))); };
+function befriend(a: User, b: User) {
+  dropReqs(a.id, b.id);
+  for (const [x, y] of [[a, b], [b, a]] as const) { const l = (x.friends ??= []); if (!l.includes(y.id)) l.push(y.id); }
+  saveDb(); pushFriends(a.id, b.id);
+}
+export const socialInit = (u: User) => ({ voice: voiceState(), dms: convList(u), ...fstate(u) });
 
 function leaveRoom(c: SClient, room: string) {
   const set = rooms.get(room); if (!set || !set.delete(c)) return;
@@ -75,6 +90,33 @@ function endCall(call: Call, reason: "ended" | "declined" | "missed" | "cancelle
 export function socialMessage(c: SClient, me: User, msg: any): boolean {
   const ws = c.ws;
   switch (msg.t) {
+    case "fr-send": {
+      const to = userById(String(msg.to)); if (!to || to.id === me.id) return true;
+      if (isBlocked(me, to)) return X.send(ws, { t: "error", message: "You can't send this person a request." }), true;
+      if (areFriends(me, to)) return true;
+      if (!allow(`fr:${me.id}`, 10, 60_000)) return X.send(ws, { t: "error", message: "Slow down a little with friend requests." }), true;
+      if ((me.friends?.length ?? 0) >= MAX_FRIENDS || (to.friends?.length ?? 0) >= MAX_FRIENDS) return X.send(ws, { t: "error", message: "A friends list is full." }), true;
+      if (db.data.friendReqs.some((r) => r.from === to.id && r.to === me.id)) { befriend(me, to); toUser(to.id, { t: "fr-ok", user: { id: me.id, username: me.username } }); return true; }
+      if (db.data.friendReqs.some((r) => r.from === me.id && r.to === to.id)) return true;
+      if (db.data.friendReqs.filter((r) => r.from === me.id).length >= 50) return X.send(ws, { t: "error", message: "You have too many pending requests." }), true;
+      db.data.friendReqs.push({ id: uid(), from: me.id, to: to.id, ts: Date.now() }); saveDb();
+      pushFriends(me.id, to.id); toUser(to.id, { t: "fr-new", from: { id: me.id, username: me.username } });
+      return true;
+    }
+    case "fr-accept": {
+      const from = userById(String(msg.from)); if (!from || !db.data.friendReqs.some((r) => r.from === from.id && r.to === me.id)) return true;
+      befriend(me, from); toUser(from.id, { t: "fr-ok", user: { id: me.id, username: me.username } }); return true;
+    }
+    case "fr-decline": case "fr-cancel": {
+      const other = String(msg.t === "fr-decline" ? msg.from : msg.to);
+      db.data.friendReqs = db.data.friendReqs.filter((r) => !((msg.t === "fr-decline" && r.from === other && r.to === me.id) || (msg.t === "fr-cancel" && r.from === me.id && r.to === other)));
+      saveDb(); pushFriends(me.id, other); return true;
+    }
+    case "fr-remove": {
+      const other = userById(String(msg.id)); if (!other) return true;
+      for (const [x, y] of [[me, other], [other, me]] as const) x.friends = (x.friends ?? []).filter((f) => f !== y.id);
+      saveDb(); pushFriends(me.id, other.id); return true;
+    }
     case "dm-list": X.send(ws, { t: "dm-list", list: convList(me) }); return true;
     case "dm-history": {
       const peer = userById(String(msg.with)); if (!peer) return true;
@@ -87,6 +129,7 @@ export function socialMessage(c: SClient, me: User, msg: any): boolean {
       const to = userById(String(msg.to)); const text = String(msg.text ?? "").trim().slice(0, 2000);
       if (!to || to.id === me.id || !text) return true;
       if (isBlocked(me, to)) return X.send(ws, { t: "error", message: "You can't message this person." }), true;
+      if (!areFriends(me, to)) return X.send(ws, { t: "error", message: "You need to be friends to message each other." }), true;
       if (!allow(`dm:${me.id}`, 8, 8000)) return X.send(ws, { t: "error", message: "You're sending messages too fast." }), true;
       const v = moderate(me, text, null);
       if (v.block) { if (v.ban) { saveDb(); X.ban(me.id); } return X.send(ws, { t: "error", message: v.ban ? "You were banned for inappropriate language." : "Message blocked: keep it clean." }), true; }
@@ -96,13 +139,14 @@ export function socialMessage(c: SClient, me: User, msg: any): boolean {
     case "dm-block": {
       const peer = userById(String(msg.id)); if (!peer || peer.id === me.id) return true;
       const l = (me.dmBlocked ??= []); const i = l.indexOf(peer.id);
-      if (msg.on && i < 0) l.push(peer.id); else if (!msg.on && i >= 0) l.splice(i, 1);
+      if (msg.on && i < 0) { l.push(peer.id); for (const [x, y] of [[me, peer], [peer, me]] as const) x.friends = (x.friends ?? []).filter((f) => f !== y.id); dropReqs(me.id, peer.id); pushFriends(me.id, peer.id); } else if (!msg.on && i >= 0) l.splice(i, 1);
       saveDb(); toUser(me.id, { t: "dm-blocked", id: peer.id, on: !!msg.on });
       return true;
     }
     case "call-invite": {
       const to = userById(String(msg.to)); if (!to || to.id === me.id) return true;
       if (isBlocked(me, to)) return X.send(ws, { t: "error", message: "You can't call this person." }), true;
+      if (!areFriends(me, to)) return X.send(ws, { t: "error", message: "You need to be friends to call each other." }), true;
       if (!live(to.id)) return X.send(ws, { t: "error", message: `${to.username} is offline right now.` }), true;
       if (callOf(me.id)) return X.send(ws, { t: "error", message: "You're already in a call." }), true;
       if (callOf(to.id)) return X.send(ws, { t: "error", message: `${to.username} is already on a call.` }), true;

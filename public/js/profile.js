@@ -1,8 +1,23 @@
 /* Full profile: big picture and effect, rank, titles, arcade bests, collection. Staff also see coins. Plus the profile lookup. */
-import { $, api, emit, avatar, esc, fmtNum, overlay, roleTags, state, toast, titleChip, rarityColor, isCoOwnerUp } from "./util.js";
+import { $, api, avatar, confirmBox, emit, esc, fmtNum, on, overlay, roleTags, state, toast, titleChip, rarityColor } from "./util.js";
 import { EFFECTS, GAMES, BGS, bgMap, effectMap, THEMES, TAGS } from "./cosmetics.js";
 
 const RANK_COL = ["#8d96bd", "#4cc9f0", "#3ddc97", "#ffc857", "#ff8a5b", "#e879f9", "#ffd76a"], RANK_NAME = ["Stardust", "Cadet", "Pilot", "Navigator", "Captain", "Voyager", "Legend"];
+
+/* Each profile effect gives the whole card a spinning edge in its own colors. */
+const FXC = { stardust: ["#cfe0ff", "#ffffff"], ringlet: ["#cfe0ff", "#8b7bff"], aurora: ["#3dffb5", "#b57bff"], neon: ["#ff3df0", "#4cc9f0"], orbit: ["#e8ecff", "#4cc9f0"], glitch: ["#ff3b6b", "#3be8ff"], flare: ["#ff7a2b", "#ffd76a"], comet: ["#4cc9f0", "#ffffff"], halo: ["#ff8a5b", "#ffd0a8"], supernova: ["#ffd76a", "#ff8a5b"], crown: ["#ffd76a", "#fff6d0"], pixel: ["#3dff7a", "#ff3df0"], hud: ["#ff3b3b", "#ffffff"], code: ["#33ff33", "#0a8a0a"], scan: ["#3dff7a", "#3be8ff"], prism: ["#ff4df0", "#3be8ff"], holo: ["#ff4df0", "#ffd76a"], "opening-night": ["#ffd76a", "#ff5d9e"], haunted: ["#7dff6a", "#b46bff"], bats: ["#ff8a2b", "#7b2cbf"], jack: ["#ff8a2b", "#ffd76a"], ghostfire: ["#7dff6a", "#b46bff"], cobweb: ["#ffffff", "#9aa4cf"], witchmoon: ["#ffb347", "#ff6a1a"] };
+const PRES = { online: ["Online", "#3ddc97"], idle: ["Idle", "#ffc857"], dnd: ["Do not disturb", "#ff5d6e"], invisible: ["Offline", "#8d96bd"] };
+const fmtJoin = (t) => new Date(t).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" });
+
+function actionBar(p) {
+  const rel = state.friendRel?.(p.id) ?? "none";
+  if (p.id === state.me?.id) return `<button type="button" class="btn pc-main" data-pact="edit">Edit my profile</button>`;
+  const blk = `<button type="button" class="btn ghost pc-sq" data-pact="block" title="Block ${esc(p.username)}" aria-label="Block">⊘</button>`;
+  if (rel === "friends") return `<button type="button" class="btn pc-main" data-pact="dm">✉ Message</button><button type="button" class="btn pc-sq" data-pact="call" title="Voice call">📞</button><button type="button" class="btn pc-sq" data-pact="video" title="Video call">🎥</button><button type="button" class="btn ghost pc-sq" data-pact="remove" title="Remove friend">✓ Friends</button>${blk}`;
+  if (rel === "outgoing") return `<button type="button" class="btn pc-main ghost" data-pact="cancel">Request sent · Cancel</button>${blk}`;
+  if (rel === "incoming") return `<button type="button" class="btn pc-main" data-pact="accept">Accept friend request</button><button type="button" class="btn ghost" data-pact="decline">Decline</button>${blk}`;
+  return `<button type="button" class="btn pc-main" data-pact="add">＋ Add friend</button>${blk}`;
+}
 
 export async function openFullProfile(name) {
   let p; try { p = await api("/profile/" + encodeURIComponent(name)); } catch (e) { return toast(e.message, true); }
@@ -10,31 +25,44 @@ export async function openFullProfile(name) {
   if (!state.people.has(p.id)) state.people.set(p.id, person);
   person.fx = p.equip.effect; person.tag = p.equip.tag; person.bg = p.equip.bg; /* make sure the avatar shows the freshest effect */
   const rc = RANK_COL[p.rank] ?? "#8d96bd", pic = p.profile?.avatar, eff = effectMap.get(p.equip.effect);
+  const [c1, c2] = FXC[p.equip.effect] ?? [rc, rc];
   const bests = GAMES.map((g) => [g.name, p.bests?.[g.id] ?? 0]).filter((x) => x[1] > 0);
   const owned = EFFECTS.filter((e) => p.inv.effects.includes(e.id));
   const total = p.inv.effects.length + p.inv.tags.length + p.inv.themes.length + (p.inv.bgs?.length ?? 0), ownedBgs = BGS.filter((b) => p.inv.bgs?.includes(b.id)), bgi = bgMap.get(p.equip.bg);
-  const o = overlay(`<div class="prof glass" style="--rc:${rc}" role="dialog" aria-label="${esc(p.username)}'s profile">
-    <div class="prof-banner ${p.equip.bg ? "pbg-" + esc(p.equip.bg) : ""}" ${p.profile?.accent && !p.equip.bg ? `style="background:linear-gradient(135deg,${esc(p.profile.accent)},color-mix(in srgb,${esc(p.profile.accent)} 25%,#000))"` : ""}></div>
+  const online = (state.onlineIds ?? new Set()).has(p.id), pr = PRES[p.profile?.presence] ?? PRES.online, accent = p.profile?.accent;
+  const bgStyle = p.equip.bg ? "" : `style="background:linear-gradient(150deg,${esc(accent || rc)},color-mix(in srgb,${esc(accent || rc)} 22%,#05060d) 70%)"`;
+  const o = overlay(`<div class="profcard ${eff ? "has-fx" : ""} ${["chroma"].includes(eff?.rarity) ? "rainbow" : ""}" style="--rc:${rc};--c1:${c1};--c2:${c2}" role="dialog" aria-label="${esc(p.username)}'s profile">
+    <div class="pc-bg ${p.equip.bg ? "pbg-" + esc(p.equip.bg) : ""}" ${bgStyle}></div><div class="pc-shade"></div>${eff ? `<i class="pc-edge"></i>` : ""}
     <button type="button" class="prof-x" data-x aria-label="Close">×</button>
-    <div class="prof-top"><button type="button" class="prof-av" data-zoom title="${pic ? "Click to enlarge the picture" : ""}">${avatar(p.username, false, false, true)}</button>
-      <div><h2>${esc(p.username)}</h2><div class="prof-tags">${roleTags(person)}<span class="rchip" style="--rc:${rc}">${RANK_NAME[p.rank] ?? ""}</span></div>
-      ${p.profile?.pronouns ? `<small class="faint">${esc(p.profile.pronouns)}</small>` : ""}
-      ${p.profile?.status ? `<p class="dim">${esc(p.profile.status)}</p>` : ""}</div></div>
-    ${p.id !== state.me?.id ? `<div class="prof-act"><button type="button" class="btn sm" data-pm>✉ Message</button><button type="button" class="btn sm" data-pcall>📞 Call</button><button type="button" class="btn sm" data-pvideo>🎥 Video</button></div>` : ""}
-    <div class="prof-stats"><div><b>${fmtNum(p.xp)}</b><small>XP</small></div><div><b>${p.streak}</b><small>day streak</small></div><div><b>${p.plays}</b><small>arcade plays</small></div><div><b>${total}</b><small>collected</small></div><div><b>${p.ach ?? 0}</b><small>achievements</small></div>${p.coins != null ? `<div class="staff"><b>◎ ${p.coins.toLocaleString()}</b><small>coins (staff only)</small></div>` : ""}</div>
-    ${p.profile?.bio ? `<p class="prof-bio">${esc(p.profile.bio)}</p>` : ""}
-    ${eff ? `<p class="prof-eff"><span class="chip" style="--tc:${rarityColor(eff.rarity)}">Effect · ${esc(eff.name)}</span></p>` : ""}
-    ${bests.length ? `<h4 class="sec">Arcade bests</h4><div class="prof-bests">${bests.map(([n, v]) => `<span><small>${esc(n)}</small><b>${fmtNum(v)}</b></span>`).join("")}</div>` : ""}
-    ${owned.length ? `<h4 class="sec">Profile effects</h4><div class="prof-fx">${owned.map((e) => `<span class="chip" style="--tc:${rarityColor(e.rarity)}" title="${esc(e.desc)}">${esc(e.name)}</span>`).join("")}</div>` : ""}
-    ${bgi ? `<p class="prof-eff"><span class="chip" style="--tc:${rarityColor(bgi.rarity)}">Backdrop · ${esc(bgi.name)}</span></p>` : ""}
-    ${ownedBgs.length ? `<h4 class="sec">Backdrops</h4><div class="prof-bgs">${ownedBgs.map((b) => `<span class="bgp" title="${esc(b.name)}"><i class="bgprev pbg-${esc(b.id)}"></i><small>${esc(b.name)}</small></span>`).join("")}</div>` : ""}
-    ${p.inv.tags.length ? `<h4 class="sec">Titles</h4><div class="prof-fx">${p.inv.tags.map((t) => titleChip(t)).join("")}</div>` : ""}
-    <p class="faint" style="margin:14px 0 0">Member since ${new Date(p.createdAt).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric" })}</p></div>`, { center: true });
-  const close = () => o.remove();
-  o.querySelector("[data-pm]")?.addEventListener("click", () => { close(); emit("dm-open", p.id); });
-  o.querySelector("[data-pcall]")?.addEventListener("click", () => { close(); emit("dm-open", p.id); emit("call-start", { id: p.id, video: false }); });
-  o.querySelector("[data-pvideo]")?.addEventListener("click", () => { close(); emit("dm-open", p.id); emit("call-start", { id: p.id, video: true }); });
-  o.querySelector("[data-x]").onclick = close; o.addEventListener("click", (e) => { if (e.target === o) close(); });
+    <div class="pc-scroll"><div class="pc-top"><button type="button" class="prof-av pc-av" data-zoom title="${pic ? "Click to enlarge the picture" : ""}">${avatar(p.username, false, false, true)}</button></div>
+      <h2 class="pc-name">${esc(p.username)}<span class="rchip" style="--rc:${rc}">${RANK_NAME[p.rank] ?? ""}</span></h2>
+      <div class="pc-chips">${roleTags(person)}</div>
+      <div class="pc-handle">@${esc(p.username.toLowerCase())}${p.profile?.pronouns ? ` · ${esc(p.profile.pronouns)}` : ""}</div>
+      <div class="pc-meta"><span>✦ ${fmtNum(p.xp)} XP</span><span>◷ joined ${fmtJoin(p.createdAt)}</span><span>💬 ${fmtNum(p.msgs ?? 0)} messages</span>${p.streak ? `<span>🔥 ${p.streak} day streak</span>` : ""}</div>
+      <div class="pc-pres"><span class="pc-pill"><i style="background:${online ? pr[1] : "#8d96bd"}"></i>${online ? pr[0] : "Offline"}</span>${p.profile?.status ? `<span class="pc-status">${esc(p.profile.status)}</span>` : ""}</div>
+      ${p.profile?.bio ? `<div class="pc-bio">${esc(p.profile.bio)}</div>` : ""}
+      ${eff || bgi ? `<div class="pc-fxline">${eff ? `<span class="chip" style="--tc:${rarityColor(eff.rarity)}">Effect · ${esc(eff.name)}</span>` : ""}${bgi ? `<span class="chip" style="--tc:${rarityColor(bgi.rarity)}">Backdrop · ${esc(bgi.name)}</span>` : ""}</div>` : ""}
+      <details class="pc-more"><summary>Collection and stats · ${total} items · ${p.ach ?? 0} achievements${p.coins != null ? ` · ◎ ${fmtNum(p.coins)}` : ""}</summary>
+        ${bests.length ? `<h4 class="sec">Arcade bests</h4><div class="prof-bests">${bests.map(([n, v]) => `<span><small>${esc(n)}</small><b>${fmtNum(v)}</b></span>`).join("")}</div>` : ""}
+        ${owned.length ? `<h4 class="sec">Profile effects</h4><div class="prof-fx">${owned.map((e) => `<span class="chip" style="--tc:${rarityColor(e.rarity)}" title="${esc(e.desc)}">${esc(e.name)}</span>`).join("")}</div>` : ""}
+        ${ownedBgs.length ? `<h4 class="sec">Backdrops</h4><div class="prof-bgs">${ownedBgs.map((b) => `<span class="bgp" title="${esc(b.name)}"><i class="bgprev pbg-${esc(b.id)}"></i><small>${esc(b.name)}</small></span>`).join("")}</div>` : ""}
+        ${p.inv.tags.length ? `<h4 class="sec">Titles</h4><div class="prof-fx">${p.inv.tags.map((t) => titleChip(t)).join("")}</div>` : ""}
+      </details></div>
+    <div class="pc-actions" id="pcActions">${actionBar(p)}</div></div>`, { center: true });
+  on("friends", () => { if (!o.isConnected) return; const a = o.querySelector("#pcActions"); if (a) a.innerHTML = actionBar(p); });
+  const close = () => { o.remove(); };
+  o.addEventListener("click", async (e) => {
+    if (e.target === o) return close();
+    const b = e.target.closest("[data-pact]"); if (!b) return;
+    const a = b.dataset.pact;
+    if (a === "edit") { close(); return emit("view", "settings"); }
+    if (a === "dm") { close(); return emit("dm-open", p.id); }
+    if (a === "call" || a === "video") { close(); emit("dm-open", p.id); return emit("call-start", { id: p.id, video: a === "video" }); }
+    if (a === "block") { if (!(await confirmBox(`Block ${p.username}?`, "You will not be able to message or call each other, and any friendship ends.", { ok: "Block", danger: true }))) return; return emit("fr-act", { act: "block", id: p.id }); }
+    if (a === "remove" && !(await confirmBox(`Remove ${p.username} as a friend?`, "You will not be able to message or call each other until you are friends again.", { ok: "Remove", danger: true }))) return;
+    emit("fr-act", { act: a, id: p.id });
+  });
+  o.querySelector("[data-x]").onclick = close;
   o.querySelector("[data-zoom]").onclick = () => {
     if (!pic) return toast("They haven't set a profile picture", "");
     const z = overlay(`<div class="zoom"><img src="${esc(pic)}" alt="${esc(p.username)}'s profile picture"><small>${esc(p.username)}</small></div>`, { center: true }); z.addEventListener("click", () => z.remove());
