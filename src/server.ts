@@ -12,7 +12,7 @@ import { runCommand } from "./commands.js";
 import { wheelMs } from "./game.js";
 import { activity, progress, addEventPoints, earnedToday, activeBoosts, newGame, boards, publicEvent, publicGame, rankIndex, submitRun } from "./game.js";
 import { casinoPlay, casinoState } from "./casino.js";
-import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giveXpTo, buyUpgrade, giftPass, upgradeState, giveItems, giveSelfWholePack, takeItems, joinLive, openPack, spinWheel, pushEventState, quick, startLive, targets } from "./economy.js";
+import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giveXpTo, buyUpgrade, togglePass, giftPass, upgradeState, giveItems, giveSelfWholePack, takeItems, joinLive, openPack, spinWheel, pushEventState, quick, startLive, targets } from "./economy.js";
 import { storageInfo, migrate } from "./store.js";
 import { checkExit, cloudPass, exitInfo, exitKey, exitStatus, localCloudKey, setExit } from "./exit.js";
 import { attachCloud } from "./cloud-browser.js";
@@ -407,6 +407,10 @@ api.post("/shop/open", auth, (req, res) => {
 api.post("/shop/upgrade", auth, (req, res) => {
   const u = me(req); if (!allow(`upg:${u.id}`, 60, 60_000)) return void res.status(429).json({ error: "Slow down" });
   try { buyUpgrade(u, String(req.body?.id ?? "")); res.json(shopPayload(u)); } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+api.post("/shop/pass", auth, (req, res) => {
+  const u = me(req); if (!allow(`uppass:${u.id}`, 60, 60_000)) return void res.status(429).json({ error: "Slow down" });
+  try { togglePass(u, String(req.body?.id ?? ""), !!req.body?.on); res.json(shopPayload(u)); } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 api.post("/shop/gift", auth, (req, res) => {
   const u = me(req); if (!allow(`upgift:${u.id}`, 10, 60_000)) return void res.status(429).json({ error: "Slow down" });

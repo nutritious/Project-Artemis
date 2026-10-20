@@ -1,6 +1,6 @@
 /* Crew progression: XP, coins, ranks, daily missions, streaks, arcade scores and live-event scoring. */
 import { db, saveDb, type Game, type User } from "./store.js";
-import { EVENTS, GAMES, DAILY_CAP, COIN_RATES, ACHIEVEMENTS, WHEEL_MS } from "../public/js/cosmetics.js";
+import { hasPass, EVENTS, GAMES, DAILY_CAP, COIN_RATES, ACHIEVEMENTS, WHEEL_MS } from "../public/js/cosmetics.js";
 
 export const RANKS = [
   { name: "Stardust", xp: 0, color: "#8d96bd" },
@@ -51,7 +51,7 @@ export function earn(u: User, amount: number) {
   return got;
 }
 export const earnedToday = (u: User) => (u.game.earnDay === dayKey() ? u.game.earned : 0);
-export const wheelMs = (u: User) => (u.up?.pass.includes("wheel") ? WHEEL_MS / 2 : WHEEL_MS);
+export const wheelMs = (u: User) => (hasPass(u.up, "wheel") ? WHEEL_MS / 2 : WHEEL_MS);
 export const nextSpin = (u: User) => u.game.lastSpin + wheelMs(u);
 
 const statVal = (u: User, k: string) => {

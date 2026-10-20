@@ -1087,3 +1087,23 @@ body:has(.cb-view) #liveBar { display: none !important; } /* the coin/spin chips
 .inst h3 { margin: 0; } .inst-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
 .inst-it { position: relative; display: grid; gap: 2px; padding: 10px 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--rc) 14%, rgba(255,255,255,.04)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rc) 55%, transparent); }
 .inst-it b { font-size: 13px; } .inst-it small { color: var(--rc); font-weight: 600; font-size: 11px; letter-spacing: .04em; } .inst-it em { font-style: normal; font-size: 11px; color: #3ddc97; } .inst-it em.dupe { color: var(--dim); } .inst-it i { position: absolute; right: 8px; top: 6px; font-style: normal; }
+
+/* more Secrets */
+.fx-phantom .fxa { inset: -10px; border-radius: 50%; box-shadow: 0 0 18px 4px rgba(180,225,255,.65), inset 0 0 14px rgba(180,225,255,.5); animation: fxghost 3.2s ease-in-out infinite; }
+.fx-phantom .fxb { inset: -24px -10px -12px; border-radius: 50% 50% 40% 40%; background: radial-gradient(ellipse at 50% 30%, rgba(230,245,255,.4), transparent 65%); filter: blur(3px); animation: fxdrift 4.2s ease-in-out infinite; }
+@keyframes fxghost { 0%, 100% { opacity: .25; transform: scale(.96); } 40% { opacity: .95; transform: scale(1.05); } 55% { opacity: .1; } 60% { opacity: .8; } }
+@keyframes fxdrift { 0%, 100% { transform: translateY(3px); opacity: .5; } 50% { transform: translateY(-6px); opacity: 1; } }
+.pbg-deep-signal { background: repeating-radial-gradient(circle at 50% 135%, transparent 0 16px, rgba(80,255,170,.24) 16px 17px), repeating-linear-gradient(90deg, transparent 0 9px, rgba(80,255,170,.16) 9px 10px), linear-gradient(180deg, #010a07, #03201a) 0 0/100% 100% !important; animation: fxneon 2.8s ease-in-out infinite; }
+
+/* Forbidden and Omega tiers */
+.cell.forbidden, .chip.forbidden { --rc: #a855ff; } .cell.forbidden { background: linear-gradient(160deg, #12001f, #000); border-color: #a855ff; box-shadow: 0 0 20px -3px #a855ff; }
+.cell.omega, .chip.omega { --rc: #ffd24a; } .cell.omega { background: linear-gradient(160deg, #1f1600, #000); border-color: #ffd24a; box-shadow: 0 0 24px -2px #ffd24a; animation: fxpulse 2.4s ease-in-out infinite; }
+.rc.forbidden .rc-back { background: linear-gradient(160deg, #14002a, #000); border: 1px solid #a855ff; box-shadow: 0 0 44px -6px #a855ff; } .rc.forbidden .rar { color: #a855ff; letter-spacing: .3em; }
+.rc.omega .rc-back { background: linear-gradient(160deg, #241a00, #000); border: 1px solid #ffd24a; box-shadow: 0 0 60px -4px #ffd24a; } .rc.omega .rar { color: #ffd24a; letter-spacing: .4em; }
+.fx-eclipse .fxa { inset: -8px; border-radius: 50%; background: radial-gradient(circle, #000 52%, transparent 54%), conic-gradient(from 0deg, #a855ff, #fff, #a855ff, #3a0a66, #a855ff); -webkit-mask: radial-gradient(circle, #000 66%, transparent 70%); mask: radial-gradient(circle, #000 66%, transparent 70%); animation: fxspin 7s linear infinite; }
+.fx-eclipse .fxb { inset: -18px; border-radius: 50%; background: radial-gradient(circle, transparent 50%, rgba(168,85,255,.55) 64%, transparent 76%); animation: fxpulse 2s ease-in-out infinite; }
+.fx-omega-flare .fxa { inset: -10px; border-radius: 50%; background: conic-gradient(from 0deg, #ffd24a, #fff, #ff9a2e, #fff, #ffd24a); -webkit-mask: radial-gradient(circle, transparent 60%, #000 63%, #000 80%, transparent 84%); mask: radial-gradient(circle, transparent 60%, #000 63%, #000 80%, transparent 84%); animation: fxspin 2.2s linear infinite; }
+.fx-omega-flare .fxb { inset: -22px; border-radius: 50%; background: repeating-conic-gradient(from 0deg, rgba(255,210,74,.55) 0 4deg, transparent 4deg 22deg); -webkit-mask: radial-gradient(circle, transparent 50%, #000 58%, transparent 74%); mask: radial-gradient(circle, transparent 50%, #000 58%, transparent 74%); animation: fxspin 9s linear infinite reverse, fxpulse 1.4s ease-in-out infinite; }
+.pbg-blackout-zone { background: repeating-linear-gradient(135deg, rgba(168,85,255,.18) 0 2px, transparent 2px 14px), radial-gradient(circle at 50% 50%, #1a0033 0, #000 75%) !important; animation: fxneon 3s ease-in-out infinite; }
+.pbg-end-of-time { background: conic-gradient(from 0deg at 50% 50%, rgba(255,210,74,.35), transparent 12%, rgba(255,210,74,.2) 25%, transparent 38%, rgba(255,210,74,.35) 50%, transparent 62%, rgba(255,210,74,.2) 75%, transparent 88%, rgba(255,210,74,.35)), radial-gradient(circle at 50% 50%, #2a1d00 0, #050300 78%) !important; animation: fxneon 2.2s ease-in-out infinite; }
+.upg.pass.off { opacity: .6; } .upg.pass.off .upg-lv { color: #ff9aa9; }

@@ -28,7 +28,7 @@ export async function openFullProfile(name) {
   const [c1, c2] = FXC[p.equip.effect] ?? [rc, rc];
   const bests = GAMES.map((g) => [g.name, p.bests?.[g.id] ?? 0]).filter((x) => x[1] > 0);
   const cnt = {}; for (const [list, ids] of [[EFFECTS, p.inv.effects], [TAGS, p.inv.tags], [THEMES, p.inv.themes], [BGS, p.inv.bgs ?? []]]) for (const it of list) if (ids.includes(it.id)) cnt[it.rarity] = (cnt[it.rarity] ?? 0) + 1;
-  const counts = ["secret", "chroma", "legendary", "epic", "rare", "common", "limited"].filter((r) => cnt[r]).map((r) => `<span class="chip" style="--tc:${rarityColor(r)}">${cnt[r]} ${RARITY[r].name}</span>`).join("");
+  const counts = ["omega", "forbidden", "secret", "chroma", "legendary", "epic", "rare", "common", "limited"].filter((r) => cnt[r]).map((r) => `<span class="chip" style="--tc:${rarityColor(r)}">${cnt[r]} ${RARITY[r].name}</span>`).join("");
   const total = p.inv.effects.length + p.inv.tags.length + p.inv.themes.length + (p.inv.bgs?.length ?? 0), ownedBgs = BGS.filter((b) => p.inv.bgs?.includes(b.id)), bgi = bgMap.get(p.equip.bg);
   const online = (state.onlineIds ?? new Set()).has(p.id), pr = PRES[p.profile?.presence] ?? PRES.online, accent = p.profile?.accent;
   const bgStyle = p.equip.bg ? "" : `style="background:linear-gradient(150deg,${esc(accent || rc)},color-mix(in srgb,${esc(accent || rc)} 22%,#05060d) 70%)"`;

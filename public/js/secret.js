@@ -2,11 +2,13 @@
    A terminal types out a warning, the picture tears, a heartbeat speeds up, the screen cracks, a black hole opens, lightning, then the name decodes out of the noise.
    Built to stay light: few particles, no heavy blur, and it lowers its own resolution if the computer struggles. */
 import { state } from "./util.js";
-import { SECRET_CHANCE, EFFECTS, TAGS, BGS } from "./cosmetics.js";
+import { tierChance, EFFECTS, TAGS, BGS } from "./cosmetics.js";
 
 /* The real odds, worked out from the same numbers the pack roll uses: one hidden roll per pack slot, then a pick among every Secret. */
-const secretCount = () => Math.max(1, [...EFFECTS, ...TAGS, ...BGS].filter((x) => x.rarity === "secret").length);
-const oddsText = () => `1 IN ${Math.round(secretCount() / SECRET_CHANCE).toLocaleString("en-US")}`;
+const ALL = () => [...EFFECTS, ...TAGS, ...BGS];
+const tierOf = (item) => item?.rarity && item.rarity !== "secret" ? item.rarity : ALL().find((x) => x.id === item?.id)?.rarity ?? "secret";
+const TIER = { secret: { word: "SECRET", hue: 0 }, forbidden: { word: "FORBIDDEN", hue: 285 }, omega: { word: "OMEGA", hue: 52 } };
+const oddsText = (tier) => `1 IN ${Math.round(Math.max(1, ALL().filter((x) => x.rarity === tier).length) / tierChance(tier)).toLocaleString("en-US")}`;
 
 /* the timeline, in seconds */
 const T = { glitch: 5.0, black: 7.0, crack: 9.8, hole: 13.0, word: 14.6, reveal: 20.5 };
@@ -20,9 +22,12 @@ const BEATS = [7.2, 7.95, 8.6, 9.15, 9.55, 9.85, 10.1, 10.3, 10.5];
 const VARIANTS = {
   horizon: [["> opening pack...", 0], ["> reading contents... ok", 0], ["> WARNING: unlisted item detected", 1], ["> item.rarity = ???", 1], ["> item.owner = YOU", 0], ["> this was never supposed to be here", 1]],
   redacted: [["> opening pack...", 0], ["> reading contents... ok", 0], ["> ACCESS: [REDACTED]", 1], ["> authorised by: [REDACTED]", 1], ["> file status = CLASSIFIED", 1], ["> you were not supposed to see this", 1]],
+  phantom: [["> opening pack...", 0], ["> reading contents... ok", 0], ["> WARNING: unregistered presence", 1], ["> source = directly behind you", 1], ["> it has been here the whole time", 1], ["> do not turn around", 1]],
+  kernel: [["> opening pack...", 0], ["> reading contents... ok", 0], ["> FATAL: kernel panic, not syncing", 1], ["> stack overflow at 0xDEADC0DE", 1], ["> init process killed", 1], ["> halted by an unknown item", 1]],
+  signal: [["> opening pack...", 0], ["> reading contents... ok", 0], ["> INCOMING: unknown transmission", 1], ["> origin = deep space", 1], ["> message length = unknown", 1], ["> it is replying to you", 1]],
   rift: [["> opening pack...", 0], ["> reading contents... ok", 0], ["> WARNING: spatial tear detected", 1], ["> source = the other side", 1], ["> something is looking back", 1], ["> do not look into it", 1]],
 };
-const variantOf = (item) => (item?.id === "redacted" ? "redacted" : item?.id === "the-rift" ? "rift" : "horizon");
+const variantOf = (item) => ({ redacted: "redacted", "the-rift": "rift", phantom: "phantom", "kernel-panic": "kernel", "deep-signal": "signal", eclipse: "horizon", "the-forbidden": "redacted", "blackout-zone": "rift", "omega-flare": "signal", "omega-prime": "kernel", "end-of-time": "phantom" }[item?.id] ?? "horizon");
 const CPS = 26, LINE_GAP = 0.25;
 const typedFor = (V) => VARIANTS[V].map(([t], i, a) => ({ t, start: a.slice(0, i).reduce((n, [x]) => n + x.length / CPS + LINE_GAP, 0.35) }));
 
@@ -57,6 +62,18 @@ function sound(ctx, V) {
   } else if (V === "redacted") {                                                   /* stamps and a typewriter */
     for (let i = 0; i < 14; i++) { const at = T.hole + i * 0.42; osc("sine", 140, 40, at, 0.22, 0.7); noise(at, 0.12, 0.4, 1800, 300); if (i % 4 === 3) osc("sine", 2400, 2400, at + 0.1, 0.5, 0.05); }
     osc("sawtooth", 55, 52, T.hole, 14, 0.07, 200);
+  } else if (V === "phantom") {                                                     /* whispers, a cold wind, a slow choir */
+    for (let i = 0; i < 12; i++) noise(T.hole + i * 0.5, 0.9, 0.12, 900 + (i % 4) * 400, 2600);
+    noise(T.hole - 0.2, 4, 0.35, 200, 1400, "bandpass"); osc("sine", 62, 30, T.hole, 5, 0.85);
+    [220, 261.63, 311.13, 392].forEach((f, i) => osc("sine", f * 0.995, f * 1.005, T.hole + 0.8 + i * 0.4, 12, 0.05));
+  } else if (V === "kernel") {                                                      /* error beeps, a crash, a boot chime */
+    for (let i = 0; i < 24; i++) osc("square", 900 + (i % 3) * 300, 900 + (i % 3) * 300, T.hole + i * 0.18, 0.06, 0.07);
+    noise(T.hole, 1.2, 0.8, 4000, 200, "lowpass"); osc("sine", 60, 25, T.hole, 3, 0.9);
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => osc("triangle", f, f, T.reveal - 0.4 + i * 0.12, 0.8, 0.07));
+  } else if (V === "signal") {                                                      /* sonar pings, morse-like blips, a rising tone */
+    for (let i = 0; i < 9; i++) { osc("sine", 1400, 1380, T.hole + i * 1.1, 1.1, 0.12); osc("sine", 700, 690, T.hole + i * 1.1 + 0.02, 1.6, 0.05); }
+    for (let i = 0; i < 26; i++) osc("square", 1800, 1800, T.hole + 1 + i * 0.21 + (i % 3) * 0.04, 0.05 + (i % 2) * 0.1, 0.035);
+    osc("sine", 120, 880, T.hole, 6, 0.1); osc("sine", 50, 22, T.hole, 5, 0.85); noise(T.hole, 2.2, 0.5, 5000, 200, "lowpass");
   } else {                                                                          /* the tearing of space, then a choir */
     noise(T.hole - 0.2, 3.2, 0.7, 300, 9000); noise(T.hole, 2, 0.6, 2500, 60, "lowpass"); osc("sine", 50, 18, T.hole, 5, 0.9);
     [196, 247, 294, 392, 494].forEach((f, i) => { osc("sine", f * 0.99, f * 1.01, T.hole + 1 + i * 0.3, 12, 0.06); osc("sine", f * 1.5, f * 1.52, T.hole + 3 + i * 0.3, 9, 0.025); });
@@ -195,16 +212,57 @@ function frame(x, W, H, t, S, item) {
     }
   }
 
+
+  if (t >= T.hole && V === "phantom") {
+    const tt = t - T.hole, flick = tt > 2.2 && Math.sin(t * 41) > 0.82 ? 0.25 : 1;
+    const bg = x.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#04060d"); bg.addColorStop(1, "#0a1222"); x.fillStyle = bg; x.fillRect(0, 0, W, H);
+    S.fog ??= Array.from({ length: 9 }, () => ({ x: rnd(W), y: rnd(H * 0.5, H), r: rnd(0.3, 0.7), s: rnd(8, 22) }));
+    for (const f of S.fog) { const fx = (f.x + t * f.s * k) % (W + 400 * k) - 200 * k, g = x.createRadialGradient(fx, f.y, 0, fx, f.y, R * f.r); g.addColorStop(0, "rgba(170,200,235,.13)"); g.addColorStop(1, "rgba(170,200,235,0)"); x.fillStyle = g; x.fillRect(fx - R, f.y - R, R * 2, R * 2); }
+    const ghost = (gx, gy, sz, a, wob) => {
+      x.save(); x.translate(gx, gy); x.globalAlpha = a * flick;
+      const g = x.createLinearGradient(0, -sz, 0, sz * 1.1); g.addColorStop(0, "rgba(235,246,255,.95)"); g.addColorStop(1, "rgba(150,190,235,.05)"); x.fillStyle = g; x.shadowColor = "rgba(190,230,255,.9)"; x.shadowBlur = 24 * k;
+      x.beginPath(); x.moveTo(-sz * 0.6, sz); x.lineTo(-sz * 0.6, -sz * 0.2); x.arc(0, -sz * 0.2, sz * 0.6, Math.PI, 0); x.lineTo(sz * 0.6, sz);
+      for (let i = 4; i >= -4; i--) x.lineTo((i / 4) * sz * 0.6, sz + (i % 2 ? 1 : -1) * sz * 0.14 + Math.sin(t * 3 + i + wob) * sz * 0.05);
+      x.closePath(); x.fill(); x.shadowBlur = 0; x.fillStyle = "#02040a"; x.beginPath(); x.ellipse(-sz * 0.22, -sz * 0.25, sz * 0.1, sz * 0.15, 0, 0, TAU); x.ellipse(sz * 0.22, -sz * 0.25, sz * 0.1, sz * 0.15, 0, 0, TAU); x.fill(); x.beginPath(); x.ellipse(0, sz * 0.05, sz * 0.09, sz * 0.15, 0, 0, TAU); x.fill(); x.restore();
+    };
+    for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + tt * 0.3, rr = R * (0.85 - 0.35 * easeOut(tt / 4)), gp = clamp((tt - i * 0.35) / 1.2); ghost(cx + Math.cos(a) * rr * 1.2, cy + R * 0.1 + Math.sin(a) * rr * 0.5, R * 0.16, 0.5 * gp, i); }
+    ghost(cx, cy + R * 0.05, R * (0.12 + 0.34 * easeOut((tt - 1.5) / 3)), clamp((tt - 1.2) / 1.4) * 0.95, 9);
+  }
+  if (t >= T.hole && V === "kernel") {
+    const tt = t - T.hole, cols = 26, rows = 14, cw = W / cols, rh = H / rows;
+    x.fillStyle = "#00102e"; x.fillRect(0, 0, W, H);
+    S.hex ??= Array.from({ length: cols * rows }, () => "0123456789ABCDEF"[Math.floor(Math.random() * 16)] + "0123456789ABCDEF"[Math.floor(Math.random() * 16)]);
+    for (let n = 0; n < 8; n++) S.hex[Math.floor(Math.random() * S.hex.length)] = "0123456789ABCDEF"[Math.floor(Math.random() * 16)] + "0123456789ABCDEF"[Math.floor(Math.random() * 16)];
+    x.font = mono(Math.max(9, rh * 0.5), 600); x.textAlign = "center"; x.textBaseline = "middle";
+    for (let c = 0; c < cols; c++) for (let r = 0; r < rows; r++) { const lit = (Math.sin(c * 1.7 + tt * 2.2 - r * 0.8) + 1) / 2; x.fillStyle = `rgba(80,160,255,${0.08 + lit * 0.3})`; x.fillText(S.hex[c * rows + r], c * cw + cw / 2, r * rh + rh / 2); }
+    const bw = Math.min(W * 0.8, 760 * Math.max(1, k)), bx = cx - bw / 2, by = cy - R * 0.5, bh = R * 0.9, ap = easeOut(tt / 0.4);
+    x.globalAlpha = ap; x.fillStyle = "#0a47ff"; x.fillRect(bx, by, bw, bh); x.strokeStyle = "#fff"; x.lineWidth = 2 * k + 1; x.strokeRect(bx + 8 * k, by + 8 * k, bw - 16 * k, bh - 16 * k);
+    x.textAlign = "left"; x.fillStyle = "#fff"; x.font = `900 ${R * 0.2}px ui-monospace, Menlo, Consolas, monospace`; x.fillText(":(", bx + 28 * k, by + bh * 0.28);
+    x.font = mono(Math.max(13, R * 0.05), 800); x.fillText("KERNEL PANIC", bx + 28 * k, by + bh * 0.5); x.font = mono(Math.max(10, R * 0.034), 600);
+    const pct = Math.min(100, Math.floor(clamp((tt - 1) / 6) * 100)); x.fillText(`an unknown item crashed the system  ${pct}%`, bx + 28 * k, by + bh * 0.64); x.fillText(["0xDEADC0DE", "0xBADF00D", "0xC0FFEE", "0xFEEDFACE"][Math.floor(tt * 3) % 4] + "  at  secret.sys", bx + 28 * k, by + bh * 0.78);
+    x.fillStyle = "rgba(255,255,255,.25)"; x.fillRect(bx + 28 * k, by + bh * 0.86, bw - 56 * k, 6 * k); x.fillStyle = "#fff"; x.fillRect(bx + 28 * k, by + bh * 0.86, (bw - 56 * k) * pct / 100, 6 * k);
+    x.globalAlpha = 1; if (Math.random() < 0.06 && tt > 2) { x.fillStyle = "rgba(255,255,255,.12)"; x.fillRect(0, rnd(H), W, rnd(4, 30)); }
+  }
+  if (t >= T.hole && V === "signal") {
+    const tt = t - T.hole, by = H * 0.86;
+    x.fillStyle = "#010d0a"; x.fillRect(0, 0, W, H);
+    x.strokeStyle = "rgba(80,255,170,.12)"; x.lineWidth = 1; for (let i = 1; i < 14; i++) { x.beginPath(); x.moveTo((i / 14) * W, 0); x.lineTo((i / 14) * W, H); x.stroke(); } for (let i = 1; i < 8; i++) { x.beginPath(); x.moveTo(0, (i / 8) * H); x.lineTo(W, (i / 8) * H); x.stroke(); }
+    for (let i = 0; i < 6; i++) { const q = ((tt * 0.35 + i / 6) % 1), r = q * R * 1.9; x.strokeStyle = `rgba(80,255,170,${(1 - q) * 0.7})`; x.lineWidth = (4 - q * 3) * k + 1; x.beginPath(); x.arc(cx, by, r, Math.PI, TAU); x.stroke(); }
+    const amp = R * 0.34 * easeOut(tt / 4) * (tt > 8 ? 1 + 0.2 * Math.sin(tt * 3) : 1), fy = cy - R * 0.05;
+    for (const [w, col, al] of [[10 * k, "rgba(80,255,170,.25)", 1], [2.5 * k + 1, "#c8ffe6", 1]]) { x.strokeStyle = col; x.lineWidth = w; x.globalAlpha = al; x.beginPath(); for (let px = 0; px <= W; px += 4) { const u = px / W, env = Math.sin(u * Math.PI), v = Math.sin(u * 22 + tt * 5) * 0.5 + Math.sin(u * 9 - tt * 2.4) * 0.35 + Math.sin(u * 47 + tt * 11) * 0.15 * Math.sin(tt); const yy = fy + v * amp * env; px ? x.lineTo(px, yy) : x.moveTo(px, yy); } x.stroke(); } x.globalAlpha = 1;
+    x.font = mono(Math.max(11, R * 0.04), 700); x.textAlign = "left"; x.fillStyle = "rgba(80,255,170,.8)"; x.fillText("FREQ 1420.405 MHZ", W * 0.04, H * 0.09); x.textAlign = "right"; x.fillText(tt < 3 ? "SIGNAL: WEAK" : tt < 6 ? "SIGNAL: LOCKED" : "SIGNAL: REPLYING", W * 0.96, H * 0.09);
+    const sc = clamp((tt - 2.5) / 5); x.textAlign = "center"; x.font = mono(Math.max(12, R * 0.045), 700); x.fillStyle = "rgba(80,255,170,.65)"; const msg = "HELLO WE HAVE BEEN WAITING FOR YOU"; x.fillText(msg.slice(0, Math.floor(msg.length * sc)) + (Math.floor(tt * 3) % 2 ? "_" : ""), cx, H * 0.72);
+  }
   if (t >= T.reveal - 0.3 && V !== "horizon") { x.fillStyle = `rgba(0,0,0,${(V === "rift" ? 0.82 : 0.7) * clamp((t - T.reveal + 0.3) / 0.9)})`; x.fillRect(0, 0, W, H); }
   /* the word and the reveal */
   if (t >= T.word) {
-    const tt = t - T.word, slam = easeOut(tt / 0.28), lift = easeOut((t - T.reveal) / 0.8), size = R * (0.34 - 0.16 * lift) * (3 - 2 * slam), ty = cy + R * (0.02 - 0.5 * lift);
+    const WORD = TIER[tierOf(item)].word, tt = t - T.word, slam = easeOut(tt / 0.28), lift = easeOut((t - T.reveal) / 0.8), size = R * (0.34 - 0.16 * lift) * (3 - 2 * slam), ty = cy + R * (0.02 - 0.5 * lift);
     const glitch = (Math.floor(t * 22) % 9 === 0) ? rnd(-14, 14) * k : 0;
     const shake = tt < 0.6 ? (1 - tt / 0.6) * 14 * k : 0; x.save(); x.translate(rnd(-1, 1) * shake, rnd(-1, 1) * shake);
     x.textAlign = "center"; x.textBaseline = "middle"; x.font = `900 ${size}px Impact, "Arial Black", system-ui, sans-serif`; x.letterSpacing = `${size * 0.08}px`;
     x.globalAlpha = clamp(tt / 0.1);
-    x.globalCompositeOperation = "lighter"; x.fillStyle = "#ff2038"; x.fillText("SECRET", cx - 7 * k + glitch, ty); x.fillStyle = "#18e0ff"; x.fillText("SECRET", cx + 7 * k - glitch, ty);
-    x.globalCompositeOperation = "source-over"; x.fillStyle = "#fff"; x.fillText("SECRET", cx + glitch * 0.4, ty); x.globalAlpha = 1; x.letterSpacing = "0px";
+    x.globalCompositeOperation = "lighter"; x.fillStyle = "#ff2038"; x.fillText(WORD, cx - 7 * k + glitch, ty); x.fillStyle = "#18e0ff"; x.fillText(WORD, cx + 7 * k - glitch, ty);
+    x.globalCompositeOperation = "source-over"; x.fillStyle = "#fff"; x.fillText(WORD, cx + glitch * 0.4, ty); x.globalAlpha = 1; x.letterSpacing = "0px";
     if (t >= T.word + 2.4 && t < T.reveal - 0.2) { const fl = 0.5 + 0.5 * Math.sin(t * 5); x.font = mono(Math.max(12, R * 0.05)); x.fillStyle = `rgba(255,46,77,${0.4 + fl * 0.5})`; x.letterSpacing = `${R * 0.02}px`; x.fillText(t < T.word + 5.5 ? "SOMEONE JUST PULLED SOMETHING" : t < T.word + 8.5 ? "EVERYONE ONLINE HAS BEEN TOLD" : "IT HAS CHOSEN YOU", cx, cy + R * 0.62); x.letterSpacing = "0px"; }
     if (t >= T.reveal + 0.2) {
       const name = String(item.name ?? "???"), n = Math.floor((t - T.reveal - 0.2) / 0.12), seed = Math.floor(t * 14);
@@ -214,7 +272,7 @@ function frame(x, W, H, t, S, item) {
       x.font = `800 ${Math.max(18, R * 0.15)}px Impact, "Arial Black", system-ui, sans-serif`; x.fillStyle = "#fff"; x.globalAlpha = clamp((t - T.reveal - 0.2) / 0.3); x.fillText(shown, cx, cy + R * 0.18);
       x.font = mono(Math.max(12, R * 0.055)); x.fillStyle = "#ff2e4d"; x.letterSpacing = `${R * 0.02}px`; x.fillText(KIND[item.type] ?? "ITEM", cx, cy + R * 0.34); x.letterSpacing = "0px";
       if (n >= name.length + 3) { x.fillStyle = "rgba(255,255,255,.55)"; x.font = mono(Math.max(11, R * 0.045), 600); x.fillText("no one else has this", cx, cy + R * 0.46); }
-      if (n >= name.length + 6) { const o = clamp((t - T.reveal - 0.2 - (name.length + 6) * 0.12) / 0.8); x.globalAlpha = o; x.fillStyle = "#ff2e4d"; x.font = mono(Math.max(14, R * 0.07), 800); x.letterSpacing = `${R * 0.012}px`; x.fillText(oddsText(), cx, cy + R * 0.6); x.fillStyle = "rgba(255,255,255,.5)"; x.font = mono(Math.max(10, R * 0.034), 600); x.letterSpacing = `${R * 0.014}px`; x.fillText("CHANCE PER PACK SLOT", cx, cy + R * 0.68); x.letterSpacing = "0px"; x.globalAlpha = 1; }
+      if (n >= name.length + 6) { const o = clamp((t - T.reveal - 0.2 - (name.length + 6) * 0.12) / 0.8); x.globalAlpha = o; x.fillStyle = "#ff2e4d"; x.font = mono(Math.max(14, R * 0.07), 800); x.letterSpacing = `${R * 0.012}px`; x.fillText(oddsText(tierOf(item)), cx, cy + R * 0.6); x.fillStyle = "rgba(255,255,255,.5)"; x.font = mono(Math.max(10, R * 0.034), 600); x.letterSpacing = `${R * 0.014}px`; x.fillText("CHANCE PER PACK SLOT", cx, cy + R * 0.68); x.letterSpacing = "0px"; x.globalAlpha = 1; }
       x.globalAlpha = 1;
       if (done) { for (let i = 0; i < 2 && S.sparks.length < 90; i++) S.sparks.push({ x: cx + rnd(-1, 1) * R * 0.9, y: cy + R * 0.5, v: rnd(30, 120) * k, l: 1 }); x.fillStyle = "#ff8a9a"; for (const q of S.sparks) { q.y -= q.v * S.dt; q.l -= 0.35 * S.dt; x.globalAlpha = clamp(q.l); x.fillRect(q.x, q.y, 2.2 * k + 1, 2.2 * k + 1); } S.sparks = S.sparks.filter((q) => q.l > 0); x.globalAlpha = 1; }
     }
@@ -232,7 +290,7 @@ function frame(x, W, H, t, S, item) {
 /** Play the Secret cutscene. Resolves when it ends or the viewer skips it. item = { name, type } */
 export function playSecret(item) {
   return new Promise((resolve) => {
-    const cv = document.createElement("canvas"); cv.className = "secret-cut"; cv.setAttribute("role", "img"); cv.setAttribute("aria-label", "A Secret was pulled");
+    const cv = document.createElement("canvas"); cv.className = "secret-cut"; { const th = TIER[tierOf(item)].hue; if (th) cv.style.filter = `hue-rotate(${th}deg) saturate(1.15)`; } cv.setAttribute("role", "img"); cv.setAttribute("aria-label", "A Secret was pulled");
     const LV = [Math.min(1, window.devicePixelRatio || 1), 0.7, 0.5]; let lv = 0, ema = 16, nf = 0;
     const fit = () => { cv.width = Math.max(2, Math.round(innerWidth * LV[lv])); cv.height = Math.max(2, Math.round(innerHeight * LV[lv])); };
     fit(); document.body.appendChild(cv); addEventListener("resize", fit);

@@ -1,7 +1,7 @@
 /* Coins, packs, items, live events and quick events. */
 import crypto from "node:crypto";
 import { audit, db, saveDb, uid, type User, type Upgrades } from "./store.js";
-import { UPGRADES, upgradeMap, upCost, noUps, refundMult, packContents, cleanSchedule, DEFAULT_CFG, DUPE_COINS, EVENT_PRESETS, QUICK_PRESETS, BASE_THEMES, EVENTS, QUICK_EVENTS, packMap, rollPack, TAGS, EFFECTS, THEMES, BGS, WHEEL, WHEEL_MS } from "../public/js/cosmetics.js";
+import { hasPass, isSecretTier, UPGRADES, upgradeMap, upCost, noUps, refundMult, packContents, cleanSchedule, DEFAULT_CFG, DUPE_COINS, EVENT_PRESETS, QUICK_PRESETS, BASE_THEMES, EVENTS, QUICK_EVENTS, packMap, rollPack, TAGS, EFFECTS, THEMES, BGS, WHEEL, WHEEL_MS } from "../public/js/cosmetics.js";
 import { broadcast, onlineUsers, sendToUser } from "./chat.js";
 import { activeBoosts, grant, giveCoins, publicEvent, publicGame, startRush, stat, wheelMs } from "./game.js";
 
@@ -24,7 +24,7 @@ export function announceChroma(u: User, items: { type: string; id: string; name:
 }
 /** Global banner when anyone pulls a Secret. It says who, never what. */
 export function announceSecret(u: User, items: { rarity: string }[]) {
-  for (const it of items) if (it.rarity === "secret") broadcast({ t: "secret", user: u.username });
+  for (const it of items) if (isSecretTier(it.rarity)) broadcast({ t: "secret", user: u.username });
 }
 export function spinWheel(u: User) {
   const g = u.game, now = Date.now();
@@ -39,7 +39,7 @@ export function spinWheel(u: User) {
 }
 
 /** This person's upgrades, filled in with zeros the first time they are needed. */
-export const ups = (u: User): Upgrades => { const next: Upgrades = { ...noUps(), ...(u.up ?? {}), pass: [...(u.up?.pass ?? [])] }; u.up = next; return next; };
+export const ups = (u: User): Upgrades => { const next: Upgrades = { ...noUps(), ...(u.up ?? {}), pass: [...(u.up?.pass ?? [])], off: [...(u.up?.off ?? [])] }; u.up = next; return next; };
 export const upgradeState = (u: User) => ({ ...ups(u) });
 
 /** Buy one level of an upgrade, or a one-time pass, for yourself. */
@@ -55,6 +55,13 @@ export function buyUpgrade(u: User, id: string) {
     const cost = upCost(def, lvl); if (u.coins < cost) throw new Error("Not enough coins");
     u.coins -= cost; (up as any)[id] = lvl + 1;
   }
+  saveDb(); push(u);
+}
+/** Switch an owned pass off or on without losing it. */
+export function togglePass(u: User, id: string, on: boolean) {
+  const def = upgradeMap.get(id); if (!def || def.kind !== "pass") throw new Error("No such pass");
+  const up = ups(u); if (!up.pass.includes(id)) throw new Error("You do not own that pass");
+  up.off = (up.off ?? []).filter((x) => x !== id); if (!on) up.off.push(id);
   saveDb(); push(u);
 }
 /** Buy a one-time pass for someone else. Only passes can be gifted. */
@@ -76,13 +83,13 @@ export function openPack(u: User, packId: string, free: boolean, n = 1) {
   const pack = packMap.get(packId); if (!pack) throw new Error("No such pack");
   if ((pack as any).until && Date.now() >= (pack as any).until) throw new Error("The Halloween Pack has left the shop. See you next year!");
   const up = ups(u);
-  n = Math.floor(n) || 1; if (n < 1 || n > 5 || (n > 1 && (!up.pass.includes("bulk") || free))) throw new Error(n > 1 ? "You need the Open ×5 pass for that" : "Bad count");
+  n = Math.floor(n) || 1; if (n < 1 || n > 5 || (n > 1 && (!hasPass(up, "bulk") || free))) throw new Error(n > 1 ? "You need the Open ×5 pass for that" : "Bad count");
   if (free) { if (pack.id !== "crate" || u.freePacks < 1) throw new Error("No free crates left"); u.freePacks--; }
   else { if (u.coins < pack.cost * n) throw new Error("Not enough coins"); u.coins -= pack.cost * n; }
-  const rolled = { ...pack, count: pack.count + (up.pass.includes("slot") ? 1 : 0) }, mult = refundMult(up.refund);
+  const rolled = { ...pack, count: pack.count + (hasPass(up, "slot") ? 1 : 0) }, mult = refundMult(up.refund);
   const items: any[] = []; let cashback = 0, doubles = 0;
   const take = (list: any[], bonus: boolean) => { for (const it of list) {
-    if (it.dupe) { if (it.rarity !== "chroma" && it.rarity !== "secret") it.refund = Math.round(it.refund * mult); u.coins += it.refund; } else addItem(u, it.type, it.id);
+    if (it.dupe) { if (it.rarity !== "chroma" && !isSecretTier(it.rarity)) it.refund = Math.round(it.refund * mult); u.coins += it.refund; } else addItem(u, it.type, it.id);
     if (bonus) it.bonus = true; items.push(it);
   } };
   for (let k = 0; k < n; k++) {

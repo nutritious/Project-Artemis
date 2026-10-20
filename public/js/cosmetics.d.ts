@@ -46,3 +46,10 @@ export const speedMult: (l: number) => number;
 export const refundMult: (l: number) => number;
 export const upCost: (def: UpgradeDef, lvl: number) => number;
 export const noUps: () => { luck: number; speed: number; refund: number; cash: number; dbl: number; pass: string[] };
+
+export const FORBIDDEN_CHANCE: number;
+export const OMEGA_CHANCE: number;
+export const SECRET_TIERS: string[];
+export function isSecretTier(r: string): boolean;
+export function tierChance(r: string): number;
+export function hasPass(up: any, id: string): boolean;
