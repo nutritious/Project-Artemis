@@ -2,13 +2,10 @@
    A terminal types out a warning, the picture tears, a heartbeat speeds up, the screen cracks, a black hole opens, lightning, then the name decodes out of the noise.
    Built to stay light: few particles, no heavy blur, and it lowers its own resolution if the computer struggles. */
 import { state } from "./util.js";
-import { tierChance, EFFECTS, TAGS, BGS } from "./cosmetics.js";
+import { tierOf, oddsText, playForbidden, playOmega } from "./tiers.js";
 
 /* The real odds, worked out from the same numbers the pack roll uses: one hidden roll per pack slot, then a pick among every Secret. */
-const ALL = () => [...EFFECTS, ...TAGS, ...BGS];
-const tierOf = (item) => item?.rarity && item.rarity !== "secret" ? item.rarity : ALL().find((x) => x.id === item?.id)?.rarity ?? "secret";
-const TIER = { secret: { word: "SECRET", hue: 0 }, forbidden: { word: "FORBIDDEN", hue: 285 }, omega: { word: "OMEGA", hue: 52 } };
-const oddsText = (tier) => `1 IN ${Math.round(Math.max(1, ALL().filter((x) => x.rarity === tier).length) / tierChance(tier)).toLocaleString("en-US")}`;
+const TIER = { secret: { word: "SECRET", hue: 0 } };
 
 /* the timeline, in seconds */
 const T = { glitch: 5.0, black: 7.0, crack: 9.8, hole: 13.0, word: 14.6, reveal: 20.5 };
@@ -289,6 +286,7 @@ function frame(x, W, H, t, S, item) {
 
 /** Play the Secret cutscene. Resolves when it ends or the viewer skips it. item = { name, type } */
 export function playSecret(item) {
+  { const tier = tierOf(item); if (tier === "forbidden") return playForbidden(item); if (tier === "omega") return playOmega(item); }
   return new Promise((resolve) => {
     const cv = document.createElement("canvas"); cv.className = "secret-cut"; { const th = TIER[tierOf(item)].hue; if (th) cv.style.filter = `hue-rotate(${th}deg) saturate(1.15)`; } cv.setAttribute("role", "img"); cv.setAttribute("aria-label", "A Secret was pulled");
     const LV = [Math.min(1, window.devicePixelRatio || 1), 0.7, 0.5]; let lv = 0, ema = 16, nf = 0;

@@ -24,7 +24,7 @@ export function announceChroma(u: User, items: { type: string; id: string; name:
 }
 /** Global banner when anyone pulls a Secret. It says who, never what. */
 export function announceSecret(u: User, items: { rarity: string }[]) {
-  for (const it of items) if (isSecretTier(it.rarity)) broadcast({ t: "secret", user: u.username });
+  for (const it of items) if (isSecretTier(it.rarity)) broadcast({ t: "secret", user: u.username, tier: it.rarity });
 }
 export function spinWheel(u: User) {
   const g = u.game, now = Date.now();

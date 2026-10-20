@@ -1107,3 +1107,5 @@ body:has(.cb-view) #liveBar { display: none !important; } /* the coin/spin chips
 .pbg-blackout-zone { background: repeating-linear-gradient(135deg, rgba(168,85,255,.18) 0 2px, transparent 2px 14px), radial-gradient(circle at 50% 50%, #1a0033 0, #000 75%) !important; animation: fxneon 3s ease-in-out infinite; }
 .pbg-end-of-time { background: conic-gradient(from 0deg at 50% 50%, rgba(255,210,74,.35), transparent 12%, rgba(255,210,74,.2) 25%, transparent 38%, rgba(255,210,74,.35) 50%, transparent 62%, rgba(255,210,74,.2) 75%, transparent 88%, rgba(255,210,74,.35)), radial-gradient(circle at 50% 50%, #2a1d00 0, #050300 78%) !important; animation: fxneon 2.2s ease-in-out infinite; }
 .upg.pass.off { opacity: .6; } .upg.pass.off .upg-lv { color: #ff9aa9; }
+.secret-banner.forbidden { color: #a855ff; border-color: #a855ff; box-shadow: 0 0 40px -4px #a855ff; } .secret-banner.forbidden small { color: #d9b3ff; }
+.secret-banner.omega { color: #ffd24a; border-color: #ffd24a; box-shadow: 0 0 56px -2px #ffd24a; } .secret-banner.omega small { color: #fff2b8; }
