@@ -604,6 +604,7 @@ api.put("/settings", auth, (req, res) => {
   if ("cloakTitle" in b) s.cloakTitle = str(b.cloakTitle, 80);
   if ("cloakIcon" in b) s.cloakIcon = str(b.cloakIcon, 20);
   if ("antiClose" in b) s.antiClose = !!b.antiClose;
+  if ("skipCutscenes" in b) s.skipCutscenes = !!b.skipCutscenes;
   if ("panicKey" in b) s.panicKey = str(b.panicKey, 10);
   if ("panicUrl" in b) s.panicUrl = str(b.panicUrl, 500);
   saveDb();

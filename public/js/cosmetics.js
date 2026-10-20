@@ -13,8 +13,8 @@ export const RARITY = {
 /** Secret items never show in a pack's odds or contents. Each item slot has this tiny chance of being one instead. */
 export const SECRET_CHANCE = 1 / 200;
 /** Tiers above Secret. Each is rolled first, per slot, and is much rarer. */
-export const FORBIDDEN_CHANCE = 1 / 2000;
-export const OMEGA_CHANCE = 1 / 20000;
+export const FORBIDDEN_CHANCE = 1 / 1000;
+export const OMEGA_CHANCE = 1 / 5000;
 export const SECRET_TIERS = ["secret", "forbidden", "omega"];
 export const isSecretTier = (r) => SECRET_TIERS.includes(r);
 export const tierChance = (r) => (r === "omega" ? OMEGA_CHANCE : r === "forbidden" ? FORBIDDEN_CHANCE : SECRET_CHANCE);

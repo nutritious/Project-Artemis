@@ -91,6 +91,7 @@ export function buildSettings() {
     <div class="card glass"><h3>Tab cloak</h3><label>Preset<select id="setCloak">${Object.entries(CLOAKS).map(([k, c]) => `<option value="${k}" ${s.cloakIcon === k ? "selected" : ""}>${c.label}</option>`).join("")}</select></label>
       <label>Custom title<input id="setCloakTitle" maxlength="80" value="${esc(s.cloakTitle)}" placeholder="Overrides the preset title"></label>
       <label class="switch"><span>Anti-close<small>Asks "Are you sure you want to leave?" before the tab can be closed or reloaded.</small></span><input type="checkbox" id="setAntiClose" ${s.antiClose !== false ? "checked" : ""}></label>
+      <label class="switch"><span>Skip cutscenes<small>Pack openings skip the Chroma, Secret, Forbidden and Omega cutscenes and just show the item. The announcement banner still appears.</small></span><input type="checkbox" id="setSkipCut" ${s.skipCutscenes ? "checked" : ""}></label>
       <button class="btn" id="blankBtn">Open in an about:blank window</button></div>
     <div class="card glass"><h3>Panic key</h3><label>Key (press twice quickly)<input id="setPanicKey" maxlength="10" value="${esc(s.panicKey)}"></label><label>Jump to<input id="setPanicUrl" value="${esc(s.panicUrl)}"></label></div>
     <div class="card glass"><h3>Account</h3>
@@ -127,6 +128,7 @@ export function buildSettings() {
   $("#setTunnel").onchange = (e) => { try { localStorage.setItem("artemis.tunnel", e.target.value); } catch {} toast(e.target.value === "epoxy" ? "Epoxy tunnel on. Open a new tab or reload." : "libcurl tunnel on. Open a new tab or reload."); };
   $("#setEngine").onchange = (e) => saveSettings({ engine: e.target.value });
   $("#setCloak").onchange = (e) => { saveSettings({ cloakIcon: e.target.value, cloakTitle: "" }); $("#setCloakTitle").value = ""; };
+  $("#setSkipCut").onchange = (e) => saveSettings({ skipCutscenes: e.target.checked });
   $("#setAntiClose").onchange = (e) => saveSettings({ antiClose: e.target.checked });
   $("#setCloakTitle").oninput = (e) => saveSettings({ cloakTitle: e.target.value });
   $("#setPanicKey").oninput = (e) => saveSettings({ panicKey: e.target.value });
