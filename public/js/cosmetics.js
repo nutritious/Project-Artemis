@@ -259,15 +259,16 @@ export const chromaLuck = (l) => 1 + 0.05 * l;         /* Chroma gets a gentler 
 export const speedMult = (l) => 1 / (1 + 0.25 * l);    /* how long the opening takes: 1 = normal */
 export const refundMult = (l) => 1 + 0.1 * l;          /* duplicate refunds (not Chroma or Secret, those have set amounts) */
 export const UPGRADES = [
-  { id: "luck", kind: "level", icon: "🍀", name: "Extra Luck", base: 1000, grow: 1.6, desc: "Rarer items turn up more often in every pack. Stack it as high as you like, each level costs more.", effect: (l) => (l ? `Rarer steps ×${luckStep(l).toFixed(1)} each, Chroma +${l * 5}%` : "No bonus yet") },
-  { id: "speed", kind: "level", icon: "⚡", name: "Quick Hands", base: 600, grow: 1.5, desc: "Pack openings play faster. Every level shortens the reveal.", effect: (l) => (l ? `Reveals take ${Math.round(speedMult(l) * 100)}% of the time` : "Normal speed") },
-  { id: "refund", kind: "level", icon: "♻️", name: "Duplicate Refunds", base: 2500, grow: 1.7, max: 10, desc: "Get more coins back when you pull something you already own.", effect: (l) => (l ? `+${l * 10}% coins on duplicates` : "No bonus yet") },
-  { id: "cash", kind: "level", icon: "💸", name: "Cashback", base: 5000, grow: 1.8, max: 25, desc: "Each pack you buy has a chance to give the price back.", effect: (l) => (l ? `${l}% chance to get the price back` : "No bonus yet") },
-  { id: "dbl", kind: "level", icon: "🎲", name: "Double Roll", base: 6000, grow: 1.8, max: 25, desc: "Each pack you buy has a chance to roll a second time for free.", effect: (l) => (l ? `${l}% chance of a free second roll` : "No bonus yet") },
-  { id: "skip", kind: "pass", icon: "⏭️", name: "Skip Button", cost: 3000, desc: "Adds a Skip button to pack openings: jump straight to your items." },
-  { id: "bulk", kind: "pass", icon: "📦", name: "Open ×5", cost: 10000, desc: "Open five packs in one go with a new button on every pack." },
-  { id: "slot", kind: "pass", icon: "➕", name: "Extra Slot", cost: 25000, desc: "Every pack you open has one extra item." },
-  { id: "wheel", kind: "pass", icon: "🎡", name: "Quick Wheel", cost: 8000, desc: "The hourly wheel recharges every 30 minutes." },
+  { id: "luck", kind: "level", icon: "🍀", name: "Extra Luck", base: 100, grow: 1.5, desc: "Rarer items turn up more often in every pack. Stack it as high as you like, each level costs more.", effect: (l) => (l ? `Rarer steps ×${luckStep(l).toFixed(1)} each, Chroma +${l * 5}%` : "No bonus yet") },
+  { id: "speed", kind: "level", icon: "⚡", name: "Quick Hands", base: 60, grow: 1.4, desc: "Pack openings play faster. Every level shortens the reveal.", effect: (l) => (l ? `Reveals take ${Math.round(speedMult(l) * 100)}% of the time` : "Normal speed") },
+  { id: "refund", kind: "level", icon: "♻️", name: "Duplicate Refunds", base: 250, grow: 1.5, max: 10, desc: "Get more coins back when you pull something you already own.", effect: (l) => (l ? `+${l * 10}% coins on duplicates` : "No bonus yet") },
+  { id: "cash", kind: "level", icon: "💸", name: "Cashback", base: 500, grow: 1.5, max: 25, desc: "Each pack you buy has a chance to give the price back.", effect: (l) => (l ? `${l}% chance to get the price back` : "No bonus yet") },
+  { id: "dbl", kind: "level", icon: "🎲", name: "Double Roll", base: 600, grow: 1.5, max: 25, desc: "Each pack you buy has a chance to roll a second time for free.", effect: (l) => (l ? `${l}% chance of a free second roll` : "No bonus yet") },
+  { id: "skip", kind: "pass", icon: "⏭️", name: "Skip Button", cost: 400, desc: "Adds a Skip button to pack openings: jump straight to your items." },
+  { id: "bulk", kind: "pass", icon: "📦", name: "Open ×5", cost: 1000, desc: "Open five packs in one go with a new button on every pack." },
+  { id: "slot", kind: "pass", icon: "➕", name: "Extra Slot", cost: 3000, desc: "Every pack you open has one extra item." },
+  { id: "instant", kind: "pass", icon: "⚡", name: "Instant Open", cost: 10000, desc: "Skips the pack opening completely: click a pack and see everything you got at once. Chroma and Secret pulls still get their cutscene." },
+  { id: "wheel", kind: "pass", icon: "🎡", name: "Quick Wheel", cost: 800, desc: "The hourly wheel recharges every 30 minutes." },
 ];
 export const upgradeMap = new Map(UPGRADES.map((u) => [u.id, u]));
 export const upCost = (def, lvl) => (def.kind === "pass" ? def.cost : Math.min(Number.MAX_SAFE_INTEGER, Math.round(def.base * Math.pow(def.grow, lvl))));

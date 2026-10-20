@@ -1083,3 +1083,7 @@ body:has(.cb-view) #liveBar { display: none !important; } /* the coin/spin chips
 .upg-fx.next { color: var(--accent, #7aa2ff); } .upg-fx.max { color: #3ddc97; }
 .upg.own { box-shadow: inset 0 0 0 1px rgba(61,220,151,.4); }
 .ps-skip { position: absolute; right: 14px; bottom: 14px; }
+.inst { width: min(94vw, 720px); max-height: 86vh; overflow: auto; padding: 18px; border-radius: 18px; display: grid; gap: 14px; box-shadow: 0 0 0 1px var(--pc, #7aa2ff), 0 18px 60px rgba(0,0,0,.55); }
+.inst h3 { margin: 0; } .inst-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.inst-it { position: relative; display: grid; gap: 2px; padding: 10px 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--rc) 14%, rgba(255,255,255,.04)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rc) 55%, transparent); }
+.inst-it b { font-size: 13px; } .inst-it small { color: var(--rc); font-weight: 600; font-size: 11px; letter-spacing: .04em; } .inst-it em { font-style: normal; font-size: 11px; color: #3ddc97; } .inst-it em.dupe { color: var(--dim); } .inst-it i { position: absolute; right: 8px; top: 6px; font-style: normal; }

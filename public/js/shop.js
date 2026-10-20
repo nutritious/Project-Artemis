@@ -124,7 +124,7 @@ async function onClick(e) {
   const op = e.target.closest("[data-open]");
   if (op && !busy) {
     busy = true;
-    try { const r = await api("/shop/open", "POST", { pack: op.dataset.open, free: !!op.dataset.free, count: Number(op.dataset.count) || 1 }); S.coins = r.coins; S.freePacks = r.freePacks; S.inv = r.inv; S.up = r.up ?? S.up; sync(); if (r.cashback) toast(`Cashback! ◎ ${r.cashback.toLocaleString("en-US")} back`, "ok"); if (r.doubles) toast(`Double Roll! ${r.doubles} free extra roll${r.doubles > 1 ? "s" : ""}`, "ok"); await reveal(PACKS.find((p) => p.id === op.dataset.open), r.items); } catch (err) { toast(err.message, true); } finally { busy = false; paint(); }
+    try { const r = await api("/shop/open", "POST", { pack: op.dataset.open, free: !!op.dataset.free, count: Number(op.dataset.count) || 1 }); S.coins = r.coins; S.freePacks = r.freePacks; S.inv = r.inv; S.up = r.up ?? S.up; sync(); if (r.cashback) toast(`Cashback! ◎ ${r.cashback.toLocaleString("en-US")} back`, "ok"); if (r.doubles) toast(`Double Roll! ${r.doubles} free extra roll${r.doubles > 1 ? "s" : ""}`, "ok"); await (S.up?.pass.includes("instant") ? instant : reveal)(PACKS.find((p) => p.id === op.dataset.open), r.items); } catch (err) { toast(err.message, true); } finally { busy = false; paint(); }
     return;
   }
   const eq = e.target.closest("[data-eq]");
@@ -136,6 +136,18 @@ async function onClick(e) {
       paint();
     } catch (err) { toast(err.message, true); }
   }
+}
+
+/* ---------- Instant Open pass: no ceremony, just the results ---------- */
+async function instant(pack, items) {
+  for (const it of items) { const info = itemInfo(it.type, it.id) ?? { name: it.name }; if (it.rarity === "chroma") await playChroma({ name: info.name, type: it.type, id: it.id }); if (it.rarity === "secret") await playSecret({ name: info.name, type: it.type, id: it.id }); }
+  const best = ["secret", "chroma", "limited", "legendary", "epic", "rare", "common"].find((r) => items.some((i) => i.rarity === r)) ?? "common"; sfxReveal(best);
+  return new Promise((resolve) => {
+    const o = overlay(`<div class="inst glass" style="--pc:${pack.color}"><h3>${esc(pack.name)} · ${items.length} item${items.length === 1 ? "" : "s"}</h3>
+      <div class="inst-grid">${items.map((it) => { const info = itemInfo(it.type, it.id) ?? { name: it.name }; return `<div class="inst-it ${it.rarity}" style="--rc:${rarityColor(it.rarity)}"><b>${esc(info.name)}</b><small>${esc(RARITY[it.rarity]?.name ?? "")}</small>${it.dupe ? `<em class="dupe">+${it.refund}</em>` : `<em class="new">NEW</em>`}${it.bonus ? `<i title="Double Roll">🎲</i>` : ""}</div>`; }).join("")}</div>
+      <button class="btn" data-x>Collect</button></div>`, { center: true });
+    const end = () => { o.remove(); resolve(); }; o.querySelector("[data-x]").onclick = end; o.addEventListener("click", (e) => { if (e.target === o) end(); });
+  });
 }
 
 /* ---------- the opening ceremony ---------- */
