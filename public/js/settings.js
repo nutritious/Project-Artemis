@@ -34,12 +34,15 @@ export const THEMES = [
 ];
 const svgUri = (inner) => "data:image/svg+xml," + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'>${inner}</svg>`);
 
+/** Asks "Are you sure you want to leave?". Armed from the very first moment the page opens, even on the sign-in screen. */
+export const guard = (e) => { e.preventDefault(); e.returnValue = ""; return ""; };
+window.onbeforeunload = guard; /* on from the first moment, before anyone signs in */
 export function applySettings() {
   const s = state.me.settings;
   document.documentElement.dataset.theme = s.theme;
   const c = CLOAKS[s.cloakIcon] ?? CLOAKS.none;
   document.title = s.cloakTitle || c.title || "Project Artemis";
-  window.onbeforeunload = s.antiClose ? (e) => { e.preventDefault(); e.returnValue = ""; return ""; } : null;
+  window.onbeforeunload = s.antiClose === false ? null : guard;
   const fav = $("#favicon"); if (fav) fav.href = svgUri(c.svg || "<circle cx='16' cy='16' r='14' fill='#e8ecff'/><circle cx='21' cy='13' r='12' fill='#05060d'/>");
   const meta = document.querySelector("meta[name=theme-color]"); if (meta) meta.content = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#05060d";
 }
@@ -57,7 +60,7 @@ export function panicCheck(key) {
   const k = state.me?.settings.panicKey;
   if (!k || key !== k) return;
   const t = Date.now();
-  if (t - lastPanic < 600) location.replace(state.me.settings.panicUrl || "https://en.wikipedia.org/");
+  if (t - lastPanic < 600) (window.onbeforeunload = null, location.replace(state.me.settings.panicUrl || "https://en.wikipedia.org/"));
   lastPanic = t;
 }
 
@@ -87,7 +90,7 @@ export function buildSettings() {
     <div class="card glass"><h3>Built on</h3><p class="note">Artemis browsing is powered by projects from <b>Mercury Workshop</b>: <a href="https://github.com/MercuryWorkshop/scramjet" target="_blank" rel="noopener noreferrer">Scramjet</a> (the web proxy), <a href="https://github.com/MercuryWorkshop/wisp-protocol" target="_blank" rel="noopener noreferrer">Wisp</a> (the socket tunnel protocol), <a href="https://github.com/MercuryWorkshop/epoxy-tls" target="_blank" rel="noopener noreferrer">Epoxy</a> (an encrypted tunnel), <a href="https://github.com/MercuryWorkshop/dreamlandjs" target="_blank" rel="noopener noreferrer">Dreamland</a> and <a href="https://github.com/MercuryWorkshop/AnuraOS" target="_blank" rel="noopener noreferrer">AnuraOS</a>. Thank you to everyone who builds them.</p></div>
     <div class="card glass"><h3>Tab cloak</h3><label>Preset<select id="setCloak">${Object.entries(CLOAKS).map(([k, c]) => `<option value="${k}" ${s.cloakIcon === k ? "selected" : ""}>${c.label}</option>`).join("")}</select></label>
       <label>Custom title<input id="setCloakTitle" maxlength="80" value="${esc(s.cloakTitle)}" placeholder="Overrides the preset title"></label>
-      <label class="switch"><span>Anti-close<small>Asks "Are you sure you want to leave?" before the tab can be closed or reloaded.</small></span><input type="checkbox" id="setAntiClose" ${s.antiClose ? "checked" : ""}></label>
+      <label class="switch"><span>Anti-close<small>Asks "Are you sure you want to leave?" before the tab can be closed or reloaded.</small></span><input type="checkbox" id="setAntiClose" ${s.antiClose !== false ? "checked" : ""}></label>
       <button class="btn" id="blankBtn">Open in an about:blank window</button></div>
     <div class="card glass"><h3>Panic key</h3><label>Key (press twice quickly)<input id="setPanicKey" maxlength="10" value="${esc(s.panicKey)}"></label><label>Jump to<input id="setPanicUrl" value="${esc(s.panicUrl)}"></label></div>
     <div class="card glass"><h3>Account</h3>
@@ -103,7 +106,7 @@ export function buildSettings() {
   const saveProfile = async (patch) => {
     try {
       const { profile } = await api("/profile", "PUT", patch);
-      state.me.profile = profile; const me = state.people.get(state.me.id); if (me) me.profile = profile;
+      state.me.profile = profile; const me = state.people.get(state.me.id); if (me) me.profile = profile; emit("self");
       $("#avPrev").innerHTML = avatar(state.me.username, true, false, true); $("#avNote").textContent = "";
     } catch (err) { toast(err.message, true); }
   };
@@ -147,10 +150,10 @@ export function buildSettings() {
     if (state.me.role === "owner") return void toast("The owner can't delete their account. Transfer ownership first.", true);
     if (!(await confirmBox("Delete your account?", "Your profile, bookmarks and history are removed for good. Your chat messages stay, under your old name.", { ok: "Continue", danger: true }))) return;
     const password = await promptBox("Confirm it's you", { label: "Your passcode", type: "password", ok: "Delete account" }); if (!password) return;
-    try { await api("/account", "DELETE", { password }); location.reload(); } catch (err) { toast(err.message, true); }
+    try { await api("/account", "DELETE", { password }); (window.onbeforeunload = null, location.reload()); } catch (err) { toast(err.message, true); }
   };
   $("#clearHist").onclick = async () => { if (await confirmBox("Clear browsing history?", "Address bar suggestions from your history are deleted.", { ok: "Clear", danger: true })) { try { await api("/history", "DELETE"); toast("History cleared", "ok"); } catch (err) { toast(err.message, true); } } };
-  $("#logoutBtn").onclick = async () => { await api("/logout", "POST", {}).catch(() => {}); location.reload(); };
+  $("#logoutBtn").onclick = async () => { await api("/logout", "POST", {}).catch(() => {}); (window.onbeforeunload = null, location.reload()); };
 }
 
 /* Center-crop to a 128px square JPEG so avatars stay tiny (a few KB). */

@@ -236,7 +236,7 @@ function palette() {
     ...state.bookmarks.map((b) => ({ l: b.title, h: b.url, run: () => openUrl(b.url) })),
     ...THEMES.map(([id, n]) => ({ l: `Theme: ${n}`, h: "Appearance", run: () => saveSettings({ theme: id }) })),
     ...state.engines.map((e) => ({ l: `Search with ${e.name}`, h: "Default engine", run: () => { saveSettings({ engine: e.id }); toast(`Default engine: ${e.name}`, "ok"); } })),
-    { l: "Sign out", h: "Account", run: async () => { await api("/logout", "POST", {}).catch(() => {}); location.reload(); } },
+    { l: "Sign out", h: "Account", run: async () => { await api("/logout", "POST", {}).catch(() => {}); (window.onbeforeunload = null, location.reload()); } },
   ];
   let items = [], sel = 0;
   const paint = () => {

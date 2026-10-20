@@ -38,7 +38,7 @@ export function buildShop() {
 bindRedeem(); on("redeemed", () => { if (S) load(); });
 export async function onShopShown() { await load(); }
 async function load() { try { S = await api("/shop"); sync(); paint(); } catch (e) { toast(e.message, true); } }
-function sync() { if (!S) return; state.nextSpin = S.nextSpin ?? state.nextSpin; Object.assign(state.me, { up: S.up, coins: S.coins, freePacks: S.freePacks, inv: S.inv, equip: S.equip }); document.querySelectorAll(".coinbal").forEach((el) => (el.textContent = S.coins.toLocaleString())); }
+function sync() { if (!S) return; state.nextSpin = S.nextSpin ?? state.nextSpin; Object.assign(state.me, { up: S.up, coins: S.coins, freePacks: S.freePacks, inv: S.inv, equip: S.equip }); document.querySelectorAll(".coinbal").forEach((el) => (el.textContent = S.coins.toLocaleString())); emit("coins"); }
 
 const GLYPH = { halloween: "🎃", gamer: "🎮", hacker: "⌨", backdrops: "🖼", chroma: "🌈" };
 const packGlyph = (p) => GLYPH[p.id] ?? (p.kind === "theme" ? "◐" : "✦");

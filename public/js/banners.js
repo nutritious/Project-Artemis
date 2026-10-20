@@ -16,7 +16,7 @@ let upd = null;
 function showUpdate() {
   if (upd) return; upd = document.createElement("button"); upd.type = "button"; upd.id = "updBanner";
   upd.innerHTML = `<span>🚀</span><b>The update is live!</b><span>Click here to restart and get the new version. Your account, chat and progress are kept.</span>`;
-  upd.onclick = () => location.reload(); document.body.appendChild(upd); toast("A new update is live", "ok");
+  upd.onclick = () => (window.onbeforeunload = null, location.reload()); document.body.appendChild(upd); toast("A new update is live", "ok");
 }
 export function initBanners() { on("countdown", paintCountdown); on("updatelive", showUpdate); on("self", () => { if (state.countdown && !cd) paintCountdown(); }); paintCountdown(); }
 export { emit };

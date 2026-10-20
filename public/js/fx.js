@@ -139,6 +139,7 @@ function eventEnd(m) {
 export function initFx() {
   on("legend", legendBanner); on("chroma", chromaBanner); on("secret", secretBanner); on("ach", achToast); on("fx", onFx); on("eventend", eventEnd);
   on("liveevent", paintBar); on("boost", paintBar); on("self", paintBar);
+  on("coins", () => paintBar()); /* the shop, wheel and upgrades say when your coin total changed, so the bar updates without waiting for the server push */
   on("game", (m) => { state.me.coins = m.game.coins; state.me.freePacks = m.game.freePacks; state.nextSpin = m.game.nextSpin; paintBar(); });
   paintBar();
   api("/game").then((r) => { state.nextSpin = r.game.nextSpin; paintBar(); }).catch(() => {});

@@ -171,6 +171,6 @@ async function onSubmit(e) {
     const name = f.querySelector(`option[value="${id}"]`).textContent;
     if (!(await confirmBox(`Make ${name} the owner?`, "You'll become a commander and lose these controls.", { ok: "Transfer", danger: true }))) return;
     const pw = await askPw("Confirm with your password", `Transfer ownership to ${name}`); if (!pw) return;
-    try { await api("/owner/transfer", "POST", { userId: id, password: pw }); await infoBox("Ownership transferred", `${name} is now the owner.`); location.reload(); } catch (err) { toast(err.message, true); }
+    try { await api("/owner/transfer", "POST", { userId: id, password: pw }); await infoBox("Ownership transferred", `${name} is now the owner.`); (window.onbeforeunload = null, location.reload()); } catch (err) { toast(err.message, true); }
   }
 }

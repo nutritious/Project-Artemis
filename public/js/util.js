@@ -25,7 +25,7 @@ export async function api(path, method = "GET", body) {
   let data = {};
   try { data = await res.json(); } catch { /* empty body */ }
   if (!res.ok) {
-    if (res.status === 401 && state.me && !path.startsWith("/login")) { location.reload(); }
+    if (res.status === 401 && state.me && !path.startsWith("/login")) { (window.onbeforeunload = null, location.reload()); }
     const err = new Error(data.error || `Request failed (${res.status})`);
     err.status = res.status;
     throw err;
@@ -82,7 +82,8 @@ export const tagChip = (t) => !t ? "" : t.tier === "owner" ? `<span class="chip 
 export const byLine = (a) => !a?.by ? "" : `${esc(a.by)} ${a.byTag ? tagChip(a.byTag) : roleTags(personByName(a.by))}`;
 export const hue = (s) => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
 export const avatar = (name, on, sm, big) => {
-  const p = personByName(name), img = p?.profile?.avatar, pres = p?.profile?.presence ?? "online";
+  const mine = state.me && state.me.username === name ? state.me : null; /* your own picture comes from your account, so it shows even before the member list has loaded */
+  const p = personByName(name) ?? mine, img = (mine?.profile ?? p?.profile)?.avatar, pres = (mine?.profile ?? p?.profile)?.presence ?? "online";
   const fx = p?.fx && effectMap.has(p.fx) ? p.fx : "", deco = fx ? `<i class="fxa"></i><i class="fxb"></i>` : "";
   const cls = `avatar${sm ? " sm" : ""}${big ? " big" : ""}${on ? " on " + pres : ""}${fx ? " fx fx-" + fx : ""}`;
   return img ? `<div class="${cls}">${deco}<img src="${esc(img)}" alt=""></div>` : `<div class="${cls}" style="background:linear-gradient(135deg,hsl(${hue(name)} 60% 50%),hsl(${(hue(name) + 40) % 360} 55% 38%))">${deco}<span class="av-l">${esc(String(name)[0]?.toUpperCase() ?? "?")}</span></div>`;

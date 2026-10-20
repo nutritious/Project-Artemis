@@ -68,7 +68,7 @@ async function restoreFrom(file) {
   if (!ok) return;
   const r = await api("/owner/restore", "POST", data);
   toast(`Restored ${r.users} accounts. Reloading...`, "ok");
-  setTimeout(() => location.reload(), 1200);
+  setTimeout(() => (window.onbeforeunload = null, location.reload()), 1200);
 }
 async function click(b) {
   const d = b.dataset;
