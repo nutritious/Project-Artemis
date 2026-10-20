@@ -7,6 +7,7 @@ import { sjSrc } from "./browser.js";
 const pref = (k, d) => { try { return localStorage.getItem(k) || d; } catch { return d; } };
 const setPref = (k, v) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } };
 const PROXY_VIDEOS = "PREFS=" + encodeURIComponent(JSON.stringify({ local: true })) + "; path=/; max-age=31536000"; /* Invidious: "proxy videos" on, so the server (not YouTube) sends the video */
+const noNative = new Set(); let siteOverride = ""; /* videos the person sent back to the website player */
 let mode = pref("artemis.ytmode", "site"), tab = "popular", q = "", backends = [], watching = null, busy = 0;
 const thumb = (id) => `/api/img?u=${encodeURIComponent(`https://i.ytimg.com/vi/${id}/mqdefault.jpg`)}`;
 const dur = (s) => { if (!s) return "LIVE"; const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(x).padStart(2, "0"); };
@@ -26,7 +27,8 @@ export function buildTube() {
     <div id="tuBody" class="tu-grid"></div></div>`;
   const root = $("#tube");
   root.addEventListener("click", (e) => {
-    const t = e.target.closest("[data-tab],[data-home],[data-b],[data-v],[data-recheck],[data-stop],[data-mode]"); if (!t) return;
+    const t = e.target.closest("[data-tab],[data-home],[data-b],[data-v],[data-recheck],[data-stop],[data-mode],[data-webplayer]"); if (!t) return;
+    if (t.dataset.webplayer) { const v = t.dataset.webplayer; noNative.add(v); mode = "site"; siteOverride = `${baseOf()}/watch?v=${v}`; watching = null; paintBack(); return void show(); }
     if (t.matches("[data-home]")) { e.preventDefault(); q = ""; watching = null; root.querySelector("[data-search] input").value = ""; return void show(); }
     if (t.dataset.mode) { mode = t.dataset.mode; setPref("artemis.ytmode", mode); watching = null; paintBack(); return void show(); }
     if (t.dataset.tab) { tab = t.dataset.tab; q = ""; watching = null; return void show(); }
@@ -34,6 +36,14 @@ export function buildTube() {
     if (t.dataset.v) { e.preventDefault(); return void watch(t.dataset.v); }
     if (t.matches("[data-recheck]")) return void recheck();
     if (t.matches("[data-stop]")) { watching = null; return void show(); }
+  });
+  /* When the website inside the proxy opens a video, play it natively instead: the website's own player cannot stream through the proxy engine. */
+  window.addEventListener("message", (e) => {
+    const d = e.data; if (!d || d.artemis !== "nav" || mode !== "site") return;
+    const f = document.querySelector("#tuBody .tu-frame"); if (!f || e.source !== f.contentWindow) return;
+    let u; try { u = new URL(d.url); } catch { return; }
+    const v = u.searchParams.get("v");
+    if (u.pathname === "/watch" && /^[\w-]{11}$/.test(v ?? "") && backends.some((b) => b.host === u.hostname) && !noNative.has(v)) playNative(v, String(d.title ?? "").replace(/\s*-\s*Invidious\s*$/i, ""));
   });
   root.querySelector("[data-search]").addEventListener("submit", (e) => { e.preventDefault(); q = new FormData(e.target).get("q").toString().trim(); watching = null; show(); });
 }
@@ -69,13 +79,30 @@ const siteSrc = (url) => sjSrc(url) + "&pc=" + encodeURIComponent(PROXY_VIDEOS);
 
 function show() { return mode === "site" ? showSite() : load(); }
 
+/* ---- Native player: Artemis streams the video from the server, a plain <video> tag plays it ---- */
+const streamSrc = (vid, n) => `/api/yt/stream/${encodeURIComponent(vid)}?b=${backends.length ? (bsel() + n) % backends.length : -1}`;
+const playerHtml = (vid) => `<div class="tu-player"><video controls autoplay playsinline preload="auto" data-vid="${esc(vid)}" src="${esc(streamSrc(vid, 0))}"></video></div>`;
+function bindPlayer(root, vid) {
+  const v = root.querySelector("video[data-vid]"), msg = root.querySelector("#tuVMsg"); if (!v) return; let n = 0;
+  v.addEventListener("loadeddata", () => { if (msg) msg.textContent = ""; });
+  v.addEventListener("error", () => {
+    if (n < Math.min(3, Math.max(1, backends.length)) - 1) { n++; if (msg) msg.textContent = "That server could not send it, trying another…"; v.src = streamSrc(vid, n); v.play().catch(() => {}); }
+    else if (msg) msg.innerHTML = `None of the servers could send this one. <button class="btn" data-webplayer="${esc(vid)}">Try the website player</button>`;
+  });
+}
+function playNative(vid, title) {
+  const id = ++busy, body = $("#tuBody"); body.dataset.ready = "1"; body.className = "tu-grid"; watching = { id: vid }; paintTabs();
+  body.innerHTML = `<div class="tu-main">${playerHtml(vid)}<h2>${esc(title || "Video")}</h2><p class="tu-note" id="tuVMsg">Starting the stream… the first start can take a few seconds.</p><button class="btn" data-stop>← Back to videos</button> <button class="btn" data-webplayer="${esc(vid)}">Use the website player instead</button></div>`;
+  bindPlayer(body, vid);
+}
+
 /* ---- Full site: the server's own website in the proxy ---- */
 async function showSite() {
   const id = ++busy, body = $("#tuBody"); body.dataset.ready = "1"; body.className = "tu-site"; paintBack(); paintTabs();
   const base = baseOf();
   if (!base) { body.innerHTML = `<p class="tu-msg">No video servers are set up.</p>`; return; }
   await ensureToken(); if (id !== busy) return;
-  const url = q ? `${base}/search?q=${encodeURIComponent(q)}` : `${base}/feed/popular`;
+  const url = siteOverride || (q ? `${base}/search?q=${encodeURIComponent(q)}` : `${base}/feed/popular`); siteOverride = "";
   $("#tuNote").textContent = "";
   body.innerHTML = `<iframe class="tu-frame" src="${esc(siteSrc(url))}" allow="fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write" allowfullscreen title="Videos"></iframe>`;
 }
@@ -100,11 +127,11 @@ async function watch(vid) {
     const r = await api(`/yt/video/${encodeURIComponent(vid)}?b=${bsel()}`);
     if (id !== busy) return;
     watching = r.video; backends = r.backends; paintBack(); paintTabs(); await ensureToken(); if (id !== busy) return;
-    const src = siteSrc(`${r.base}/embed/${vid}?autoplay=1&local=true`);
-    body.innerHTML = `<div class="tu-main"><div class="tu-player"><iframe src="${esc(src)}" allow="fullscreen; autoplay; encrypted-media; picture-in-picture" allowfullscreen title="${esc(r.video.title)}"></iframe></div>
+    body.innerHTML = `<div class="tu-main">${playerHtml(vid)}
       <h2>${esc(r.video.title)}</h2><p class="tu-meta"><b>${esc(r.video.author)}</b> · ${num(r.video.views)} views${r.video.published ? " · " + esc(r.video.published) : ""}</p>
       <details class="tu-desc"><summary>Description</summary><pre>${esc(r.video.description)}</pre></details>
-      <p class="tu-note">Player not loading? Pick another backend above. Playback runs through the Artemis proxy, so the first start can take a few seconds.</p><button class="btn" data-stop>← Back to videos</button></div>
+      <p class="tu-note" id="tuVMsg">Starting the stream… the first start can take a few seconds.</p><button class="btn" data-stop>← Back to videos</button> <button class="btn" data-webplayer="${esc(vid)}">Use the website player instead</button></div>
       <aside class="tu-rel">${r.related.map(cardHtml).join("")}</aside>`;
+    bindPlayer(body, vid);
   } catch (e) { if (id === busy) body.innerHTML = `<p class="tu-msg">${esc(e.message)}<br><button class="btn" data-stop>← Back</button></p>`; }
 }

@@ -26,7 +26,7 @@ import compression from "compression";
 import { handleWispUpgrade, isWispPath, mountScramjet } from "./scramjet.js";
 import { snapshot, record } from "./monitor.js";
 import { extendPhase, gotoPhase, resumeDirector, skipPhase } from "./director.js";
-import { ask, card, cards, checkAll, INSTANCES, status as ytStatus, VIDEO_ID } from "./yt.js";
+import { ask, card, cards, checkAll, INSTANCES, openStream, status as ytStatus, VIDEO_ID } from "./yt.js";
 import { ENGINES, search, suggest, type EngineId } from "./search.js";
 
 const app = express();
@@ -279,6 +279,18 @@ api.get("/yt/video/:id", auth, async (req, res) => {
     const d = r.data ?? {};
     res.json({ video: { ...card({ ...d, videoId: id }), description: String(d.description ?? "").slice(0, 1500), likes: Number(d.likeCount) || 0 }, related: cards((d.recommendedVideos ?? []).map((x: any) => ({ ...x, viewCount: x.viewCount ?? x.viewCountText }))), base: INSTANCES[r.from], backends: ytStatus() });
   } catch (e) { ytFail(res, e); }
+});
+api.get("/yt/stream/:id", auth, async (req, res) => {
+  if (!allow(`ytst:${me(req).id}`, 120, 60_000)) return void res.status(429).json({ error: "Slow down" });
+  const id = String(req.params.id); if (!VIDEO_ID.test(id)) return void res.status(400).json({ error: "Bad video id" });
+  const itag = ["18", "22", "17"].includes(String(req.query.itag)) ? String(req.query.itag) : "18";
+  const s = await openStream(id, req.headers.range, ytBackend(req), itag).catch(() => null);
+  if (!s) return void res.status(502).json({ error: "No video server could send this video" });
+  res.status(s.status);
+  for (const h of ["content-type", "content-length", "content-range", "accept-ranges"]) { const v = s.headers[h]; if (v) res.setHeader(h, String(v)); }
+  res.setHeader("cache-control", "private, max-age=600");
+  res.on("close", () => { try { s.body.destroy(); } catch { /* done */ } });
+  s.body.on("error", () => res.end()); s.body.pipe(res);
 });
 /* GIF library: the server library (owner and co-owners curate it), each person's saved GIFs, and optional search */
 const gifUrl = (raw: unknown) => {

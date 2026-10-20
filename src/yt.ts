@@ -61,3 +61,23 @@ export async function checkAll() {
   return status();
 }
 export const status = () => INSTANCES.map((b, i) => ({ i, name: "B" + (i + 1), host: b.replace(/^https:\/\//, ""), base: b, ok: health.get(b)!.ok, api: apiOk.get(b) ?? null, ms: health.get(b)!.ms }));
+
+/** Open a video stream. Artemis asks the Invidious server for the file (the server fetches it from YouTube with its own address) and hands it on, range requests included,
+ *  so the browser plays it with a plain <video> tag and no proxy engine in the middle. */
+export async function openStream(id: string, range: string | undefined, prefer: number, itag: string) {
+  const order = INSTANCES.map((_, i) => i).sort((a, b) => {
+    if (a === prefer) return -1; if (b === prefer) return 1;
+    const ba = INSTANCES[a], bb = INSTANCES[b], ha = health.get(ba)!, hb = health.get(bb)!;
+    return (ha.ok === false ? 1 : 0) - (hb.ok === false ? 1 : 0) || ha.ms - hb.ms;
+  });
+  for (const i of order.slice(0, 4)) {
+    try {
+      const r = await request(`${INSTANCES[i]}/latest_version?id=${id}&itag=${itag}&local=true`, { method: "GET", dispatcher: safeDispatcher, maxRedirections: 4, headersTimeout: 8000, bodyTimeout: 60000,
+        headers: { "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36", cookie: 'PREFS={"local":true}', ...(range && /^bytes=\d*-\d*$/.test(range) ? { range } : {}) } });
+      const type = String(r.headers["content-type"] ?? "");
+      if ((r.statusCode === 200 || r.statusCode === 206) && /^(video|audio)\//.test(type)) return { status: r.statusCode, headers: r.headers, body: r.body, from: i };
+      await r.body.dump().catch(() => {});
+    } catch { /* next server */ }
+  }
+  return null;
+}
