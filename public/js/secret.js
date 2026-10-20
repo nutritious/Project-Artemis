@@ -2,6 +2,11 @@
    A terminal types out a warning, the picture tears, a heartbeat speeds up, the screen cracks, a black hole opens, lightning, then the name decodes out of the noise.
    Built to stay light: few particles, no heavy blur, and it lowers its own resolution if the computer struggles. */
 import { state } from "./util.js";
+import { SECRET_CHANCE, EFFECTS, TAGS, BGS } from "./cosmetics.js";
+
+/* The real odds, worked out from the same numbers the pack roll uses: one hidden roll per pack slot, then a pick among every Secret. */
+const secretCount = () => Math.max(1, [...EFFECTS, ...TAGS, ...BGS].filter((x) => x.rarity === "secret").length);
+const oddsText = () => `1 IN ${Math.round(secretCount() / SECRET_CHANCE).toLocaleString("en-US")}`;
 
 /* the timeline, in seconds */
 const T = { glitch: 5.0, black: 7.0, crack: 9.8, hole: 13.0, word: 14.6, reveal: 20.5 };
@@ -209,6 +214,7 @@ function frame(x, W, H, t, S, item) {
       x.font = `800 ${Math.max(18, R * 0.15)}px Impact, "Arial Black", system-ui, sans-serif`; x.fillStyle = "#fff"; x.globalAlpha = clamp((t - T.reveal - 0.2) / 0.3); x.fillText(shown, cx, cy + R * 0.18);
       x.font = mono(Math.max(12, R * 0.055)); x.fillStyle = "#ff2e4d"; x.letterSpacing = `${R * 0.02}px`; x.fillText(KIND[item.type] ?? "ITEM", cx, cy + R * 0.34); x.letterSpacing = "0px";
       if (n >= name.length + 3) { x.fillStyle = "rgba(255,255,255,.55)"; x.font = mono(Math.max(11, R * 0.045), 600); x.fillText("no one else has this", cx, cy + R * 0.46); }
+      if (n >= name.length + 6) { const o = clamp((t - T.reveal - 0.2 - (name.length + 6) * 0.12) / 0.8); x.globalAlpha = o; x.fillStyle = "#ff2e4d"; x.font = mono(Math.max(14, R * 0.07), 800); x.letterSpacing = `${R * 0.012}px`; x.fillText(oddsText(), cx, cy + R * 0.6); x.fillStyle = "rgba(255,255,255,.5)"; x.font = mono(Math.max(10, R * 0.034), 600); x.letterSpacing = `${R * 0.014}px`; x.fillText("CHANCE PER PACK SLOT", cx, cy + R * 0.68); x.letterSpacing = "0px"; x.globalAlpha = 1; }
       x.globalAlpha = 1;
       if (done) { for (let i = 0; i < 2 && S.sparks.length < 90; i++) S.sparks.push({ x: cx + rnd(-1, 1) * R * 0.9, y: cy + R * 0.5, v: rnd(30, 120) * k, l: 1 }); x.fillStyle = "#ff8a9a"; for (const q of S.sparks) { q.y -= q.v * S.dt; q.l -= 0.35 * S.dt; x.globalAlpha = clamp(q.l); x.fillRect(q.x, q.y, 2.2 * k + 1, 2.2 * k + 1); } S.sparks = S.sparks.filter((q) => q.l > 0); x.globalAlpha = 1; }
     }
