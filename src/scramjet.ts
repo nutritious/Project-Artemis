@@ -28,6 +28,10 @@ export function mountScramjet(app: Express) {
   app.use("/sj1/lib", express.static(mod("scramjet-v1/dist"), opts));
   app.use("/sj1/mux", express.static(mod("bare-mux-v1/dist"), opts));
   app.use("/sj1/curl", express.static(mod("libcurl-transport-v1/dist"), opts));
+  /* Ultraviolet, another engine to try (Settings > Proxy engine). It shares V1's tunnel pieces. */
+  app.use("/uv/lib", express.static(mod("@titaniumnetwork-dev/ultraviolet/dist"), opts));
+  app.use("/uv/mux", express.static(mod("bare-mux-v1/dist"), opts));
+  app.use("/uv/curl", express.static(mod("libcurl-transport-v1/dist"), opts));
 }
 
 logging.set_level(logging.ERROR);

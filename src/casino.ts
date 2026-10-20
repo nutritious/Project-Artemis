@@ -16,7 +16,7 @@ function stake(u: User, raw: unknown) {
   const bet = Math.floor(Number(raw));
   if (!Number.isFinite(bet) || bet < CAS.MIN || bet > CAS.MAX) fail(`Bets are ${CAS.MIN} to ${CAS.MAX} coins`);
   if (u.coins < bet) fail("Not enough coins");
-  const now = Date.now(); if (now - (last.get(u.id) ?? 0) < CAS.GAP) fail("Slow down a little");
+  const now = Date.now(); if (u.role !== "owner" && now - (last.get(u.id) ?? 0) < CAS.GAP) fail("Slow down a little");
   last.set(u.id, now); return bet;
 }
 function pay(u: User, bet: number, payout: number) { u.coins += payout - bet; rec(u).net += payout - bet; saveDb(); sync(u); }

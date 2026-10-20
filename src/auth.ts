@@ -68,7 +68,11 @@ export function publicUser(u: User) {
 
 const hits = new Map<string, number[]>();
 /** Sliding-window limiter. Returns true when the call is allowed. */
+let ownerIds = new Set<string>(), ownerAt = 0;
+/** The owner is never rate limited: every key ends in the user id, so a match on the owner's id lets the call through. */
+const isOwnerKey = (key: string) => { const t = Date.now(); if (t - ownerAt > 15_000) { ownerIds = new Set(db.data.users.filter((u) => u.role === "owner").map((u) => u.id)); ownerAt = t; } return ownerIds.has(key.slice(key.lastIndexOf(":") + 1)); };
 export function allow(key: string, limit: number, windowMs: number): boolean {
+  if (isOwnerKey(key)) return true;
   const t = Date.now();
   const arr = (hits.get(key) ?? []).filter((x) => t - x < windowMs);
   if (arr.length >= limit) {

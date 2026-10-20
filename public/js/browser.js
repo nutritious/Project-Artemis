@@ -17,9 +17,9 @@ const cur = () => tabs.find((t) => t.id === active);
 
 /** Scramjet runs in a small shell page; "#t" carries the signed token, "#u" the first address. */
 const exitQ = () => (state.exitUrl && state.exitToken ? `&x=${encodeURIComponent(state.exitUrl)}&xt=${encodeURIComponent(state.exitToken)}` : "");
-/** Engine choices live in Settings: "scramjet" (V2, default), "scramjet1" (V1) or "classic"; the tunnel is "libcurl" or "epoxy" (V2 only). */
+/** Engine choices live in Settings: "scramjet" (V2, default), "scramjet1" (V1), "uv" (Ultraviolet) or "classic"; the tunnel is "libcurl" or "epoxy" (V2 only). */
 const pref = (k, d) => { try { return localStorage.getItem(k) || d; } catch { return d; } };
-const sjBase = () => `${state.sjOrigin || ""}${pref("artemis.proxy", "scramjet") === "scramjet1" ? "/sj1" : "/sj"}/shell.html#t=${encodeURIComponent(state.proxyToken)}${exitQ()}${pref("artemis.proxy", "scramjet") === "scramjet" && pref("artemis.tunnel", "libcurl") === "epoxy" ? "&tr=epoxy" : ""}`;
+const sjBase = () => `${state.sjOrigin || ""}${{scramjet1: "/sj1", uv: "/uv"}[pref("artemis.proxy", "scramjet")] ?? "/sj"}/shell.html#t=${encodeURIComponent(state.proxyToken)}${exitQ()}${pref("artemis.proxy", "scramjet") === "scramjet" && pref("artemis.tunnel", "libcurl") === "epoxy" ? "&tr=epoxy" : ""}`;
 export const sjSrc = (url) => `${sjBase()}&u=${encodeURIComponent(url)}`;
 export const proxySrc = (url) => `${state.proxyOrigin}/p/${state.proxyToken}/${b64u(url)}`;
 const favicon = (host) => `${state.proxyOrigin}/p/${state.proxyToken}/${b64u("https://" + host + "/favicon.ico")}`;
@@ -200,7 +200,7 @@ function render(light) {
   if (tag) {
     const isPage = e.kind === "page" && !hooks.frame;
     tag.classList.toggle("hidden", !isPage);
-    tag.textContent = t.legacy ? "Classic" : pref("artemis.proxy", "scramjet") === "scramjet1" ? "Scramjet V1" : "Scramjet V2";
+    tag.textContent = t.legacy ? "Classic" : pref("artemis.proxy", "scramjet") === "scramjet1" ? "Scramjet V1" : pref("artemis.proxy", "scramjet") === "uv" ? "Ultraviolet" : "Scramjet V2";
     tag.classList.toggle("warn", !!t.legacy); tag.classList.toggle("ok", !t.legacy);
   }
 }

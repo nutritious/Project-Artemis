@@ -14,6 +14,9 @@ export const RANKS = [
   { name: "Quasar", xp: 20000, color: "#5ad1ff" },
   { name: "Pulsar", xp: 35000, color: "#9d7bff" },
   { name: "Singularity", xp: 60000, color: "#c9d1ff" },
+  { name: "Paradox", xp: 70000, color: "#22e3c9" },
+  { name: "Multiverse", xp: 80000, color: "#ff4d6d" },
+  { name: "Infinity", xp: 90000, color: "#fff0b8" },
   { name: "Touch Grass", xp: 100000, color: "#58d35a" },
 ];
 const LEGEND = 6;

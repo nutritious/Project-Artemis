@@ -11,7 +11,7 @@ import { can, effectivePerms, hasDashboard, outranks, publicRoles, PERMS, PERM_I
 import { runCommand } from "./commands.js";
 import { activity, progress, addEventPoints, earnedToday, activeBoosts, newGame, boards, publicEvent, publicGame, rankIndex, submitRun } from "./game.js";
 import { casinoPlay, casinoState } from "./casino.js";
-import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giveItems, giveSelfWholePack, takeItems, joinLive, openPack, spinWheel, pushEventState, quick, startLive, targets } from "./economy.js";
+import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giveXpTo, giveItems, giveSelfWholePack, takeItems, joinLive, openPack, spinWheel, pushEventState, quick, startLive, targets } from "./economy.js";
 import { storageInfo, migrate } from "./store.js";
 import { checkExit, cloudPass, exitInfo, exitKey, exitStatus, localCloudKey, setExit } from "./exit.js";
 import { attachCloud } from "./cloud-browser.js";
@@ -53,7 +53,7 @@ app.use((req, res, next) => (req.path.startsWith("/p/") || req.path.startsWith("
 
 app.use((req, res, next) => {
   const role = hostRole(req.hostname);
-  const isProxyPath = req.path.startsWith("/p/") || req.path.startsWith("/__artemis/") || req.path.startsWith("/sj/") || req.path.startsWith("/sj1/");
+  const isProxyPath = req.path.startsWith("/p/") || req.path.startsWith("/__artemis/") || req.path.startsWith("/sj/") || req.path.startsWith("/sj1/") || req.path.startsWith("/uv/");
   if (role === "proxy" && !isProxyPath) {
     // Fix up scripts that navigate to site-relative paths by using the Referer.
     const real = realFromProxyUrl(req.get("referer"));
@@ -76,7 +76,7 @@ app.use((req, res, next) => {
 
 const IMG_ORIGINS = [PROXY_ORIGIN, "http://127.0.0.1:*"].filter(Boolean).join(" ");
 app.use((req, res, next) => {
-  if (!req.path.startsWith("/p/") && !req.path.startsWith("/sj/") && !req.path.startsWith("/sj1/")) {
+  if (!req.path.startsWith("/p/") && !req.path.startsWith("/sj/") && !req.path.startsWith("/sj1/") && !req.path.startsWith("/uv/")) {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "SAMEORIGIN");
     res.setHeader("Referrer-Policy", "same-origin");
@@ -441,6 +441,12 @@ api.post("/owner/coins", auth, panelUp, (req, res) => {
   const n = giveCoinsTo(me(req).username, amount, parseTarget(req.body?.target), String(req.body?.reason ?? "").slice(0, 60));
   broadcastMembers(); res.json({ ok: true, reached: n });
 });
+api.post("/owner/xp", auth, coownerUp, (req, res) => {
+  const amount = Math.round(Number(req.body?.amount));
+  if (!Number.isFinite(amount) || amount === 0 || Math.abs(amount) > 1_000_000_000) return void res.status(400).json({ error: "Enter an XP amount (any number except 0, negative takes XP back)" });
+  const n = giveXpTo(me(req).username, amount, parseTarget(req.body?.target), String(req.body?.reason ?? "").slice(0, 60));
+  broadcastMembers(); res.json({ ok: true, reached: n });
+});
 api.post("/owner/give", auth, panelUp, (req, res) => {
   const type = String(req.body?.type ?? "");
   if (type === "tag" && String(req.body?.id ?? "") === "og" && me(req).role !== "owner") return void res.status(403).json({ error: OG_MSG });
@@ -469,7 +475,7 @@ api.post("/owner/event", auth, panelUp, (req, res) => {
   const user = me(req), b = req.body ?? {};
   if (!allow(`ownev:${user.id}`, 6, 30_000)) return void res.status(429).json({ error: "One at a time, commander" });
   const kind = String(b.kind ?? "");
-  if (!/^(launch|eclipse|party|update|opening|halloween|levelup:([1-9]|1[01]))$/.test(kind)) return void res.status(400).json({ error: "Unknown cutscene" });
+  if (!/^(launch|eclipse|party|update|opening|halloween|levelup:([1-9]|1[0-4]))$/.test(kind)) return void res.status(400).json({ error: "Unknown cutscene" });
   const title = String(b.title ?? "").trim().slice(0, 60) || "LIFTOFF", sub = String(b.sub ?? "").trim().slice(0, 400);
   const reached = broadcastEvent({ kind, title, sub, by: user.username });
   audit(user.username, "event.cutscene", kind); res.json({ ok: true, reached });

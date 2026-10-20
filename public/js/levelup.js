@@ -8,7 +8,7 @@ const rnd = (a = 1, b) => (b === undefined ? Math.random() * a : a + Math.random
 export const DUR = 10;
 const mix = (c1, c2, k) => { const p = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)); const a = p(c1), b = p(c2); return `rgb(${a.map((v, i) => Math.round(lerp(v, b[i], k))).join(",")})`; };
 const pulse = (S, key, rate) => { S[key] = (S[key] ?? 0) + rate * S.dt; const n = Math.floor(S[key]); S[key] -= n; return n; };
-const BLURB = ["First steps into the void", "Faster than light", "You can find your way anywhere", "Command of the crew", "Beyond the known map", "A legend of Artemis", "A star is born", "Feeding on the dark", "Your heartbeat, across the galaxy", "Past the point of no return", "Congrats, you unlocked sunlight. Go outside."];
+const BLURB = ["First steps into the void", "Faster than light", "You can find your way anywhere", "Command of the crew", "Beyond the known map", "A legend of Artemis", "A star is born", "Feeding on the dark", "Your heartbeat, across the galaxy", "Past the point of no return", "The timeline folds around you", "Every universe, one of you", "No ceiling, no edge, no end", "Congrats, you unlocked sunlight. Go outside."];
 
 function skyStars(x, W, H, S, t, alpha = 1, n = 160) {
   S.bg ??= Array.from({ length: n }, () => ({ x: Math.random(), y: Math.random(), p: Math.random() * 6, s: 0.5 + Math.random() * 1.4 }));
@@ -202,7 +202,49 @@ export const SCENES = [
     x.fillStyle = "#000"; x.beginPath(); x.arc(cx, cy, hr, 0, TAU); x.fill();
     if (t >= 5.2) { glow(x, cx, cy, R * (0.2 + easeOut(q / 1.5) * 1.1), "#fff", Math.max(0, 1 - q * 0.45)); ringPulse(x, cx, cy, q * 0.6, D * 0.6, c, 16, 5); }
   } },
-  /* 11 TOUCH GRASS: fall out of orbit, break through the clouds, land in a sunny meadow */
+  /* 11 PARADOX: nested squares spin against each other, fold inward, then the whole thing turns inside out */
+  { tag: "TIME FOLDS", hit: 5.0, draw(x, W, H, t, c, S, R) {
+    const cx = W / 2, cy = H * 0.46, k = R / 720, q = Math.max(0, t - 5), fold = ease(t / 5);
+    x.fillStyle = "#02080a"; x.fillRect(0, 0, W, H); skyStars(x, W, H, S, t, 0.5);
+    x.save(); x.translate(cx, cy);
+    for (let i = 0; i < 22; i++) {
+      const dir = i % 2 ? 1 : -1, sz = R * (0.05 + i * 0.052) * (t < 5 ? 1 - 0.55 * fold + 0.08 * Math.sin(t * 3 - i * 0.4) : 1 + easeOut(q / 1.2) * 0.9 * (i / 22));
+      x.save(); x.rotate(dir * (t * 0.25 + i * 0.09) * (t < 5 ? 1 : -1 - q * 0.3)); x.globalAlpha = (t < 5 ? 0.25 + 0.5 * fold : Math.max(0, 0.9 - q * 0.22)) * (1 - i / 30);
+      x.strokeStyle = i % 3 ? c : "#fff"; x.lineWidth = (1.5 + (i % 4)) * k; x.strokeRect(-sz, -sz, sz * 2, sz * 2); x.restore();
+    }
+    x.restore(); x.globalAlpha = 1;
+    const m = Math.sin(t * 6) > 0 ? 1 : 0; if (t > 3.4 && t < 5) { x.fillStyle = `rgba(34,227,201,${(t - 3.4) / 1.6 * 0.2 * m})`; x.fillRect(0, 0, W, H); }
+    if (t >= 5) { glow(x, cx, cy, R * (0.2 + easeOut(q / 1.6) * 1.2), c + "aa", Math.max(0, 1 - q * 0.35)); ringPulse(x, cx, cy, q * 0.6, Math.hypot(W, H) * 0.6, c, 14, 4); }
+  } },
+  /* 12 MULTIVERSE: a field of little universes drifts together, and you are the one they merge into */
+  { tag: "BRANCHING TIMELINES", hit: 5.0, draw(x, W, H, t, c, S, R) {
+    const cx = W / 2, cy = H * 0.46, k = R / 720, q = Math.max(0, t - 5), come = ease((t - 1.6) / 3.4), grow = easeOut(t / 2);
+    S.mv ??= Array.from({ length: 26 }, (_, i) => ({ x: rnd(0.08, 0.92), y: rnd(0.1, 0.9), r: rnd(0.05, 0.12), hue: (i * 47) % 360, p: rnd(TAU), a: rnd(TAU) }));
+    x.fillStyle = "#07020a"; x.fillRect(0, 0, W, H); skyStars(x, W, H, S, t, 0.4, 120);
+    for (const u of S.mv) {
+      const home = { x: u.x * W + Math.sin(t * 0.6 + u.p) * 14 * k, y: u.y * H + Math.cos(t * 0.5 + u.p) * 14 * k };
+      const orb = t >= 5 ? { x: cx + Math.cos(u.a + q * 0.9) * R * 0.42, y: cy + Math.sin(u.a + q * 0.9) * R * 0.42 * 0.55 } : { x: cx, y: cy };
+      const k2 = t < 5 ? come : ease(q / 1.2), px = lerp(home.x, t < 5 ? cx : orb.x, t < 5 ? come * 0.55 : k2), py = lerp(home.y, t < 5 ? cy : orb.y, t < 5 ? come * 0.55 : k2), r = R * u.r * grow * (t >= 5 ? 0.7 : 1);
+      const g = x.createRadialGradient(px - r * 0.3, py - r * 0.3, 0, px, py, r); g.addColorStop(0, `hsla(${u.hue},90%,78%,.95)`); g.addColorStop(0.6, `hsla(${u.hue},80%,42%,.7)`); g.addColorStop(1, `hsla(${u.hue},80%,20%,.15)`);
+      x.fillStyle = g; x.beginPath(); x.arc(px, py, Math.max(1, r), 0, TAU); x.fill(); x.strokeStyle = `hsla(${u.hue},100%,80%,.7)`; x.lineWidth = 1.5 * k; x.stroke();
+    }
+    if (t >= 5) { glow(x, cx, cy, R * (0.15 + easeOut(q / 1.4) * 0.55), "#fff", Math.max(0.15, 1 - q * 0.5)); ringPulse(x, cx, cy, q * 0.6, Math.hypot(W, H) * 0.6, c, 12, 5); const g = x.createRadialGradient(cx, cy, 0, cx, cy, R * 0.22); g.addColorStop(0, "#fff"); g.addColorStop(1, c + "00"); x.fillStyle = g; x.beginPath(); x.arc(cx, cy, R * 0.22, 0, TAU); x.fill(); }
+  } },
+  /* 13 INFINITY: a figure eight is drawn once, then it keeps echoing outward forever */
+  { tag: "NO LIMITS", hit: 5.0, draw(x, W, H, t, c, S, R) {
+    const cx = W / 2, cy = H * 0.46, k = R / 720, q = Math.max(0, t - 5), a = R * 0.62, prog = ease(t / 4.8) * TAU;
+    x.fillStyle = "#04040a"; x.fillRect(0, 0, W, H); skyStars(x, W, H, S, t, 0.5);
+    const pt = (u, sc = 1) => { const d = 1 + Math.sin(u) ** 2; return [cx + (a * sc * Math.cos(u)) / d, cy + (a * sc * Math.sin(u) * Math.cos(u)) / d]; };
+    const trace = (sc, upTo, col, w, al) => { x.globalAlpha = al; x.strokeStyle = col; x.lineWidth = w; x.lineCap = "round"; x.beginPath(); for (let u = 0; u <= upTo; u += 0.03) { const [px, py] = pt(u - Math.PI / 2, sc); u ? x.lineTo(px, py) : x.moveTo(px, py); } x.stroke(); };
+    if (t < 5) { trace(1, prog, c, 14 * k, 0.25); trace(1, prog, "#fff", 4 * k, 1); const [hx, hy] = pt(prog - Math.PI / 2); glow(x, hx, hy, R * 0.12, c, 1); }
+    else {
+      const full = TAU + 0.05;
+      for (let n = 7; n >= 0; n--) { const sc = 1 + n * 0.16 + easeOut(q / 2) * n * 0.05 + 0.02 * Math.sin(q * 2 - n), al = Math.max(0, (1 - n / 8) * Math.min(1, q * 1.5)) * (n ? 0.55 : 1); trace(sc, full, n ? c : "#fff", (n ? 6 : 6) * k * (1 - n * 0.08), al); }
+      glow(x, cx, cy, R * (0.4 + easeOut(q / 1.4) * 0.8), c + "88", Math.max(0.2, 1 - q * 0.25)); ringPulse(x, cx, cy, q * 0.6, Math.hypot(W, H) * 0.6, c, 10, 4);
+    }
+    x.globalAlpha = 1;
+  } },
+  /* 14 TOUCH GRASS: fall out of orbit, break through the clouds, land in a sunny meadow */
   { tag: "SKILL ISSUE: SUNLIGHT", hit: 5.0, draw(x, W, H, t, c, S, R) {
     const cx = W / 2, k = R / 720, q = Math.max(0, t - 5), desc = ease(t / 4.8);
     S.gr ??= Array.from({ length: 520 }, () => ({ x: Math.random(), y: rnd(0.66, 1.02), h: rnd(0.6, 1.4), p: rnd(TAU), hue: rnd(95, 135), l: rnd(28, 52) }));
@@ -244,22 +286,22 @@ function caption(x, W, H, t, hit, rank, idx, tag, R) {
   const t0 = hit + 0.4; if (t < t0) return;
   const name = rank.name.toUpperCase(), size = Math.min(R * 0.15, W / (name.length * 0.82)), sp = size * 0.07, y = Math.min(H * 0.8, H - size * 2.15), out = 1 - ease((t - (DUR - 0.9)) / 0.7);
   x.save(); x.textAlign = "left"; x.textBaseline = "middle"; x.globalAlpha = out;
-  if (idx === 10) { const g = x.createLinearGradient(0, y - size * 2.2, 0, H); g.addColorStop(0, "rgba(0,12,4,0)"); g.addColorStop(0.35, "rgba(0,12,4,.72)"); g.addColorStop(1, "rgba(0,12,4,.85)"); x.globalAlpha = out * ease((t - t0) / 0.6); x.fillStyle = g; x.fillRect(0, y - size * 2.2, W, H); x.globalAlpha = out; }
+  if (idx === SCENES.length - 1) { const g = x.createLinearGradient(0, y - size * 2.2, 0, H); g.addColorStop(0, "rgba(0,12,4,0)"); g.addColorStop(0.35, "rgba(0,12,4,.72)"); g.addColorStop(1, "rgba(0,12,4,.85)"); x.globalAlpha = out * ease((t - t0) / 0.6); x.fillStyle = g; x.fillRect(0, y - size * 2.2, W, H); x.globalAlpha = out; }
   x.font = `700 ${Math.max(11, R * 0.017)}px JB, 'JetBrains Mono', monospace`; x.letterSpacing = "6px"; x.fillStyle = rank.color; x.textAlign = "center"; x.globalAlpha = out * ease((t - t0) / 0.6); x.fillText(`RANK UP · ${tag}`, W / 2, y - size * 0.95); x.textAlign = "left"; x.letterSpacing = "0px";
   x.font = `900 ${size}px Unbounded, Inter, sans-serif`;
   const widths = [...name].map((ch) => x.measureText(ch).width + sp), total = widths.reduce((a, b) => a + b, 0) - sp; let px = W / 2 - total / 2;
   [...name].forEach((ch, i) => { const e = easeOut((t - t0 - 0.15 - i * 0.075) / 0.55); x.save(); x.globalAlpha = out * e; x.translate(px + widths[i] / 2 - sp / 2, y + (1 - e) * size * 0.35); x.scale(1 + (1 - e) * 0.5, 1 + (1 - e) * 0.5); x.textAlign = "center"; x.shadowColor = rank.color; x.shadowBlur = size * 0.5; x.fillStyle = "#fff"; x.fillText(ch, 0, 0); x.shadowBlur = size * 0.12; x.fillText(ch, 0, 0); x.restore(); px += widths[i]; });
   x.textAlign = "center"; x.font = `400 ${Math.max(14, R * 0.026)}px Inter, system-ui, sans-serif`; x.fillStyle = "#b9c2ee"; x.globalAlpha = out * ease((t - t0 - 1.1) / 0.8); x.fillText(BLURB[idx] ?? "", W / 2, y + size * 0.78);
-  if (idx === 10) { /* troll rank: show how long they have been on the site */
+  if (idx === SCENES.length - 1) { /* troll rank: show how long they have been on the site */
     const hrs = Math.max(0, state.siteHours ?? 0), k = ease((t - t0 - 1.7) / 2.2), shown = hrs * k, txt = (hrs < 10 ? shown.toFixed(1) : Math.round(shown).toLocaleString()) + " HOURS ON THIS WEBSITE";
     const line = hrs < 1 ? "less than an hour?? suspicious. go outside anyway" : hrs < 10 ? "ok that is actually healthy. still, go outside" : hrs < 50 ? "you never log off, do you" : hrs < 200 ? "bro lives here now. the grass misses you" : "the wifi is not a personality. touch some grass";
     x.globalAlpha = out * ease((t - t0 - 1.5) / 0.6); x.fillStyle = "#fff"; x.font = `800 ${Math.max(16, R * 0.034)}px JB, 'JetBrains Mono', monospace`; x.shadowColor = rank.color; x.shadowBlur = 14; x.fillText(txt, W / 2, y + size * 1.12); x.shadowBlur = 0;
     x.globalAlpha = out * ease((t - t0 - 3.9) / 0.7); x.fillStyle = rank.color; x.font = `italic 600 ${Math.max(13, R * 0.022)}px Inter, system-ui, sans-serif`; x.fillText(line, W / 2, y + size * 1.5);
   }
-  const pa = out * ease((t - t0 - 1.6) / 0.7), pw = R * 0.03; for (let i = 0, n = SCENES.length; i < n; i++) { const dx = W / 2 + (i - (n - 1) / 2) * pw * 1.7, dy = y + size * (idx === 10 ? 1.95 : 1.32); x.globalAlpha = pa; x.fillStyle = i <= idx ? rank.color : "rgba(255,255,255,.18)"; x.shadowColor = rank.color; x.shadowBlur = i <= idx ? 12 : 0; x.beginPath(); x.moveTo(dx, dy - pw * 0.55); x.lineTo(dx + pw * 0.45, dy); x.lineTo(dx, dy + pw * 0.55); x.lineTo(dx - pw * 0.45, dy); x.fill(); }
+  const pa = out * ease((t - t0 - 1.6) / 0.7), pw = R * 0.03; for (let i = 0, n = SCENES.length; i < n; i++) { const dx = W / 2 + (i - (n - 1) / 2) * pw * 1.7, dy = y + size * (idx === SCENES.length - 1 ? 1.95 : 1.32); x.globalAlpha = pa; x.fillStyle = i <= idx ? rank.color : "rgba(255,255,255,.18)"; x.shadowColor = rank.color; x.shadowBlur = i <= idx ? 12 : 0; x.beginPath(); x.moveTo(dx, dy - pw * 0.55); x.lineTo(dx + pw * 0.45, dy); x.lineTo(dx, dy + pw * 0.55); x.lineTo(dx - pw * 0.45, dy); x.fill(); }
   x.restore();
 }
-/** Draw one frame. idx is 0..10 (Cadet..Touch Grass). S is per-run state. */
+/** Draw one frame. idx is 0..13 (Cadet..Touch Grass). S is per-run state. */
 export function renderFrame(x, W, H, t, rank, idx, S) {
   const sc = SCENES[idx]; S.dt = clamp(S.lt === undefined ? 1 / 60 : t - S.lt, 0, 0.1); S.lt = t;
   x.save(); x.globalCompositeOperation = "source-over"; x.globalAlpha = 1; x.shadowBlur = 0; x.textAlign = "left"; x.letterSpacing = "0px";
@@ -330,7 +372,19 @@ export function sound(i, dur, ctx) {
     osc("sine", 900, 30, 0, 5.1, 0.16, { wet: 0.4 }); osc("sawtooth", 400, 28, 0, 5.1, 0.07, { lp: [1500, 100] }); pad([65.41, 98, 130.81], 0, 5.1, 0.24, [120, 500], 3); nz(0.5, 4.5, 0.3, { f0: 6000, f1: 120, q: 1.1, att: 4, wet: 0.4 });
     [0.5, 1.5, 2.4, 3.2, 3.8, 4.3, 4.7].forEach((s, n) => kick(s, 0.3 + n * 0.07)); nz(4.9, 0.3, 0.1, { type: "highpass", f0: 3000, wet: 0 });
     boom(5.2, 1); nz(5.2, 3.6, 0.8, { type: "lowpass", f0: 5000, f1: 50, wet: 0.5, att: 0.01 }); [196, 246.94, 293.66, 392, 493.88].forEach((f) => osc("sawtooth", f, f, 5.4, 4.4, 0.05, { att: 1.2, lp: [800, 3000], wet: 0.5 })); [1568, 1975.5, 2349, 2637, 3136].forEach((f, n) => bell(f, 5.6 + n * 0.34, 0.09, 3.5));
-  } else if (i === 10) { /* Touch Grass: wind, a chirpy morning, a calm major chord */
+  } else if (i === 10) { /* Paradox: a note falling while its mirror rises, a fold, a bright flip */
+    osc("sine", 880, 110, 0, 5, 0.12, { wet: 0.4 }); osc("sine", 110, 880, 0, 5, 0.1, { wet: 0.4 }); riser(1, 4, 0.25, 400, 9000);
+    let s = 0.4, step = 0.2; for (let n = 0; s < 4.9; n++) { kick(s, 0.35); step *= 1.12; s += step; }
+    boom(5.0, 1); pad([146.83, 220, 293.66, 369.99], 5.0, 5, 0.3, [500, 3600], 0.2); [1174.7, 880, 1174.7, 1480, 1760].forEach((f, n) => bell(f, 5.2 + n * 0.3, 0.1, 3));
+  } else if (i === 11) { /* Multiverse: layers of pads arriving one by one, then everything lands in one chord */
+    [110, 138.59, 164.81, 207.65, 246.94].forEach((f, n) => osc("sawtooth", f, f * 1.01, n * 0.8, 5 - n * 0.8, 0.07, { att: 1.4, lp: [300 + n * 200, 1500], wet: 0.5, det: n * 5 }));
+    for (let n = 0; n < 18; n++) pluck([523.25, 659.25, 783.99, 987.77, 1174.7][n % 5] * (1 + (n % 3) * 0.5), 1 + n * 0.2, 0.08); riser(2, 3, 0.3, 500, 10000);
+    boom(5.0, 1); pad([110, 164.81, 220, 277.18, 329.63], 5.0, 5, 0.34, [600, 4200], 0.3); [1318.5, 1661.2, 1975.5, 2637].forEach((f, n) => bell(f, 5.2 + n * 0.25, 0.1, 3));
+  } else if (i === 12) { /* Infinity: an endlessly rising tone, then a huge calm chord */
+    for (let n = 0; n < 5; n++) osc("sine", 110 * Math.pow(2, n), 110 * Math.pow(2, n + 1), 0, 5, 0.05 + 0.02 * Math.sin(n), { wet: 0.4 });
+    riser(1.5, 3.5, 0.28, 600, 12000); [0.5, 1.5, 2.5, 3.3, 4, 4.5, 4.8].forEach((s, n) => kick(s, 0.3 + n * 0.05));
+    boom(5.0, 1); pad([130.81, 196, 261.63, 329.63, 493.88], 5.0, 5.2, 0.34, [800, 5000], 0.3); [1046.5, 1318.5, 1568, 1975.5, 2093, 2637].forEach((f, n) => bell(f, 5.2 + n * 0.28, 0.09, 3.4));
+  } else if (i === SCENES.length - 1) { /* Touch Grass: wind, a chirpy morning, a calm major chord */
     pad([55, 82.41], 0, 5, 0.2, [150, 700], 3); nz(0, 4.9, 0.3, { f0: 400, f1: 2200, q: 0.5, att: 4.2, wet: 0.3 }); riser(2.6, 2.3, 0.3, 600, 9000);
     boom(5.0, 0.8); nz(5.0, 3, 0.22, { f0: 3000, f1: 800, q: 0.6, att: 0.05, wet: 0.5 });
     pad([261.63, 329.63, 392, 523.25], 5.0, 5, 0.34, [800, 4200], 0.3); [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568].forEach((f, n) => pluck(f, 5.2 + n * 0.22, 0.12));
@@ -341,7 +395,7 @@ export function sound(i, dur, ctx) {
   return a;
 }
 
-/** Play the scene for rank index i (1..11; Stardust has none). */
+/** Play the scene for rank index i (1..14; Stardust has none). */
 export function playLevelUp(i, rank) {
   const idx = Math.max(0, Math.min(SCENES.length - 1, i - 1));
   if (running) return; running = true;

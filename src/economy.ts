@@ -97,6 +97,17 @@ export function giveCoinsTo(by: string, amount: number, t: Target, reason: strin
   return list.length;
 }
 
+/** Give (or take back, when negative) any amount of XP. Gifts can trigger rank-up cutscenes; taking XP never drops below 0. */
+export function giveXpTo(by: string, amount: number, t: Target, reason: string) {
+  const list = targets(t);
+  for (const u of list) {
+    if (amount > 0) grant(u, amount, reason || "XP gift");
+    else { u.game.xp = Math.max(0, u.game.xp + amount); saveDb(); sendToUser(u.id, { t: "game", game: publicGame(u), gains: [], rankUp: null }); }
+  }
+  audit(by, "give.xp", `${amount} → ${t.type}${t.value ? ":" + t.value : ""} (${list.length})`);
+  return list.length;
+}
+
 /* ---------- redeem codes ---------- */
 const itemMeta = (type: string, id: string) => { const l: any[] = type === "effect" ? EFFECTS : type === "tag" ? [...TAGS, ...db.data.customTags] : type === "theme" ? THEMES : BGS; const f = l.find((x) => x.id === id); return { type, id, name: f?.name ?? id, rarity: f?.rarity ?? "common" }; };
 export const normCode = (s: unknown) => String(s ?? "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 32);
