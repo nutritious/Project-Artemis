@@ -3,7 +3,7 @@ import { hooks } from "../public/js/util.js";
 import { playChroma } from "../public/js/chroma.js";
 import { ArenaWorld } from "../public/js/arena-core.js";
 import { CAS, flip as cFlip, slots as cSlots, roulette as cRoul, rouletteKindOk, bjDeal, bjHit, bjStand, bjDouble, bjView } from "../public/js/casino-core.js";
-import { cleanSchedule, DEFAULT_CFG, DUPE_COINS, EVENT_PRESETS, QUICK_PRESETS, PHASE_KINDS, EVENTS, EFFECTS, TAGS, THEMES, BGS, PACKS, GAMES, QUICK_EVENTS, ACHIEVEMENTS, WHEEL, WHEEL_MS, DAILY_CAP, COIN_RATES, packMap, rollPack } from "../public/js/cosmetics.js";
+import { UPGRADES, upgradeMap, upCost, noUps, refundMult, cleanSchedule, DEFAULT_CFG, DUPE_COINS, EVENT_PRESETS, QUICK_PRESETS, PHASE_KINDS, EVENTS, EFFECTS, TAGS, THEMES, BGS, PACKS, GAMES, QUICK_EVENTS, ACHIEVEMENTS, WHEEL, WHEEL_MS, DAILY_CAP, COIN_RATES, packMap, rollPack } from "../public/js/cosmetics.js";
 
 const TQ = [["Which planet is known as the Red Planet?", "Mars", "Venus", "Jupiter", "Mercury"], ["What is NASA's program to return humans to the Moon called?", "Artemis", "Apollo", "Gemini", "Voyager"], ["What does \"GG\" mean in gaming?", "Good game", "Get going", "Great goal", "Go go"], ["Which planet is famous for its rings?", "Saturn", "Mars", "Earth", "Mercury"], ["In Minecraft, which block builds a Nether portal frame?", "Obsidian", "Bedrock", "Diamond", "Netherrack"], ["Not even what can escape a black hole?", "Light", "Sound", "Heat", "Radio waves"], ["What was the first dog in orbit called?", "Laika", "Belka", "Strelka", "Lassie"], ["Which planet spins on its side?", "Uranus", "Neptune", "Saturn", "Venus"], ["In Mario Kart, which item hits the player in first place?", "Blue shell", "Red shell", "Banana", "Bullet Bill"], ["About how long does sunlight take to reach Earth?", "8 minutes", "8 seconds", "8 hours", "8 days"]];
 const WORDS = [["ASTEROID", "Space rock"], ["NEBULA", "Cloud where stars are born"], ["ORION", "The Artemis spacecraft"], ["ECLIPSE", "Sun, Moon and Earth line up"], ["COMET", "Icy tail"], ["GRAVITY", "What keeps you down"]];
@@ -172,7 +172,7 @@ export function installEconomy(C) {
   }
 
   /* ---------- helpers ---------- */
-  const shop = () => ({ nextSpin: G.lastSpin + WHEEL_MS, coins: me.coins, freePacks: me.freePacks, inv: me.inv, equip: me.equip, packs: PACKS, customTags: CT });
+  const UP = noUps(); const shop = () => ({ up: UP, nextSpin: G.lastSpin + WHEEL_MS, coins: me.coins, freePacks: me.freePacks, inv: me.inv, equip: me.equip, packs: PACKS, customTags: CT });
   const rows = () => [me, ...Object.values(bots)].map((e) => ({ id: e.id, username: e.username, role: e.id === me.id ? me.role : "member", roleId: null, xp: e.id === me.id ? G.xp : e.xp, rank: RANKS.reduce((r, k, i) => ((e.id === me.id ? G.xp : e.xp) >= k.xp ? i : r), 0), streak: e.streak ?? G.streak, best: e.bests?.run ?? 0, fx: e.equip.effect, tag: e.equip.tag }));
   const gameBoards = () => { const r = rows(), arcade = {}; for (const g of GAMES) arcade[g.id] = [me, ...Object.values(bots)].filter((e) => (e.bests?.[g.id] ?? 0) > 0).sort((a, b) => b.bests[g.id] - a.bests[g.id]).map((e) => ({ ...r.find((x) => x.id === e.id), best: e.bests[g.id] })); return { ranks: RANKS, xp: r.filter((x) => x.xp > 0).sort((a, b) => b.xp - a.xp), arcade }; };
   const gamePayload = () => ({ game: pubGame(), ...gameBoards(), event: pubEv(), boosts });
@@ -188,9 +188,23 @@ export function installEconomy(C) {
     if (p === "/shop") return shop();
     if (p === "/shop/open") {
       const pack = packMap.get(body.pack); if (!pack) throw demoErr("No such pack");
-      if (body.free) { if (pack.id !== "crate" || me.freePacks < 1) throw demoErr("No free crates left"); me.freePacks--; } else { if (me.coins < pack.cost) throw demoErr("Not enough coins"); me.coins -= pack.cost; }
-      const items = rollPack(pack, me.inv, Math.random); for (const it of items) { if (it.dupe) me.coins += it.refund; else addItem(me, it.type, it.id); }
-      bump("packs"); announceChroma(items); bump("chroma", items.filter((i) => i.rarity === "chroma").length); gp(); return { items, coins: me.coins, freePacks: me.freePacks, inv: me.inv };
+      const n = Math.floor(body.count) || 1; if (n < 1 || n > 5 || (n > 1 && (!UP.pass.includes("bulk") || body.free))) throw demoErr("You need the Open ×5 pass for that");
+      if (body.free) { if (pack.id !== "crate" || me.freePacks < 1) throw demoErr("No free crates left"); me.freePacks--; } else { if (me.coins < pack.cost * n) throw demoErr("Not enough coins"); me.coins -= pack.cost * n; }
+      const rolled = { ...pack, count: pack.count + (UP.pass.includes("slot") ? 1 : 0) }, items = []; let cashback = 0, doubles = 0;
+      const take = (list, bonus) => { for (const it of list) { if (it.dupe) { if (it.rarity !== "chroma" && it.rarity !== "secret") it.refund = Math.round(it.refund * refundMult(UP.refund)); me.coins += it.refund; } else addItem(me, it.type, it.id); if (bonus) it.bonus = true; items.push(it); } };
+      for (let k = 0; k < n; k++) { take(rollPack(rolled, me.inv, Math.random, UP.luck), false); if (!body.free && Math.random() < UP.cash * 0.01) { me.coins += pack.cost; cashback += pack.cost; } if (!body.free && Math.random() < UP.dbl * 0.01) { take(rollPack(rolled, me.inv, Math.random, UP.luck), true); doubles++; } }
+      bump("packs", n); announceChroma(items); bump("chroma", items.filter((i) => i.rarity === "chroma").length); gp(); return { items, coins: me.coins, freePacks: me.freePacks, inv: me.inv, cashback, doubles, up: UP };
+    }
+    if (p === "/shop/upgrade") {
+      const def = upgradeMap.get(body.id); if (!def) throw demoErr("No such upgrade");
+      if (def.kind === "pass") { if (UP.pass.includes(def.id)) throw demoErr("You already own that"); if (me.coins < def.cost) throw demoErr("Not enough coins"); me.coins -= def.cost; UP.pass.push(def.id); }
+      else { const l = UP[def.id]; if (def.max && l >= def.max) throw demoErr("That one is maxed out"); const c = upCost(def, l); if (me.coins < c) throw demoErr("Not enough coins"); me.coins -= c; UP[def.id] = l + 1; }
+      gp(); return shop();
+    }
+    if (p === "/shop/gift") {
+      const def = upgradeMap.get(body.id); if (!def || def.kind !== "pass") throw demoErr("Only one-time passes can be gifted");
+      const to = String(body.to ?? "").trim(); const bot = Object.values(bots).find((b) => b.username.toLowerCase() === to.toLowerCase()); if (!bot) throw demoErr("No one here has that username");
+      if (me.coins < def.cost) throw demoErr("Not enough coins"); me.coins -= def.cost; gp(); return { ...shop(), to: bot.username };
     }
     if (p === "/equip" && method === "PUT") {
       if ("effect" in body) { const v = String(body.effect ?? ""); if (v && !me.inv.effects.includes(v)) throw demoErr("You don't own that effect"); me.equip.effect = v; }

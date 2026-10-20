@@ -9,9 +9,10 @@ import { audit, db, defaultSettings, isStaff, newEconomy, saveDb, uid, type Sett
 import { trustInfo, TRUST, accrueProxy } from "./trust.js";
 import { can, effectivePerms, hasDashboard, outranks, publicRoles, PERMS, PERM_INFO, rank, roleRank, roleTag, type Perm } from "./perms.js";
 import { runCommand } from "./commands.js";
+import { wheelMs } from "./game.js";
 import { activity, progress, addEventPoints, earnedToday, activeBoosts, newGame, boards, publicEvent, publicGame, rankIndex, submitRun } from "./game.js";
 import { casinoPlay, casinoState } from "./casino.js";
-import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giveXpTo, giveItems, giveSelfWholePack, takeItems, joinLive, openPack, spinWheel, pushEventState, quick, startLive, targets } from "./economy.js";
+import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giveXpTo, buyUpgrade, giftPass, upgradeState, giveItems, giveSelfWholePack, takeItems, joinLive, openPack, spinWheel, pushEventState, quick, startLive, targets } from "./economy.js";
 import { storageInfo, migrate } from "./store.js";
 import { checkExit, cloudPass, exitInfo, exitKey, exitStatus, localCloudKey, setExit } from "./exit.js";
 import { attachCloud } from "./cloud-browser.js";
@@ -396,12 +397,20 @@ api.post("/event/join", auth, (req, res) => { try { joinLive(me(req)); res.json(
 api.post("/fx/claim", auth, (req, res) => { if (!allow(`claim:${me(req).id}`, 40, 60_000)) return void res.status(429).json({ error: "Easy there" }); try { res.json({ coins: claimFx(me(req), String(req.body?.id ?? "")) }); } catch (e: any) { res.status(400).json({ error: e.message }); } });
 
 /* ----- shop: packs, equipping ----- */
-const shopPayload = (u: User) => ({ nextSpin: u.game.lastSpin + WHEEL_MS, coins: u.coins, freePacks: u.freePacks, inv: u.inv, equip: u.equip, packs: PACKS, customTags: db.data.customTags });
+const shopPayload = (u: User) => ({ up: upgradeState(u), nextSpin: u.game.lastSpin + wheelMs(u), coins: u.coins, freePacks: u.freePacks, inv: u.inv, equip: u.equip, packs: PACKS, customTags: db.data.customTags });
 api.get("/shop", auth, (req, res) => res.json(shopPayload(me(req))));
 api.post("/shop/open", auth, (req, res) => {
   const user = me(req);
   if (!allow(`pack:${user.id}`, 20, 60_000)) return void res.status(429).json({ error: "Slow down" });
-  try { res.json(openPack(user, String(req.body?.pack ?? ""), !!req.body?.free)); } catch (e: any) { res.status(400).json({ error: e.message }); }
+  try { res.json(openPack(user, String(req.body?.pack ?? ""), !!req.body?.free, Number(req.body?.count ?? 1))); } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+api.post("/shop/upgrade", auth, (req, res) => {
+  const u = me(req); if (!allow(`upg:${u.id}`, 60, 60_000)) return void res.status(429).json({ error: "Slow down" });
+  try { buyUpgrade(u, String(req.body?.id ?? "")); res.json(shopPayload(u)); } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+api.post("/shop/gift", auth, (req, res) => {
+  const u = me(req); if (!allow(`upgift:${u.id}`, 10, 60_000)) return void res.status(429).json({ error: "Slow down" });
+  try { const to = giftPass(u, String(req.body?.id ?? ""), String(req.body?.to ?? "")); res.json({ ...shopPayload(u), to }); } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 api.put("/equip", auth, (req, res) => {
   const u = me(req), b = req.body ?? {};
@@ -420,7 +429,7 @@ api.delete("/owner/codes/:code", auth, coownerUp, (req, res) => { const n = db.d
 api.post("/wheel/spin", auth, (req, res) => { try { res.json(spinWheel(me(req))); } catch (e: any) { res.status(400).json({ error: e.message }); } });
 api.get("/casino", auth, (req, res) => res.json(casinoState(me(req))));
 api.post("/casino/:game", auth, (req, res) => { try { res.json(casinoPlay(me(req), String(req.params.game), req.body ?? {})); } catch (e: any) { res.status(400).json({ error: e.message }); } });
-api.get("/wheel", auth, (req, res) => res.json({ wheel: WHEEL, next: me(req).game.lastSpin + WHEEL_MS, ms: WHEEL_MS }));
+api.get("/wheel", auth, (req, res) => res.json({ wheel: WHEEL, next: me(req).game.lastSpin + wheelMs(me(req)), ms: wheelMs(me(req)) }));
 api.get("/achievements", auth, (req, res) => { const u = me(req); res.json({ list: ACHIEVEMENTS.map((a) => ({ ...a, done: u.game.ach[a.id] ?? 0 })), stats: { ...u.game.stats, plays: u.game.plays, rank: rankIndex(u.game.xp), items: u.inv.effects.length + u.inv.tags.length + u.inv.themes.length + u.inv.bgs.length }, earnedToday: earnedToday(u) }); });
 api.get("/profile/:name", auth, (req, res) => {
   const viewer = me(req), u = db.data.users.find((x) => x.username.toLowerCase() === String(req.params.name).toLowerCase() && !x.banned);

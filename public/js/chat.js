@@ -71,6 +71,7 @@ function handle(m) {
     case "roundstop": emit("roundstop", m); break;
     case "eventend": emit("eventend", m); break;
     case "gift": emit("gift", m); break;
+    case "passgift": toast(`${m.icon ?? "🎁"} ${m.from} gifted you ${m.name}!`, "ok"); emit("gift", m); break;
     case "customtags": state.customTags = m.customTags; renderMembers(); renderMsgs("keep"); emit("customtags"); break;
     case "channels":
       state.channels = m.channels;

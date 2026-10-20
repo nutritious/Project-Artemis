@@ -26,9 +26,9 @@ export const effectMap: Map<string, Cosmetic>;
 export const tagMap: Map<string, Cosmetic>;
 export const themeMap: Map<string, Cosmetic>;
 export const packMap: Map<string, PackDef>;
-export function rollPack(pack: PackDef, have: { effects: string[]; tags: string[]; themes: string[]; bgs?: string[] }, rand: () => number): PackItem[];
+export function rollPack(pack: PackDef, have: { effects: string[]; tags: string[]; themes: string[]; bgs?: string[] }, rand: () => number, luck?: number): PackItem[];
 
-export function packContents(pack: PackDef): { items: (Record<string, any> & { type: string })[]; odds: Record<string, number>; chromaPack: number };
+export function packContents(pack: PackDef, luck?: number): { items: (Record<string, any> & { type: string })[]; odds: Record<string, number>; chromaPack: number };
 export const PHASE_KINDS: Record<string, { name: string; icon: string; arena: boolean; blurb: string }>;
 export const EVENT_PRESETS: Record<string, { kind: string; mins: number }[]>;
 export const QUICK_PRESETS: { id: string; name: string; sched: { kind: string; mins: number }[] }[];
@@ -36,3 +36,13 @@ export const DUPE_COINS: number;
 export const DEFAULT_CFG: { bots: number; loot: string; boss: string; loop: boolean };
 export function cleanSchedule(list: unknown): { kind: string; mins: number }[];
 export const scheduleMins: (s: { kind: string; mins: number }[]) => number;
+
+export interface UpgradeDef { id: string; kind: "level" | "pass"; icon: string; name: string; desc: string; base?: number; grow?: number; max?: number; cost?: number; effect?: (l: number) => string }
+export const UPGRADES: UpgradeDef[];
+export const upgradeMap: Map<string, UpgradeDef>;
+export const luckStep: (l: number) => number;
+export const chromaLuck: (l: number) => number;
+export const speedMult: (l: number) => number;
+export const refundMult: (l: number) => number;
+export const upCost: (def: UpgradeDef, lvl: number) => number;
+export const noUps: () => { luck: number; speed: number; refund: number; cash: number; dbl: number; pass: string[] };

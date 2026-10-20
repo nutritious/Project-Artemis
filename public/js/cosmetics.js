@@ -211,13 +211,13 @@ export const effectMap = byId(EFFECTS), tagMap = byId(TAGS), themeMap = byId(THE
 const order = ["common", "rare", "epic", "legendary", "chroma"];
 
 /** Roll a pack. rand() returns [0,1). have = {effects,tags,themes,bgs} arrays. Returns items with a refund for duplicates. */
-export function rollPack(pack, have, rand) {
+export function rollPack(pack, have, rand, luck = 0) {
   const items = [], owned = { effect: new Set(have.effects), tag: new Set(have.tags), theme: new Set([...BASE_THEMES, ...have.themes]), bg: new Set(have.bgs ?? []) };
   const lists = { effect: EFFECTS, tag: TAGS, theme: THEMES, bg: BGS };
   const pools = (type) => lists[type].filter((x) => x.rarity !== "limited" && x.rarity !== "secret" && (pack.only ? x.only === pack.only : !x.only));
   /* Chroma is its own tiny roll: a little better in bigger packs, far better in the Chroma Vault */
   const pickRarity = (min = 0) => {
-    const w = order.map((r, i) => (i < min ? 0 : r === "chroma" ? RARITY.chroma.weight * (1 + pack.boost * 0.5) * (pack.chromaBoost ?? 1) : RARITY[r].weight * Math.pow(1 + 0.9 * pack.boost, i)));
+    const w = order.map((r, i) => (i < min ? 0 : r === "chroma" ? RARITY.chroma.weight * (1 + pack.boost * 0.5) * (pack.chromaBoost ?? 1) * chromaLuck(luck) : RARITY[r].weight * Math.pow(1 + 0.9 * pack.boost, i) * Math.pow(luckStep(luck), i)));
     let n = rand() * w.reduce((a, b) => a + b, 0);
     for (let i = 0; i < w.length; i++) { n -= w[i]; if (n <= 0) return order[i]; } return "common";
   };
@@ -251,12 +251,34 @@ export function rollPack(pack, have, rand) {
   return items;
 }
 
+/* ---------- shop upgrades: bought with coins, kept forever ----------
+   "level" upgrades can be bought again and again (each level costs more). "pass" upgrades are one-time and can be gifted to other people.
+   The Secret tier is never touched by Luck, so its odds stay exactly what the cutscene says. */
+export const luckStep = (l) => 1 + 0.1 * l;            /* every rarity step above Common gets this much likelier, per step */
+export const chromaLuck = (l) => 1 + 0.05 * l;         /* Chroma gets a gentler boost */
+export const speedMult = (l) => 1 / (1 + 0.25 * l);    /* how long the opening takes: 1 = normal */
+export const refundMult = (l) => 1 + 0.1 * l;          /* duplicate refunds (not Chroma or Secret, those have set amounts) */
+export const UPGRADES = [
+  { id: "luck", kind: "level", icon: "🍀", name: "Extra Luck", base: 1000, grow: 1.6, desc: "Rarer items turn up more often in every pack. Stack it as high as you like, each level costs more.", effect: (l) => (l ? `Rarer steps ×${luckStep(l).toFixed(1)} each, Chroma +${l * 5}%` : "No bonus yet") },
+  { id: "speed", kind: "level", icon: "⚡", name: "Quick Hands", base: 600, grow: 1.5, desc: "Pack openings play faster. Every level shortens the reveal.", effect: (l) => (l ? `Reveals take ${Math.round(speedMult(l) * 100)}% of the time` : "Normal speed") },
+  { id: "refund", kind: "level", icon: "♻️", name: "Duplicate Refunds", base: 2500, grow: 1.7, max: 10, desc: "Get more coins back when you pull something you already own.", effect: (l) => (l ? `+${l * 10}% coins on duplicates` : "No bonus yet") },
+  { id: "cash", kind: "level", icon: "💸", name: "Cashback", base: 5000, grow: 1.8, max: 25, desc: "Each pack you buy has a chance to give the price back.", effect: (l) => (l ? `${l}% chance to get the price back` : "No bonus yet") },
+  { id: "dbl", kind: "level", icon: "🎲", name: "Double Roll", base: 6000, grow: 1.8, max: 25, desc: "Each pack you buy has a chance to roll a second time for free.", effect: (l) => (l ? `${l}% chance of a free second roll` : "No bonus yet") },
+  { id: "skip", kind: "pass", icon: "⏭️", name: "Skip Button", cost: 3000, desc: "Adds a Skip button to pack openings: jump straight to your items." },
+  { id: "bulk", kind: "pass", icon: "📦", name: "Open ×5", cost: 10000, desc: "Open five packs in one go with a new button on every pack." },
+  { id: "slot", kind: "pass", icon: "➕", name: "Extra Slot", cost: 25000, desc: "Every pack you open has one extra item." },
+  { id: "wheel", kind: "pass", icon: "🎡", name: "Quick Wheel", cost: 8000, desc: "The hourly wheel recharges every 30 minutes." },
+];
+export const upgradeMap = new Map(UPGRADES.map((u) => [u.id, u]));
+export const upCost = (def, lvl) => (def.kind === "pass" ? def.cost : Math.min(Number.MAX_SAFE_INTEGER, Math.round(def.base * Math.pow(def.grow, lvl))));
+export const noUps = () => ({ luck: 0, speed: 0, refund: 0, cash: 0, dbl: 0, pass: [] });
+
 /** What a pack can contain: per-item chances by rarity (for one item slot, ignoring guarantees) and the items themselves. */
-export function packContents(pack) {
+export function packContents(pack, luck = 0) {
   const types = pack.kind === "theme" ? ["theme"] : pack.pool ?? ["effect", "tag", "bg"];
   const lists = { effect: EFFECTS, tag: TAGS, theme: THEMES, bg: BGS };
   const items = types.flatMap((t) => lists[t].filter((x) => x.rarity !== "limited" && x.rarity !== "secret" && (pack.only ? x.only === pack.only : !x.only)).map((x) => ({ ...x, type: t })));
-  const w = order.map((r, i) => (r === "chroma" ? RARITY.chroma.weight * (1 + pack.boost * 0.5) * (pack.chromaBoost ?? 1) : RARITY[r].weight * Math.pow(1 + 0.9 * pack.boost, i)));
+  const w = order.map((r, i) => (r === "chroma" ? RARITY.chroma.weight * (1 + pack.boost * 0.5) * (pack.chromaBoost ?? 1) * chromaLuck(luck) : RARITY[r].weight * Math.pow(1 + 0.9 * pack.boost, i) * Math.pow(luckStep(luck), i)));
   const tot = w.reduce((a, b) => a + b, 0), odds = Object.fromEntries(order.map((r, i) => [r, w[i] / tot]));
   const chromaPack = 1 - Math.pow(1 - odds.chroma, pack.count);
   return { items, odds, chromaPack };

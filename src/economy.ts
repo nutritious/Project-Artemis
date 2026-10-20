@@ -1,9 +1,9 @@
 /* Coins, packs, items, live events and quick events. */
 import crypto from "node:crypto";
-import { audit, db, saveDb, uid, type User } from "./store.js";
-import { packContents, cleanSchedule, DEFAULT_CFG, DUPE_COINS, EVENT_PRESETS, QUICK_PRESETS, BASE_THEMES, EVENTS, QUICK_EVENTS, packMap, rollPack, TAGS, EFFECTS, THEMES, BGS, WHEEL, WHEEL_MS } from "../public/js/cosmetics.js";
+import { audit, db, saveDb, uid, type User, type Upgrades } from "./store.js";
+import { UPGRADES, upgradeMap, upCost, noUps, refundMult, packContents, cleanSchedule, DEFAULT_CFG, DUPE_COINS, EVENT_PRESETS, QUICK_PRESETS, BASE_THEMES, EVENTS, QUICK_EVENTS, packMap, rollPack, TAGS, EFFECTS, THEMES, BGS, WHEEL, WHEEL_MS } from "../public/js/cosmetics.js";
 import { broadcast, onlineUsers, sendToUser } from "./chat.js";
-import { activeBoosts, grant, giveCoins, publicEvent, publicGame, startRush, stat } from "./game.js";
+import { activeBoosts, grant, giveCoins, publicEvent, publicGame, startRush, stat, wheelMs } from "./game.js";
 
 const rand = () => crypto.randomInt(0, 1_000_000_000) / 1_000_000_000;
 const rint = (a: number, b: number) => Math.floor(a + rand() * (b - a + 1));
@@ -28,28 +28,73 @@ export function announceSecret(u: User, items: { rarity: string }[]) {
 }
 export function spinWheel(u: User) {
   const g = u.game, now = Date.now();
-  if (now < g.lastSpin + WHEEL_MS) throw new Error("The wheel is still recharging");
+  if (now < g.lastSpin + wheelMs(u)) throw new Error("The wheel is still recharging");
   const total = WHEEL.reduce((a, b) => a + b.w, 0); let r = rand() * total, idx = 0;
   for (let i = 0; i < WHEEL.length; i++) { r -= WHEEL[i].w; if (r < 0) { idx = i; break; } }
   const seg = WHEEL[idx] as { coins?: number; pack?: number };
   g.lastSpin = now;
   if (seg.coins) u.coins += seg.coins; else u.freePacks += seg.pack ?? 0;
   stat(u, "spins"); push(u);
-  return { index: idx, coins: seg.coins ?? 0, crate: seg.pack ?? 0, next: g.lastSpin + WHEEL_MS, balance: u.coins, freePacks: u.freePacks };
+  return { index: idx, coins: seg.coins ?? 0, crate: seg.pack ?? 0, next: g.lastSpin + wheelMs(u), balance: u.coins, freePacks: u.freePacks };
 }
 
-export function openPack(u: User, packId: string, free: boolean) {
+/** This person's upgrades, filled in with zeros the first time they are needed. */
+export const ups = (u: User): Upgrades => { const next: Upgrades = { ...noUps(), ...(u.up ?? {}), pass: [...(u.up?.pass ?? [])] }; u.up = next; return next; };
+export const upgradeState = (u: User) => ({ ...ups(u) });
+
+/** Buy one level of an upgrade, or a one-time pass, for yourself. */
+export function buyUpgrade(u: User, id: string) {
+  const def = upgradeMap.get(id); if (!def) throw new Error("No such upgrade");
+  const up = ups(u);
+  if (def.kind === "pass") {
+    if (up.pass.includes(id)) throw new Error("You already own that");
+    const cost = upCost(def, 0); if (u.coins < cost) throw new Error("Not enough coins");
+    u.coins -= cost; up.pass.push(id);
+  } else {
+    const lvl = (up as any)[id] as number; if ((def as any).max && lvl >= (def as any).max) throw new Error("That one is maxed out");
+    const cost = upCost(def, lvl); if (u.coins < cost) throw new Error("Not enough coins");
+    u.coins -= cost; (up as any)[id] = lvl + 1;
+  }
+  saveDb(); push(u);
+}
+/** Buy a one-time pass for someone else. Only passes can be gifted. */
+export function giftPass(u: User, id: string, toName: string) {
+  const def = upgradeMap.get(id); if (!def || def.kind !== "pass") throw new Error("Only one-time passes can be gifted");
+  const to = db.data.users.find((x) => x.username.toLowerCase() === String(toName ?? "").trim().toLowerCase() && !x.banned);
+  if (!to) throw new Error("No one here has that username");
+  if (to.id === u.id) throw new Error("Buy it for yourself from the shop instead");
+  const tu = ups(to); if (tu.pass.includes(id)) throw new Error(`${to.username} already has ${def.name}`);
+  const cost = upCost(def, 0); if (u.coins < cost) throw new Error("Not enough coins");
+  u.coins -= cost; tu.pass.push(id);
+  audit(u.username, "gift.pass", `${id} → ${to.username}`);
+  saveDb(); push(u); push(to);
+  sendToUser(to.id, { t: "passgift", from: u.username, name: def.name, icon: def.icon });
+  return to.username;
+}
+
+export function openPack(u: User, packId: string, free: boolean, n = 1) {
   const pack = packMap.get(packId); if (!pack) throw new Error("No such pack");
   if ((pack as any).until && Date.now() >= (pack as any).until) throw new Error("The Halloween Pack has left the shop. See you next year!");
+  const up = ups(u);
+  n = Math.floor(n) || 1; if (n < 1 || n > 5 || (n > 1 && (!up.pass.includes("bulk") || free))) throw new Error(n > 1 ? "You need the Open ×5 pass for that" : "Bad count");
   if (free) { if (pack.id !== "crate" || u.freePacks < 1) throw new Error("No free crates left"); u.freePacks--; }
-  else { if (u.coins < pack.cost) throw new Error("Not enough coins"); u.coins -= pack.cost; }
-  const items = rollPack(pack, u.inv, rand);
-  for (const it of items) { if (it.dupe) u.coins += it.refund; else addItem(u, it.type, it.id); }
-  u.game.stats.packs = (u.game.stats.packs ?? 0) + 1;
+  else { if (u.coins < pack.cost * n) throw new Error("Not enough coins"); u.coins -= pack.cost * n; }
+  const rolled = { ...pack, count: pack.count + (up.pass.includes("slot") ? 1 : 0) }, mult = refundMult(up.refund);
+  const items: any[] = []; let cashback = 0, doubles = 0;
+  const take = (list: any[], bonus: boolean) => { for (const it of list) {
+    if (it.dupe) { if (it.rarity !== "chroma" && it.rarity !== "secret") it.refund = Math.round(it.refund * mult); u.coins += it.refund; } else addItem(u, it.type, it.id);
+    if (bonus) it.bonus = true; items.push(it);
+  } };
+  for (let k = 0; k < n; k++) {
+    take(rollPack(rolled, u.inv, rand, up.luck), false);
+    if (!free && rand() < up.cash * 0.01) { u.coins += pack.cost; cashback += pack.cost; }
+    if (!free && rand() < up.dbl * 0.01) { take(rollPack(rolled, u.inv, rand, up.luck), true); doubles++; }
+  }
+  u.game.stats.packs = (u.game.stats.packs ?? 0) + n + doubles;
   announceChroma(u, items); announceSecret(u, items);
   stat(u, "chroma", items.filter((i) => i.rarity === "chroma").length);
   saveDb(); push(u);
-  return { items, coins: u.coins, freePacks: u.freePacks, inv: u.inv };
+  return { items, coins: u.coins, freePacks: u.freePacks, inv: u.inv, cashback, doubles, up: upgradeState(u) };
 }
 
 export type Target = { type: "user" | "all" | "online" | "role"; value?: string };

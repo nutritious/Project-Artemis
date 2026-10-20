@@ -1072,3 +1072,14 @@ body:has(.cb-view) #liveBar { display: none !important; } /* the coin/spin chips
 
 .tu-player video { position: absolute; inset: 0; width: 100%; height: 100%; background: #000; }
 #tuVMsg:empty { display: none; }
+
+/* shop upgrades */
+.upgs { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.upg { display: grid; gap: 8px; align-content: start; padding: 14px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line, rgba(255,255,255,.1)); }
+.upg h4 { margin: 0; font-size: 15px; } .upg p { margin: 0; color: var(--dim); font-size: 13px; line-height: 1.45; }
+.upg-h { display: flex; gap: 10px; align-items: center; } .upg-i { font-size: 26px; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; background: rgba(255,255,255,.07); }
+.upg-lv { font-size: 12px; color: var(--dim); font-weight: 600; letter-spacing: .04em; }
+.upg-fx { font-size: 12.5px; display: flex; gap: 8px; align-items: baseline; } .upg-fx span { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); min-width: 34px; }
+.upg-fx.next { color: var(--accent, #7aa2ff); } .upg-fx.max { color: #3ddc97; }
+.upg.own { box-shadow: inset 0 0 0 1px rgba(61,220,151,.4); }
+.ps-skip { position: absolute; right: 14px; bottom: 14px; }

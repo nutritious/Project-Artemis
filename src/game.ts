@@ -51,7 +51,8 @@ export function earn(u: User, amount: number) {
   return got;
 }
 export const earnedToday = (u: User) => (u.game.earnDay === dayKey() ? u.game.earned : 0);
-export const nextSpin = (u: User) => u.game.lastSpin + WHEEL_MS;
+export const wheelMs = (u: User) => (u.up?.pass.includes("wheel") ? WHEEL_MS / 2 : WHEEL_MS);
+export const nextSpin = (u: User) => u.game.lastSpin + wheelMs(u);
 
 const statVal = (u: User, k: string) => {
   const g = u.game;
