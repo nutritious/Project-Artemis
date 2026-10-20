@@ -114,6 +114,7 @@ function crew(d) {
   const users = d.users.filter((u) => u.username.toLowerCase().includes(q));
   const open = d.invites.filter((i) => !i.usedBy);
   return `<div style="display:grid;gap:16px">
+    ${["owner", "coowner", "admin"].includes(state.me.role) ? `<div class="card glass"><h3>Give coins</h3><form data-givecoins class="evform"><div class="row2"><label>Callsign<input name="username" required maxlength="24" placeholder="Player name"></label><label>Amount (any number, negative takes coins back)<input name="amount" type="number" value="1000" required></label></div><label>Reason (they see it)<input name="reason" maxlength="60" placeholder="Event prize"></label><div class="inline"><button class="btn primary">Give coins</button></div></form></div>` : ""}
     <div class="card glass"><h3>Crew roster <input data-filter placeholder="Filter by callsign" value="${esc(A.filter)}" style="max-width:220px"></h3>
       <div class="tablewrap"><table><thead><tr><th>Callsign</th><th>Status</th><th>Requests</th><th>Data</th><th>Last seen</th><th></th></tr></thead><tbody>
       ${users.map((u) => { const self = u.id === state.me.id; return `<tr><td class="u">${avatar(u.username, Date.now() - u.lastSeen < 120000, true)}<b>${esc(u.username)}</b>${self ? ` <span class="faint">(you)</span>` : ""}</td><td>${roleChip(u)}</td><td class="mono">${fmtNum(u.requests)}</td><td class="mono">${fmtBytes(u.bytes)}</td><td class="dim">${Date.now() - u.lastSeen < 120000 ? '<span class="live">ONLINE</span>' : ago(u.lastSeen)}</td>
@@ -208,6 +209,7 @@ function onSubmit(e) {
   if (e.target.matches("[data-term]")) { const i = $("#termIn"); const v = i.value; i.value = ""; runTerm(v); return; }
   const f = e.target, v = new FormData(f);
   if (f.matches("[data-announce]")) run(() => api("/admin/announcement", "POST", { text: v.get("text") }), "Broadcast sent");
+  if (f.matches("[data-givecoins]")) run(async () => { const r = await api("/admin/coins", "POST", { username: v.get("username"), amount: Number(v.get("amount")), reason: v.get("reason") }); toast(`Gave coins to ${r.username}`, "ok"); });
   if (f.matches("[data-block]")) run(() => api("/admin/blocklist", "POST", { host: v.get("host") }), "Domain blocked");
 }
 

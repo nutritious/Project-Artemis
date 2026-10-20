@@ -450,9 +450,18 @@ api.get("/owner/economy", auth, panelUp, (_req, res) => res.json({
 }));
 api.post("/owner/coins", auth, panelUp, (req, res) => {
   const amount = Math.round(Number(req.body?.amount));
-  if (!Number.isFinite(amount) || amount === 0 || Math.abs(amount) > 1_000_000) return void res.status(400).json({ error: "Enter an amount between 1 and 1,000,000" });
+  if (!Number.isFinite(amount) || amount === 0 || Math.abs(amount) > 1e12) return void res.status(400).json({ error: "Enter an amount, positive or negative (up to a trillion)" });
   const n = giveCoinsTo(me(req).username, amount, parseTarget(req.body?.target), String(req.body?.reason ?? "").slice(0, 60));
   broadcastMembers(); res.json({ ok: true, reached: n });
+});
+api.post("/admin/coins", auth, (req, res) => {
+  const r = me(req).role; if (r !== "owner" && r !== "coowner" && r !== "admin") return void res.status(403).json({ error: "Owner, co-owner or commander only" });
+  const amount = Math.round(Number(req.body?.amount));
+  if (!Number.isFinite(amount) || amount === 0 || Math.abs(amount) > 1e12) return void res.status(400).json({ error: "Enter an amount, positive or negative (up to a trillion)" });
+  const name = String(req.body?.username ?? "").trim().toLowerCase(), t = db.data.users.find((u) => u.username.toLowerCase() === name && !u.banned);
+  if (!t) return void res.status(404).json({ error: "No active player with that callsign" });
+  giveCoinsTo(me(req).username, amount, { type: "user", value: t.id }, String(req.body?.reason ?? "").slice(0, 60));
+  broadcastMembers(); res.json({ ok: true, username: t.username, coins: t.coins });
 });
 api.post("/owner/xp", auth, coownerUp, (req, res) => {
   const amount = Math.round(Number(req.body?.amount));
