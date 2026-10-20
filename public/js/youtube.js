@@ -28,7 +28,7 @@ export function buildTube() {
   root.addEventListener("click", (e) => {
     const t = e.target.closest("[data-tab],[data-home],[data-b],[data-v],[data-recheck],[data-stop],[data-mode]"); if (!t) return;
     if (t.matches("[data-home]")) { e.preventDefault(); q = ""; watching = null; root.querySelector("[data-search] input").value = ""; return void show(); }
-    if (t.dataset.mode) { mode = t.dataset.mode; setPref("artemis.ytmode", mode); watching = null; return void show(); }
+    if (t.dataset.mode) { mode = t.dataset.mode; setPref("artemis.ytmode", mode); watching = null; paintBack(); return void show(); }
     if (t.dataset.tab) { tab = t.dataset.tab; q = ""; watching = null; return void show(); }
     if (t.dataset.b !== undefined) { setPref("artemis.ytb", t.dataset.b); return void (watching && mode === "grid" ? watch(watching.id) : show()); }
     if (t.dataset.v) { e.preventDefault(); return void watch(t.dataset.v); }
@@ -47,6 +47,7 @@ export async function onTubeShown() {
 function paintBack() {
   const sel = bsel();
   $("#tuBack").innerHTML = `<b>Switch backend:</b> ` + backends.map((b) => `<button class="${b.i === sel ? "sel" : ""}" data-b="${b.i}" title="${esc(b.host)}${b.ok === null ? " · not checked yet" : b.ok ? " · " + b.ms + " ms" : " · not answering"}${mode === "grid" ? (b.api === false ? " · list API is off" : "") : ""}">${b.name}<i class="${b.ok === true ? "up" : b.ok === false ? "down" : ""}"></i></button>`).join("") + `<button data-recheck class="re" title="Check which servers are up">↻ check</button>`;
+  $("#tuBack").classList.toggle("hidden", mode === "site"); /* the server picker only shows in Grid mode */
   $("#tube").querySelectorAll("[data-mode]").forEach((b) => b.classList.toggle("on", b.dataset.mode === mode));
 }
 function paintTabs() { $("#tuTabs").classList.toggle("hidden", mode !== "grid" || !!q || !!watching); $("#tuTabs").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab && !q)); }
@@ -75,7 +76,7 @@ async function showSite() {
   if (!base) { body.innerHTML = `<p class="tu-msg">No video servers are set up.</p>`; return; }
   await ensureToken(); if (id !== busy) return;
   const url = q ? `${base}/search?q=${encodeURIComponent(q)}` : `${base}/feed/popular`;
-  $("#tuNote").textContent = `Showing ${backends[bsel()].host} through the Artemis proxy. If it is blank or says an error, pick a different backend above (green means it answered).`;
+  $("#tuNote").textContent = "";
   body.innerHTML = `<iframe class="tu-frame" src="${esc(siteSrc(url))}" allow="fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write" allowfullscreen title="Videos"></iframe>`;
 }
 
