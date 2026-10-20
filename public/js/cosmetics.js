@@ -4,9 +4,9 @@ export const RARITY = {
   rare: { name: "Rare", color: "#4cc9f0", weight: 28, dupe: 50 },
   epic: { name: "Epic", color: "#b57bff", weight: 10, dupe: 120 },
   legendary: { name: "Legendary", color: "#ffc857", weight: 2, dupe: 300 },
-  chroma: { name: "Chroma", color: "#ff4df0", weight: 0.2, dupe: 800 },
+  chroma: { name: "Chroma", color: "#ff4df0", weight: 0.2, dupe: 3000 },
   limited: { name: "Limited", color: "#ff5d9e", weight: 0, dupe: 0 },
-  secret: { name: "Secret", color: "#ff2e4d", weight: 0, dupe: 5000 },
+  secret: { name: "Secret", color: "#ff2e4d", weight: 0, dupe: 10000 },
 };
 /** Secret items never show in a pack's odds or contents. Each item slot has this tiny chance of being one instead. */
 export const SECRET_CHANCE = 1 / 200;
