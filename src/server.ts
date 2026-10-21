@@ -165,11 +165,12 @@ function logAdmin(req: Request, action: string, detail = "") {
 }
 
 const hasOwner = () => db.data.users.some((u) => u.role === "owner");
-api.get("/config", (_req, res) => res.json({ firstRun: !hasOwner(), ownerName: OWNER_USERNAME, openRegistration: db.data.server.openRegistration, announcement: db.data.announcement }));
+api.get("/config", (_req, res) => res.json({ firstRun: !hasOwner(), ownerName: OWNER_USERNAME, openRegistration: db.data.server.openRegistration, announcement: db.data.announcement, rules: db.data.server.rules ?? "", beta: true }));
 
 api.post("/register", async (req, res) => {
   if (!allow(`reg:${clientIp(req)}`, 8, 60_000)) return void res.status(429).json({ error: "Too many attempts" });
-  const { username, password, invite, remember } = req.body ?? {};
+  const { username, password, invite, remember, agreeRules } = req.body ?? {};
+  if ((db.data.server.rules ?? "").trim() && agreeRules !== true) return void res.status(400).json({ error: "You need to agree to the rules to join" });
   if (!validUsername(username)) return void res.status(400).json({ error: "Username must be 3–24 letters, numbers, . _ -" });
   if (typeof password !== "string" || password.length < 8 || password.length > 200) return void res.status(400).json({ error: "Password must be at least 8 characters" });
   if (db.data.users.some((u) => u.username.toLowerCase() === username.toLowerCase())) return void res.status(409).json({ error: "That callsign is taken" });
@@ -185,6 +186,7 @@ api.post("/register", async (req, res) => {
     id: uid(), username, salt, hash, role: isOwnerName ? "owner" : "member", createdAt: Date.now(), lastSeen: Date.now(), banned: false,
     stats: { requests: 0, bytes: 0 }, bookmarks: [], history: [], settings: defaultSettings(db.data.server.defaultEngine), profile: { status: "", presence: "online", avatar: "" }, game: newGame(), ...newEconomy(),
   };
+  user.rulesAt = Date.now();
   if (!first && db.data.server.launchAt && Date.now() < db.data.server.launchAt + 864e5) { user.inv.tags.push("og"); user.equip.tag = "og"; }
   db.data.users.push(user);
   if (inv) inv.usedBy = user.username;
@@ -655,6 +657,7 @@ api.put("/settings", auth, (req, res) => {
   if ("cloakIcon" in b) s.cloakIcon = str(b.cloakIcon, 20);
   if ("antiClose" in b) s.antiClose = !!b.antiClose;
   if ("skipCutscenes" in b) s.skipCutscenes = !!b.skipCutscenes;
+  if ("tourSeen" in b) s.tourSeen = !!b.tourSeen;
   if ("panicKey" in b) s.panicKey = str(b.panicKey, 10);
   if ("panicUrl" in b) s.panicUrl = str(b.panicUrl, 500);
   saveDb();
@@ -772,6 +775,7 @@ api.put("/admin/settings", auth, adminOnly, (req, res) => {
     if (!Number.isFinite(n) || n < 30 || n > 20000) return void res.status(400).json({ error: "Rate limit must be between 30 and 20,000 requests per minute" });
     if (n !== s.rateLimit) { s.rateLimit = n; changes.push(`rateLimit=${n}`); }
   }
+  if ("rules" in b) { const r = String(b.rules ?? "").replace(/\r/g, "").trim().slice(0, 8000); if (r !== (s.rules ?? "")) { s.rules = r; changes.push("rules edited"); } }
   if ("defaultEngine" in b && isEngine(b.defaultEngine) && b.defaultEngine !== s.defaultEngine) { s.defaultEngine = b.defaultEngine; changes.push(`defaultEngine=${b.defaultEngine}`); }
   saveDb();
   if (changes.length) logAdmin(req, "settings.update", changes.join(", "));

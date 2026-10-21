@@ -81,7 +81,7 @@ export function giftPass(u: User, id: string, toName: string) {
 
 export function openPack(u: User, packId: string, free: boolean, n = 1) {
   const pack = packMap.get(packId); if (!pack) throw new Error("No such pack");
-  if ((pack as any).until && Date.now() >= (pack as any).until) throw new Error("The Halloween Pack has left the shop. See you next year!");
+  if ((pack as any).until && Date.now() >= (pack as any).until) throw new Error(`The ${pack.name} has left the shop. See you next year!`);
   const up = ups(u);
   n = Math.floor(n) || 1; if (n < 1 || n > 5 || (n > 1 && (!hasPass(up, "bulk") || free))) throw new Error(n > 1 ? "You need the Open ×5 pass for that" : "Bad count");
   if (free) { if (pack.id !== "crate" || u.freePacks < 1) throw new Error("No free crates left"); u.freePacks--; }

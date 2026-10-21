@@ -103,7 +103,7 @@ const CENTER = {
     S.fs ??= Array.from({ length: 26 }, () => ({ x: rnd(-0.5, 0.5), y: rnd(-0.5, 0.5), p: rnd(TAU) })); for (const f of S.fs) { x.globalAlpha = Math.max(0, Math.sin(tt * 4 + f.p)); x.fillStyle = "#fff"; x.beginPath(); x.arc(f.x * w, f.y * h, 3 * k, 0, TAU); x.fill(); } x.globalAlpha = 1; x.restore(); return pr;
   },
 };
-const VARIANT = { "effect:wraith": "ghost", "effect:prismjack": "jack", "tag:h-nightmare": "prime", "theme:witchfire": "wipe", "bg:carnival": "foil", "effect:prism": "prism", "effect:holo": "holo", "tag:chroma-prime": "prime", "tag:spectrum": "ribbon", "theme:prism": "wipe", "bg:spectrum": "panel", "bg:holo-foil": "foil" };
+const VARIANT = { "effect:wraith": "ghost", "effect:prismjack": "jack", "effect:prism-leaf": "jack", "tag:f-falling-star": "prime", "theme:autumn-prism": "wipe", "bg:leaf-storm": "foil", "tag:h-nightmare": "prime", "theme:witchfire": "wipe", "bg:carnival": "foil", "effect:prism": "prism", "effect:holo": "holo", "tag:chroma-prime": "prime", "tag:spectrum": "ribbon", "theme:prism": "wipe", "bg:spectrum": "panel", "bg:holo-foil": "foil" };
 const CHORDS = { jack: [293.66, 349.23, 440, 587.33, 698.46, 880, 1174.7], ghost: [329.63, 392, 493.88, 659.25, 783.99, 987.77, 1318.5], prism: [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568, 2093], holo: [587.33, 740, 880, 1174.7, 1480, 1760, 2349], prime: [440, 554.4, 659.25, 880, 1108.7, 1318.5, 1760], ribbon: [392, 493.9, 587.33, 783.99, 987.8, 1174.7, 1568], wipe: [349.2, 440, 523.25, 698.5, 880, 1046.5, 1396.9], panel: [466.2, 587.33, 698.5, 932.3, 1174.7, 1396.9, 1864.7], foil: [622.25, 783.99, 932.3, 1244.5, 1568, 1864.7, 2489] };
 export const chromaVariant = (type, id) => VARIANT[`${type}:${id}`] ?? "prism";
 

@@ -1,11 +1,12 @@
 /* Preview-only: an in-memory fake server so the UI can be explored without a backend. Not shipped in the real app. */
 import { hooks, state } from "../public/js/util.js";
+import { DEFAULT_RULES } from "../public/js/cosmetics.js";
 
 const now = Date.now(), min = 60000;
 const uid = () => Math.random().toString(16).slice(2, 10);
 const PERM_INFO = { view_dashboard: { title: "View mission control", desc: "See live stats, traffic and the audit log" }, announce: { title: "Post announcements", desc: "Broadcast the banner to everyone" }, manage_users: { title: "Manage crew", desc: "Suspend, reinstate, reset passwords, remove and invite people ranked below" }, manage_channels: { title: "Manage channels", desc: "Create and delete channels, set topics" }, delete_messages: { title: "Delete messages", desc: "Remove anyone's chat messages" }, manage_blocklist: { title: "Manage blocked domains", desc: "Block and unblock websites for the whole server" }, manage_roles: { title: "Assign roles", desc: "Give people ranked below you a role ranked below yours" }, use_owner_panel: { title: "Open the owner console", desc: "Live events, economy, ChatBot and trust. Not roles, security or the danger zone" }, use_terminal: { title: "Use the admin terminal", desc: "Run console commands (each command still needs its own power)" } };
 const roles = [{ id: "r-manager", name: "Manager", color: "#34d399", position: 2, perms: ["view_dashboard", "announce", "manage_users", "manage_channels", "delete_messages", "manage_roles"] }, { id: "r-mod", name: "Moderator", color: "#38bdf8", position: 3, perms: ["delete_messages", "manage_users", "view_dashboard"] }, { id: "r-vip", name: "VIP", color: "#e879f9", position: 4, perms: [] }, { id: "r-beta", name: "Beta Tester", color: "#ec4899", position: 4, perms: [] }];
-const me = { id: "u-neil", username: "Warmaster", role: "owner", roleId: null, profile: { status: "Commanding from the Moon", presence: "online", avatar: "" }, createdAt: now - 9 * 864e5, settings: { theme: "eclipse", engine: "ddg", bookmarksBar: true, chatSound: false, cloakTitle: "", cloakIcon: "none", panicKey: "`", panicUrl: "https://en.wikipedia.org/" } };
+const me = { id: "u-neil", username: "Warmaster", role: "owner", roleId: null, profile: { status: "Commanding from the Moon", presence: "online", avatar: "" }, createdAt: now - 9 * 864e5, settings: { tourSeen: false, theme: "eclipse", engine: "ddg", bookmarksBar: true, chatSound: false, cloakTitle: "", cloakIcon: "none", panicKey: "`", panicUrl: "https://en.wikipedia.org/" } };
 const users = [
   { id: me.id, username: "Warmaster", role: "owner", profile: me.profile, createdAt: me.createdAt, lastSeen: now, banned: false, requests: 1842, bytes: 96e6 },
 ];
@@ -95,7 +96,7 @@ hooks.api = async (path, method = "GET", body = {}) => {
   await new Promise((r) => setTimeout(r, 15));
   const [p, qs] = path.split("?"); const q = new URLSearchParams(qs ?? "");
   const m = (re) => p.match(re);
-  if (p === "/config") return { firstRun: false, ownerName: "Warmaster", openRegistration: D.server.openRegistration, announcement: D.announcement };
+  if (p === "/config") return { firstRun: false, ownerName: "Warmaster", openRegistration: D.server.openRegistration, announcement: D.announcement, rules: DEFAULT_RULES, beta: true };
   if (p === "/login") {
     const n = String(body.username ?? "").trim(), a = accounts[n.toLowerCase()];
     if (n.toLowerCase() === "warmaster") { become("Warmaster"); remember("Warmaster"); return { user: me }; }

@@ -49,7 +49,7 @@ export async function openGifPicker(onPick) {
     if (t.dataset.save != null) { e.stopPropagation(); const g = list[+t.dataset.save]; try { const r = await api("/gifs/mine", "POST", { url: g.url }); data.mine = r.mine; toast("Saved", "ok"); paint(); } catch (x) { toast(x.message, true); } return; }
     if (t.dataset.import != null) { e.stopPropagation(); t.disabled = true; t.textContent = "Importing, this takes a minute…"; try { const r = await api("/gifs/library/import", "POST", {}); data = { ...data, library: r.library }; toast(`Added ${r.added} GIFs`, "ok"); } catch (x) { toast(x.message, true); } paint(); return; }
     if (t.dataset.rm != null) { e.stopPropagation(); const g = list[+t.dataset.rm]; try { if (g.rm === "mine") data.mine = (await api("/gifs/mine/" + g.id, "DELETE")).mine; else data = { ...data, ...(await api("/gifs/library/" + g.id, "DELETE")) }; paint(); } catch (x) { toast(x.message, true); } return; }
-    const g = list[+t.dataset.i ?? -1] ?? list[+t.closest?.(".gp-it")?.dataset.i]; if (g) { closeGifPicker(); onPick(g.url); }
+    const g = list[+(t.dataset.i ?? t.closest?.(".gp-it")?.dataset.i)]; if (g) { closeGifPicker(); onPick(g.url); }
   });
   el.addEventListener("submit", async (e) => {
     e.preventDefault(); const f = new FormData(e.target);

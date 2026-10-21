@@ -1,5 +1,6 @@
 /* Settings: themes, search, cloak, panic key, profile, account. */
-import { halloweenOpen, setSpooky, spookyWanted } from "./spooky.js";
+import { openTour, showRules } from "./tour.js";
+import { halloweenOpen, setSpooky, spookyWanted, fallOpen, setFall, fallWanted } from "./spooky.js";
 import { $, $$, api, ago, avatar, confirmBox, emit, esc, hostOf, on, promptBox, roleName, roleTags, state, toast } from "./util.js";
 import { openUrl } from "./browser.js";
 import { themeMap } from "./cosmetics.js";
@@ -80,6 +81,7 @@ export function buildSettings() {
     <div class="card glass"><h3>Theme</h3><div class="themes">${[...THEMES, ...(state.me.inv?.themes ?? []).map((id) => themeMap.get(id)).filter(Boolean).map((t) => [t.id, t.name, `linear-gradient(135deg,${t.c[0]},${t.c[1]})`])].map(([id, n, bg]) => `<button class="theme-card${s.theme === id ? " on" : ""}" data-theme="${id}"><i style="background:${bg}"></i>${n}</button>`).join("")}</div>
       <label class="switch"><span>Chat sounds<small>A soft ping for new messages and mentions.</small></span><input type="checkbox" id="setSound" ${s.chatSound ? "checked" : ""}></label>
       ${halloweenOpen() ? `<label class="switch"><span>Halloween look 🎃<small>Orange glow and floating bats. Ends on Nov 1.</small></span><input type="checkbox" id="setSpooky" ${spookyWanted() ? "checked" : ""}></label>` : ""}
+      ${fallOpen() ? `<label class="switch"><span>Fall look 🍂<small>Warm amber glow and drifting leaves. Ends on Dec 21.</small></span><input type="checkbox" id="setFall" ${fallWanted() ? "checked" : ""}></label>` : ""}
       <label class="switch"><span>Bookmarks bar</span><input type="checkbox" id="setBar" ${s.bookmarksBar ? "checked" : ""}></label></div>
     <div class="card glass"><h3>Search</h3><label>Default engine<select id="setEngine">${state.engines.map((e) => `<option value="${e.id}" ${s.engine === e.id ? "selected" : ""}>${esc(e.name)}</option>`).join("")}</select></label>
       <p class="note">Searches run on the server, so the engine never sees your IP. Google can't be read by a server, so picking it opens the real Google results page inside the proxy tab instead. If one engine blocks or returns nothing, Artemis automatically tries the next.</p></div>
@@ -93,6 +95,7 @@ export function buildSettings() {
       <label class="switch"><span>Anti-close<small>Asks "Are you sure you want to leave?" before the tab can be closed or reloaded.</small></span><input type="checkbox" id="setAntiClose" ${s.antiClose !== false ? "checked" : ""}></label>
       <label class="switch"><span>Skip cutscenes<small>Pack openings skip the Chroma, Secret, Forbidden and Omega cutscenes and just show the item. The announcement banner still appears.</small></span><input type="checkbox" id="setSkipCut" ${s.skipCutscenes ? "checked" : ""}></label>
       <button class="btn" id="blankBtn">Open in an about:blank window</button></div>
+    <div class="card glass"><h3>About Artemis <span class="beta-badge sm">BETA</span></h3><p class="note">Artemis is in beta. Things can break or change while it is being built. The proxy, Tube and the Cloud Browser are the most likely to act up.</p><div class="inline"><button class="btn" id="replayTour">Replay the welcome tour</button><button class="btn" id="viewRules">Read the rules</button></div></div>
     <div class="card glass"><h3>Panic key</h3><label>Key (press twice quickly)<input id="setPanicKey" maxlength="10" value="${esc(s.panicKey)}"></label><label>Jump to<input id="setPanicUrl" value="${esc(s.panicUrl)}"></label></div>
     <div class="card glass"><h3>Account</h3>
       <div class="row" style="padding-top:0"><div class="grow"><div class="ttl" style="cursor:default">${esc(state.me.username)}</div><div class="sub">${esc(roleName(state.me.role))} · joined ${new Date(state.me.createdAt).toLocaleDateString()}</div></div><button class="btn sm" id="renameBtn">Change callsign</button></div>
@@ -123,6 +126,9 @@ export function buildSettings() {
   $("#setPresence").onchange = (e) => saveProfile({ presence: e.target.value });
   $("#setSound").onchange = (e) => saveSettings({ chatSound: e.target.checked });
   if ($("#setSpooky")) $("#setSpooky").onchange = (e) => setSpooky(e.target.checked);
+  $("#replayTour").onclick = () => openTour();
+  $("#viewRules").onclick = async () => { try { const c = await api("/config"); showRules(c.rules || "No rules have been set yet."); } catch (e) { toast(e.message, true); } };
+  if ($("#setFall")) $("#setFall").onchange = (e) => setFall(e.target.checked);
   $("#setBar").onchange = (e) => saveSettings({ bookmarksBar: e.target.checked });
   $("#setProxy").onchange = (e) => { try { localStorage.setItem("artemis.proxy", e.target.value); } catch {} toast(e.target.value === "classic" ? "Classic engine on. Open a new tab or reload." : e.target.value === "scramjet1" ? "Scramjet V1 on. Open a new tab or reload." : e.target.value === "uv" ? "Ultraviolet on. Open a new tab or reload." : "Scramjet V2 on. Open a new tab or reload."); };
   $("#setTunnel").onchange = (e) => { try { localStorage.setItem("artemis.tunnel", e.target.value); } catch {} toast(e.target.value === "epoxy" ? "Epoxy tunnel on. Open a new tab or reload." : "libcurl tunnel on. Open a new tab or reload."); };

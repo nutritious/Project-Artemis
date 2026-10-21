@@ -162,6 +162,8 @@ function server(d) {
     ${isStaffRole() ? `<div class="card glass"><h3>Server settings</h3>
       <label class="switch"><span>Open registration<small>Anyone can create an account without an invite.</small></span><input type="checkbox" data-open ${s.openRegistration ? "checked" : ""}></label>
       <label>Proxy rate limit per user (requests / min)<div class="inline"><input type="number" min="30" max="20000" value="${s.rateLimit}" data-rate><button class="btn" data-saverate>Apply</button></div></label>
+      <label>Rules new accounts must agree to<textarea data-rules rows="9" maxlength="8000" spellcheck="true" style="font:12px var(--mono)">${esc(s.rules ?? "")}</textarea></label>
+      <div class="inline"><button class="btn" data-saverules>Save rules</button><span class="note">Use "## Heading" for sections and "- Title — text" for each rule. Leave it empty to turn the rules checkbox off.</span></div>
       <label>Default search engine for new accounts<select data-engine>${state.engines.map((e) => `<option value="${e.id}" ${s.defaultEngine === e.id ? "selected" : ""}>${esc(e.name)}</option>`).join("")}</select></label>
       <p class="note">Private network access: <b>${d.privateAllowed ? "allowed (testing mode)" : "blocked"}</b> · Upstream proxy: <b>${d.upstreamProxy ? "on" : "off"}</b> · Origin isolation: <b>${d.proxyIsolated ? "on" : "off"}</b></p></div>` : ""}
     ${can("manage_blocklist") ? `<div class="card glass" style="grid-column:1/-1"><h3>Blocked domains</h3>
@@ -196,6 +198,7 @@ async function onClick(e) {
   if (ds.copy) { try { await navigator.clipboard.writeText(ds.copy); toast("Copied", "ok"); } catch { toast(ds.copy); } return; }
   if (t.matches("[data-clear-ann]")) return run(() => api("/admin/announcement", "DELETE"), "Announcement cleared");
   if (ds.unblock) return run(() => api("/admin/blocklist/" + encodeURIComponent(ds.unblock), "DELETE"));
+  if (t.matches("[data-saverules]")) return run(() => api("/admin/settings", "PUT", { rules: $("[data-rules]").value }), "Rules saved");
   if (t.matches("[data-saverate]")) return run(() => api("/admin/settings", "PUT", { rateLimit: $("[data-rate]").value }), "Rate limit applied");
 }
 function onChange(e) {

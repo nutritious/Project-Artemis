@@ -12,6 +12,7 @@ import { buildArcade, onArcadeLeft, onArcadeShown } from "./arcade.js";
 import { playEvent } from "./event.js";
 import { initFx } from "./fx.js";
 import { initSpooky } from "./spooky.js";
+import { maybeTour, rulesHtml } from "./tour.js";
 import { initBanners } from "./banners.js";
 import { initArena } from "./arena.js";
 import { initParty } from "./party.js";
@@ -127,6 +128,7 @@ function setAuthMode(mode) {
   const first = !$("#firstRun").classList.contains("hidden");
   $("#inviteField").classList.toggle("hidden", mode !== "register" || first || !!authCfg.openRegistration);
   $("#openNote").classList.toggle("hidden", mode !== "register" || first || !authCfg.openRegistration);
+  { const has = mode === "register" && !!(authCfg.rules ?? "").trim(); $("#rulesField").classList.toggle("hidden", !has); if (has) $("#rulesBox").innerHTML = rulesHtml(authCfg.rules); }
   $("#authForm [name=password]").minLength = mode === "register" ? 8 : 1;
   $("#authForm [name=password]").autocomplete = mode === "login" ? "current-password" : "new-password";
   $("#authForm button[type=submit]").textContent = mode === "login" ? "Begin mission" : "Join the crew";
@@ -138,7 +140,8 @@ $("#authForm").addEventListener("submit", async (e) => {
   const f = new FormData(e.target), btn = e.target.querySelector("[type=submit]");
   btn.disabled = true;
   try {
-    await api(authMode === "login" ? "/login" : "/register", "POST", { username: f.get("username"), password: f.get("password"), invite: f.get("invite"), remember: f.get("remember") === "on" });
+    if (authMode === "register" && (authCfg.rules ?? "").trim() && f.get("agree") !== "on") throw new Error("Please read the rules and tick the box to agree");
+    await api(authMode === "login" ? "/login" : "/register", "POST", { username: f.get("username"), password: f.get("password"), invite: f.get("invite"), remember: f.get("remember") === "on", agreeRules: f.get("agree") === "on" });
     const meData = await api("/me");
     /* the launch sequence plays on every sign-in (Skip is always available) */
     $("#auth").classList.add("hidden");
@@ -168,6 +171,7 @@ function enterApp(me) {
   buildOwner();
   initAnnouncementUi(); connectChat(); startTokenRefresh(); checkUpdatesDot();
   on("view", showView);
+  maybeTour();
   on("event", playEvent);
   initFx(); initSpooky(); initParty(); initBanners(); initArena();
   on("self", () => { syncRail(); applySettings(); if (state.view === "admin" && !hasDash()) showView("browse"); if (state.view === "owner" && !hasOwnerPanel(state.me)) showView("browse"); });

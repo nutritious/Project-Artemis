@@ -53,3 +53,4 @@ export const SECRET_TIERS: string[];
 export function isSecretTier(r: string): boolean;
 export function tierChance(r: string): number;
 export function hasPass(up: any, id: string): boolean;
+export const DEFAULT_RULES: string;

@@ -43,6 +43,12 @@ export const EFFECTS = [
   { id: "ghostfire", name: "Ghostfire", rarity: "epic", only: "halloween", desc: "Cold green and violet flames" },
   { id: "cobweb", name: "Cobwebbed", rarity: "epic", only: "halloween", desc: "Spiderwebs creep across your picture" },
   { id: "witchmoon", name: "Witching Moon", rarity: "legendary", only: "halloween", desc: "A huge orange moon rises behind you" },
+  { id: "leaf-fall", name: "Leaf Fall", rarity: "rare", only: "fall", desc: "Orange leaves drift around your picture" },
+  { id: "cider-steam", name: "Cider Steam", rarity: "rare", only: "fall", desc: "Warm steam curls up from your picture" },
+  { id: "harvest-glow", name: "Harvest Glow", rarity: "epic", only: "fall", desc: "A slow amber ring with drifting sparks" },
+  { id: "autumn-wind", name: "Autumn Wind", rarity: "epic", only: "fall", desc: "A swirl of leaves circles you" },
+  { id: "harvest-moon", name: "Harvest Moon", rarity: "legendary", only: "fall", desc: "A huge golden moon hangs behind you" },
+  { id: "prism-leaf", name: "Prismatic Leaf", rarity: "chroma", only: "fall", desc: "A leaf lit by every colour of autumn" },
   { id: "wraith", name: "Spectral Wraith", rarity: "chroma", only: "halloween", desc: "A rainbow ghost haunts your picture" },
   { id: "prismjack", name: "Prismatic Jack", rarity: "chroma", only: "halloween", desc: "A pumpkin lit by every colour at once" },
   { id: "horizon", name: "Event Horizon", rarity: "secret", desc: "A black hole that should not be here" },
@@ -75,6 +81,12 @@ export const TAGS = [
   { id: "og", name: "OG", color: "#ffd76a", rarity: "limited", limited: "launch" },
   { id: "opening-26", name: "Opening Night '26", color: "#ffd76a", rarity: "limited", limited: "opening" },
   { id: "halloween-26", name: "Trick or Treat '26", color: "#ff8a2b", rarity: "limited", limited: "halloween" },
+  { id: "f-leaf-peeper", name: "Leaf Peeper", color: "#e8893a", rarity: "common", only: "fall" },
+  { id: "f-cider", name: "Cider Sipper", color: "#d9a066", rarity: "common", only: "fall" },
+  { id: "f-hoodie", name: "Hoodie Weather", color: "#c97b4a", rarity: "rare", only: "fall" },
+  { id: "f-harvest-hero", name: "Harvest Hero", color: "#f2b134", rarity: "epic", only: "fall" },
+  { id: "f-fall-legend", name: "Fall Legend '26", color: "#ff7a2f", rarity: "legendary", only: "fall" },
+  { id: "f-falling-star", name: "FALLING STAR", color: "#ffb347", rarity: "chroma", only: "fall" },
   { id: "h-spooky", name: "Spooky", color: "#ff9a3c", rarity: "common", only: "halloween" },
   { id: "h-ghoul", name: "Ghoul", color: "#8dff7a", rarity: "common", only: "halloween" },
   { id: "h-pumpkin-king", name: "Pumpkin King", color: "#ff8a2b", rarity: "rare", only: "halloween" },
@@ -96,6 +108,9 @@ export const THEMES = [
   { id: "terminal", name: "Terminal", rarity: "rare", cat: "hacker", c: ["#000a00", "#33ff33"] },
   { id: "arcade", name: "Arcade Neon", rarity: "epic", cat: "gamer", c: ["#07031a", "#ff3df0"] },
   { id: "prism", name: "Prismatic", rarity: "chroma", c: ["#05030f", "#ff4df0"] },
+  { id: "maple", name: "Maple", rarity: "rare", only: "fall", c: ["#170a04", "#e0662a"] },
+  { id: "amber-dusk", name: "Amber Dusk", rarity: "epic", only: "fall", c: ["#150a0a", "#ffb347"] },
+  { id: "autumn-prism", name: "Autumn Prism", rarity: "chroma", only: "fall", c: ["#120804", "#ff9a3d"] },
   { id: "pumpkin", name: "Pumpkin Night", rarity: "rare", only: "halloween", c: ["#140700", "#ff8a2b"] },
   { id: "witching", name: "Witching Hour", rarity: "epic", only: "halloween", c: ["#0c0414", "#b46bff"] },
   { id: "witchfire", name: "Witchfire", rarity: "chroma", only: "halloween", c: ["#0a0214", "#ff4df0"] },
@@ -118,6 +133,11 @@ export const BGS = [
   { id: "gold-rush", name: "Gold Rush", rarity: "legendary", desc: "Liquid gold with a moving shine" },
   { id: "spectrum", name: "Spectrum", rarity: "chroma", desc: "Every colour, flowing together" },
   { id: "holo-foil", name: "Holo Foil", rarity: "chroma", desc: "Shimmering rainbow foil" },
+  { id: "autumn-forest", name: "Autumn Forest", rarity: "rare", only: "fall", desc: "Gold and red trees in the morning light" },
+  { id: "harvest-field", name: "Harvest Field", rarity: "rare", only: "fall", desc: "Hay bales and a low orange sun" },
+  { id: "foggy-morning", name: "Foggy Morning", rarity: "epic", only: "fall", desc: "Mist rolling over a quiet hill" },
+  { id: "golden-hour", name: "Golden Hour", rarity: "legendary", only: "fall", desc: "The whole sky turns to gold" },
+  { id: "leaf-storm", name: "Leaf Storm", rarity: "chroma", only: "fall", desc: "A blizzard of leaves in every colour" },
   { id: "haunted-forest", name: "Haunted Forest", rarity: "rare", only: "halloween", desc: "Dead trees and drifting fog" },
   { id: "pumpkin-patch", name: "Pumpkin Patch", rarity: "rare", only: "halloween", desc: "A glowing field at dusk" },
   { id: "graveyard", name: "Graveyard", rarity: "epic", only: "halloween", desc: "Tombstones under a pale moon" },
@@ -130,6 +150,8 @@ export const BGS = [
 ];
 /** Halloween ends (and the Halloween pack leaves) at midnight Pacific time on Nov 1, 2026. */
 export const HALLOWEEN_END = Date.UTC(2026, 10, 1, 7, 0);
+/** Fall ends (and the Fall pack leaves) at midnight Pacific time at the end of Dec 20, 2026. */
+export const FALL_END = Date.UTC(2026, 11, 21, 8, 0);
 export const packOpen = (p, now = Date.now()) => !p.until || now < p.until;
 export const PACKS = [
   { id: "crate", kind: "loot", name: "Supply Crate", cost: 150, count: 3, boost: 0, desc: "3 random effects, titles or backdrops", color: "#4cc9f0" },
@@ -140,7 +162,8 @@ export const PACKS = [
   { id: "backdrops", kind: "loot", name: "Backdrop Pack", cost: 300, count: 3, boost: 1, pool: ["bg"], desc: "3 profile backgrounds", color: "#ff8a5b" },
   { id: "chroma", kind: "loot", name: "Chroma Vault", cost: 3000, count: 5, boost: 2, chromaBoost: 25, desc: "5 items and a real shot at Chroma", color: "#ff4df0", guarantee: "epic" },
   { id: "themes", kind: "theme", name: "Theme Pack", cost: 250, count: 2, boost: 0, desc: "2 random themes for your whole app", color: "#ff8fb8" },
-  { id: "halloween", kind: "loot", name: "Halloween Pack", cost: 450, count: 4, boost: 1, pool: ["effect", "tag", "bg", "theme"], only: "halloween", until: HALLOWEEN_END, guarantee: "rare", chromaBoost: 14, desc: "Limited: spooky effects, titles, backdrops and themes, with a real shot at Halloween Chroma. Leaves Nov 1", color: "#ff8a2b" },
+  { id: "fall", kind: "loot", name: "Fall Pack", cost: 450, count: 4, boost: 1, pool: ["effect", "tag", "bg", "theme"], only: "fall", until: FALL_END, season: { emoji: "\ud83c\udf42", name: "Fall", leaves: "Dec 20" }, guarantee: "rare", chromaBoost: 14, desc: "Limited: leaves, hoodies and golden light. Fall effects, titles, backdrops and themes, with a real shot at Fall Chroma. Leaves Dec 20", color: "#e0662a" },
+  { id: "halloween", kind: "loot", name: "Halloween Pack", cost: 450, count: 4, boost: 1, pool: ["effect", "tag", "bg", "theme"], only: "halloween", until: HALLOWEEN_END, season: { emoji: "\ud83c\udf83", name: "Halloween", leaves: "Nov 1" }, guarantee: "rare", chromaBoost: 14, desc: "Limited: spooky effects, titles, backdrops and themes, with a real shot at Halloween Chroma. Leaves Nov 1", color: "#ff8a2b" },
   { id: "themes-deluxe", kind: "theme", name: "Deep Space Themes", cost: 600, count: 3, boost: 2, desc: "3 themes, better odds of epic and legendary", color: "#8b7bff", guarantee: "rare" },
 ];
 /** Earning rules. Everyday coins (games, chatting, searching, browsing, missions) stop at DAILY_CAP and reset each UTC day. Gifts, events, achievements, the wheel and duplicate refunds are not counted. */
@@ -325,3 +348,15 @@ export function cleanSchedule(list) {
   return out;
 }
 export const scheduleMins = (s) => s.reduce((n, p) => n + p.mins, 0);
+
+/** The house rules new accounts must agree to. The owner can edit them in Mission control, Server settings. */
+export const DEFAULT_RULES = `## Respect & Behavior
+- No Racism, Slurs, or Hate Speech — Racism, slurs, and bypassing filters (including variations of the N-word) are strictly prohibited.
+- No Harassment or Doxxing — Do not dox or leak private personal information about anyone or it will result in a permanent ban.
+- No Trolling or Disruptive Behavior — Avoid too much trolling or acting unnecessarily weird/disruptive in chat.
+## Content & Profiles
+- No NSFW — Keep all content SFW. Some curse words are allowed, but keep it moderate.
+- Appropriate Profiles — No weird, inappropriate, or offensive profile pictures (PFPs) or display names.
+## Requesting & Economy
+- No Currency Spam — Avoid asking or begging for coins constantly, or you will get timed out for a little bit.
+- No Begging for Permissions — Do not ask or beg staff for staff roles, admin permissions, or special perks. It's annoying.`;

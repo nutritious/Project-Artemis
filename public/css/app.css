@@ -1121,3 +1121,41 @@ body:has(.cb-view) #liveBar { display: none !important; } /* the coin/spin chips
 .gp-it.gp-dead { display: none; }
 /* a message that is only a picture link shows just the picture; the link comes back if the picture cannot load */
 .txt.linkhid { display: none; }
+
+/* Fall pack */
+.fx-leaf-fall .fxa { inset: -8px; border-radius: 50%; animation: fxspin 7s linear infinite; } .fx-leaf-fall .fxa::before { content: "🍂"; position: absolute; top: -7px; left: calc(50% - 7px); font-size: 14px; } .fx-leaf-fall .fxb { inset: -8px; border-radius: 50%; animation: fxspin 10s linear infinite reverse; } .fx-leaf-fall .fxb::before { content: "🍁"; position: absolute; bottom: -6px; left: calc(50% - 5px); font-size: 12px; }
+.fx-cider-steam .fxa { inset: -6px; border-radius: 50%; box-shadow: 0 0 0 2px #d9a066, 0 0 16px rgba(217,160,102,.7); animation: fxneon 2.4s infinite; } .fx-cider-steam .fxb { inset: auto; left: calc(50% - 8px); top: -16px; width: 16px; height: 16px; } .fx-cider-steam .fxb::before { content: "♨"; position: absolute; inset: 0; color: #f3d7b3; font-size: 15px; animation: fxdrift 2.6s ease-in-out infinite; }
+.fx-harvest-glow .fxa { inset: -9px; border-radius: 50%; background: conic-gradient(#ffb347, #ff7a1a, #ffe08a, #ffb347); -webkit-mask: radial-gradient(circle, transparent 60%, #000 63%, #000 80%, transparent 84%); mask: radial-gradient(circle, transparent 60%, #000 63%, #000 80%, transparent 84%); animation: fxspin 8s linear infinite; } .fx-harvest-glow .fxb { inset: -12px; border-radius: 50%; background: radial-gradient(circle, transparent 55%, rgba(255,179,71,.5) 68%, transparent 76%); animation: fxpulse 2.6s ease-in-out infinite; }
+.fx-autumn-wind .fxa { inset: -10px; border-radius: 50%; border: 2px dashed rgba(224,102,42,.85); animation: fxspin 3.2s linear infinite; } .fx-autumn-wind .fxa::before { content: "🍃"; position: absolute; top: -8px; left: 50%; font-size: 13px; } .fx-autumn-wind .fxb { inset: -4px; border-radius: 50%; border: 2px dotted rgba(242,177,52,.8); animation: fxspin 5s linear infinite reverse; } .fx-autumn-wind .fxb::after { content: "🍂"; position: absolute; bottom: -8px; right: 14%; font-size: 12px; }
+.fx-harvest-moon .fxa { inset: -12px; border-radius: 50%; background: radial-gradient(circle at 60% 40%, #ffd76a 0 36%, rgba(255,179,71,.4) 52%, transparent 70%); animation: fxpulse 3.4s infinite; } .fx-harvest-moon .fxb { inset: -2px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255,215,106,.85), 0 0 20px #ffb347; }
+.fx-prism-leaf .fxa { inset: -8px; border-radius: 50%; background: conic-gradient(#ff4d4d, #ffd24d, #4dff88, #4dd2ff, #a64dff, #ff4de0, #ff4d4d); filter: blur(6px); opacity: .85; animation: fxspin 3s linear infinite; } .fx-prism-leaf .fxb { inset: -10px; border-radius: 50%; animation: fxspin 6s linear infinite reverse; } .fx-prism-leaf .fxb::before { content: "🍁"; position: absolute; top: -8px; left: calc(50% - 8px); font-size: 16px; filter: drop-shadow(0 0 6px #fff); animation: cxhue 4s linear infinite; }
+.pbg-autumn-forest { background: radial-gradient(circle at 80% 18%, rgba(255,226,150,.65) 0 6%, transparent 8%), repeating-linear-gradient(90deg, rgba(60,20,5,.55) 0 7px, transparent 7px 46px), linear-gradient(180deg, #f2a43a, #c4551a 55%, #4a1a08) !important; }
+.pbg-harvest-field { background: radial-gradient(circle at 50% 100%, #ffd76a 0 22%, rgba(255,140,40,.4) 34%, transparent 52%), repeating-linear-gradient(0deg, rgba(120,70,10,.35) 0 4px, transparent 4px 14px), linear-gradient(180deg, #ff9a3d, #b8601a 70%, #3a1d08) !important; animation: cxflow 7s ease-in-out infinite alternate; }
+.pbg-foggy-morning { background: linear-gradient(180deg, rgba(255,255,255,.18), transparent 40%), radial-gradient(ellipse at 30% 80%, rgba(255,255,255,.4), transparent 55%), radial-gradient(ellipse at 75% 70%, rgba(255,255,255,.3), transparent 50%), linear-gradient(180deg, #7a8590, #5b4a42 70%, #2a1d18) !important; animation: cxflow 9s ease-in-out infinite alternate; }
+.pbg-golden-hour { background: radial-gradient(circle at 50% 80%, #fff2b8 0 8%, #ffd24a 18%, rgba(255,150,40,.55) 42%, transparent 70%), linear-gradient(180deg, #7a2e0a, #e08a1a 55%, #ffd76a) !important; animation: fxneon 4s ease-in-out infinite; }
+.pbg-leaf-storm { background: radial-gradient(circle at 15% 25%, #ff4d4d 0 3%, transparent 4%), radial-gradient(circle at 35% 70%, #ffd24d 0 3%, transparent 4%), radial-gradient(circle at 60% 30%, #ff8a2b 0 3%, transparent 4%), radial-gradient(circle at 80% 65%, #4dff88 0 2.5%, transparent 3.5%), radial-gradient(circle at 50% 85%, #ff4de0 0 3%, transparent 4%), linear-gradient(135deg, #2a0f04, #6a2a0a 50%, #1a0a02) !important; animation: cxflow 5s ease-in-out infinite alternate; }
+
+/* the Fall look: starts when Halloween ends */
+:root.fall:not([data-theme="maple"]):not([data-theme="amber-dusk"]):not([data-theme="autumn-prism"]) { --accent: #e0662a; --accent2: #ffb347; --accent-ink: #1d0a00; --glow: 0 0 0 1px rgba(224, 102, 42, .35), 0 8px 40px -8px rgba(224, 102, 42, .45); }
+.fall .srv-head b::after { content: " 🍂"; }
+#fallfx { position: fixed; inset: 0; pointer-events: none; z-index: 40; overflow: hidden; }
+#fallfx i { position: absolute; left: var(--x); top: -8%; font-style: normal; font-size: var(--s); opacity: .5; filter: drop-shadow(0 0 6px rgba(255, 150, 60, .45)); animation: spookydrift var(--d) linear var(--w) infinite; }
+@media (prefers-reduced-motion: reduce) { #fallfx i { animation: none; top: 20%; } }
+
+/* BETA badge, rules box, welcome tour */
+.beta-badge { display: inline-block; vertical-align: middle; margin-left: 8px; padding: 2px 8px; border-radius: 99px; font: 800 11px/1.4 var(--mono); letter-spacing: .14em; color: #1d0f00; background: linear-gradient(135deg, #ffd76a, #ff8a5b); box-shadow: 0 0 14px -2px rgba(255,170,80,.7); }
+.beta-badge.sm { margin-left: 6px; padding: 1px 6px; font-size: 9.5px; }
+.rail-logo .beta-badge.sm { margin-left: 4px; }
+.rules-box { max-height: 170px; overflow-y: auto; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: color-mix(in srgb, var(--fg) 5%, transparent); font-size: 12.5px; line-height: 1.45; text-align: left; scrollbar-width: thin; }
+.rules-box h4, .rules-body h4 { margin: 10px 0 4px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); } .rules-box h4:first-child, .rules-body h4:first-child { margin-top: 0; }
+.rules-box ul, .rules-body ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; } .rules-box li b, .rules-body li b { display: block; }
+.rules-modal { max-width: 520px; width: calc(100vw - 32px); } .rules-body { max-height: 60vh; overflow-y: auto; text-align: left; font-size: 13.5px; line-height: 1.5; margin: 8px 0 14px; }
+#rulesField { display: grid; gap: 8px; }
+.tour { max-width: 460px; width: calc(100vw - 32px); text-align: left; display: grid; gap: 10px; }
+.tour h3 { margin: 0; font-size: 21px; } .tour p { margin: 0; line-height: 1.55; color: var(--dim); font-size: 14px; } .tour p b { color: var(--fg); }
+.tour-top { display: flex; align-items: center; gap: 8px; } .tour-step { font: 700 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.tour-skip { margin-left: auto; border: 0; background: none; color: var(--dim); font-size: 12px; cursor: pointer; text-decoration: underline; }
+.tour-beta { padding: 1px 7px; border-radius: 99px; font: 800 10px/1.5 var(--mono); letter-spacing: .14em; color: #1d0f00; background: linear-gradient(135deg, #ffd76a, #ff8a5b); }
+.tour-ic { font-size: 40px; line-height: 1; }
+.tour-dots { display: flex; gap: 6px; margin-top: 4px; } .tour-dots i { width: 8px; height: 8px; border-radius: 50%; background: color-mix(in srgb, var(--fg) 20%, transparent); transition: all .2s; } .tour-dots i.done { background: color-mix(in srgb, var(--accent) 55%, transparent); } .tour-dots i.on { width: 22px; border-radius: 99px; background: var(--accent); }
+.tour .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }

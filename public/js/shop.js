@@ -42,7 +42,7 @@ function sync() { if (!S) return; state.nextSpin = S.nextSpin ?? state.nextSpin;
 
 const GLYPH = { halloween: "🎃", gamer: "🎮", hacker: "⌨", backdrops: "🖼", chroma: "🌈" };
 const packGlyph = (p) => GLYPH[p.id] ?? (p.kind === "theme" ? "◐" : "✦");
-const leftText = (t) => { const ms = t - Date.now(); if (ms <= 0) return "Gone"; const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4); return `🎃 Leaves Nov 1 · ${d ? d + "d " : ""}${h}h ${m}m left`; };
+const leftText = (t, se) => { const ms = t - Date.now(); if (ms <= 0) return "Gone"; const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4); return `${se?.emoji ?? "⏳"} Leaves ${se?.leaves ?? "soon"} · ${d ? d + "d " : ""}${h}h ${m}m left`; };
 function packCard(p) {
   const can = S.coins >= p.cost;
   return `<article class="pack ${p.kind} ${p.id === "chroma" ? "chroma-pack" : ""}" style="--pc:${p.color}">
@@ -52,7 +52,7 @@ function packCard(p) {
     <button class="btn sm ghost peekbtn" data-peek="${p.id}">See what's inside</button>
     <button class="btn ${can ? "" : "ghost"}" data-open="${p.id}" ${can ? "" : "disabled"}>◎ ${p.cost}</button>
     ${hasPass(S.up, "bulk") ? `<button class="btn sm ${S.coins >= p.cost * 5 ? "alt" : "ghost"}" data-open="${p.id}" data-count="5" ${S.coins >= p.cost * 5 ? "" : "disabled"}>Open ×5 · ◎ ${p.cost * 5}</button>` : ""}
-    ${p.until ? `<div class="pack-odds hleft">${leftText(p.until)}</div>` : ""}
+    ${p.until ? `<div class="pack-odds hleft">${leftText(p.until, p.season)}</div>` : ""}
     ${p.id === "crate" && S.freePacks > 0 ? `<button class="btn alt" data-open="crate" data-free="1">Free crate (${S.freePacks})</button>` : ""}
   </article>`;
 }
@@ -98,7 +98,7 @@ function paint() {
     <div class="gtabs" id="shopTabs"><button data-sect="packs" class="${sect === "packs" ? "on" : ""}"><b>Packs</b></button><button data-sect="upgrades" class="${sect === "upgrades" ? "on" : ""}"><b>Upgrades</b></button></div>
     ${sect === "upgrades" ? upgradesHtml() : `${redeemCard()}
     ${wheelHtml()}
-    ${PACKS.filter((p) => p.until && packOpen(p)).map((p) => `<h3 class="sec">🎃 Limited: Halloween <small>gone on Nov 1</small></h3><div class="packs">${packCard(p)}</div>`).join("")}
+    ${PACKS.filter((p) => p.until && packOpen(p)).map((p) => `<h3 class="sec">${p.season?.emoji ?? "⏳"} Limited: ${esc(p.season?.name ?? p.name)} <small>gone on ${esc(p.season?.leaves ?? "soon")}</small></h3><div class="packs">${packCard(p)}</div>`).join("")}
     <h3 class="sec">Loot crates</h3><div class="packs">${PACKS.filter((p) => ["crate", "nova", "vault"].includes(p.id)).map(packCard).join("")}</div>
     <h3 class="sec">Themed crates <small>gamer, hacker and backdrops</small></h3><div class="packs">${PACKS.filter((p) => ["gamer", "hacker", "backdrops"].includes(p.id)).map(packCard).join("")}</div>
     <h3 class="sec">Chroma <small>the rarest tier in the game</small></h3><div class="packs">${PACKS.filter((p) => p.id === "chroma").map(packCard).join("")}</div>
