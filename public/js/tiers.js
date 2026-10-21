@@ -3,12 +3,12 @@
    OMEGA: a clock running backwards, stars dragged into a point, time stops, then a supernova.
    Canvas and Web Audio only, a few hundred shapes a frame, and it lowers its own resolution if the computer struggles. */
 import { state } from "./util.js";
-import { tierChance, EFFECTS, TAGS, BGS } from "./cosmetics.js";
+import { tierChance, APEX_CHANCE, EFFECTS, TAGS, BGS } from "./cosmetics.js";
 
 const ALL = () => [...EFFECTS, ...TAGS, ...BGS];
 export const tierOf = (item) => (item?.rarity && item.rarity !== "secret" ? item.rarity : ALL().find((x) => x.id === item?.id)?.rarity ?? "secret");
-export const TIER_WORD = { secret: "SECRET", forbidden: "FORBIDDEN", omega: "OMEGA" };
-export const oddsText = (tier) => `1 IN ${Math.round(Math.max(1, ALL().filter((x) => x.rarity === tier).length) / tierChance(tier)).toLocaleString("en-US")}`;
+export const TIER_WORD = { secret: "SECRET", apex: "APEX", forbidden: "FORBIDDEN", omega: "OMEGA" };
+export const oddsText = (tier) => tier.startsWith("apex_") ? `1 IN ${Math.round(1 / APEX_CHANCE[tier.slice(5)]).toLocaleString("en-US")}` : `1 IN ${Math.round(Math.max(1, ALL().filter((x) => x.rarity === tier).length) / tierChance(tier)).toLocaleString("en-US")}`;
 
 const TAU = Math.PI * 2, clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v)), rnd = (a = 1, b) => (b === undefined ? Math.random() * a : a + Math.random() * (b - a));
 const easeOut = (v) => 1 - Math.pow(1 - clamp(v), 3);
@@ -254,3 +254,6 @@ function omegaDraw(x, G, t, S, item) {
 
 export const playForbidden = (item) => run(item, FDUR, forbiddenSound, forbiddenDraw, "A Forbidden item was pulled");
 export const playOmega = (item) => run(item, ODUR, omegaSound, omegaDraw, "An Omega item was pulled");
+
+/* shared with the season Apex scenes (apex.js) */
+export { run, stepParticles, burst, revealText, easeOut, clamp, rnd, TAU, mono };

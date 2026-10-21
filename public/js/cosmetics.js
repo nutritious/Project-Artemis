@@ -9,15 +9,18 @@ export const RARITY = {
   secret: { name: "Secret", color: "#ff2e4d", weight: 0, dupe: 10000 },
   forbidden: { name: "Forbidden", color: "#a855ff", weight: 0, dupe: 30000 },
   omega: { name: "Omega", color: "#ffd24a", weight: 0, dupe: 100000 },
+  apex: { name: "Apex", color: "#ffe9a8", weight: 0, dupe: 50000 },
 };
 /** Secret items never show in a pack's odds or contents. Each item slot has this tiny chance of being one instead. */
 export const SECRET_CHANCE = 1 / 200;
 /** Tiers above Secret. Each is rolled first, per slot, and is much rarer. */
 export const FORBIDDEN_CHANCE = 1 / 1000;
 export const OMEGA_CHANCE = 1 / 5000;
-export const SECRET_TIERS = ["secret", "forbidden", "omega"];
+/** Apex: one super-limited item hidden in each season pack, rarer than Chroma. Chance is per item slot. */
+export const APEX_CHANCE = { halloween: 1 / 800, fall: 1 / 2500 };
+export const SECRET_TIERS = ["secret", "forbidden", "omega", "apex"];
 export const isSecretTier = (r) => SECRET_TIERS.includes(r);
-export const tierChance = (r) => (r === "omega" ? OMEGA_CHANCE : r === "forbidden" ? FORBIDDEN_CHANCE : SECRET_CHANCE);
+export const tierChance = (r) => (r === "apex" ? APEX_CHANCE.fall : r === "omega" ? OMEGA_CHANCE : r === "forbidden" ? FORBIDDEN_CHANCE : SECRET_CHANCE);
 export const EFFECTS = [
   { id: "stardust", name: "Stardust", rarity: "common", desc: "Tiny stars twinkle around you" },
   { id: "ringlet", name: "Ringlet", rarity: "common", desc: "A slim ring that slowly spins" },
@@ -54,6 +57,8 @@ export const EFFECTS = [
   { id: "horizon", name: "Event Horizon", rarity: "secret", desc: "A black hole that should not be here" },
   { id: "phantom", name: "Phantom", rarity: "secret", desc: "Something stands just behind you" },
   { id: "eclipse", name: "Total Eclipse", rarity: "forbidden", desc: "The sun went out and it was not an accident" },
+  { id: "reaper", name: "Midnight Reaper", rarity: "apex", only: "halloween", desc: "The twelfth bell has struck and something hooded came for the party" },
+  { id: "sovereign", name: "Harvest Sovereign", rarity: "apex", only: "fall", desc: "One golden leaf that outlasts the whole season" },
   { id: "omega-flare", name: "Omega Flare", rarity: "omega", desc: "The last light there will ever be" },
 ];
 export const TAGS = [
@@ -275,6 +280,11 @@ export function rollPack(pack, have, rand, luck = 0) {
   };
   for (let k = 0; k < pack.count; k++) {
     /* the hidden roll: a very small chance that this slot is a Secret */
+    /* a season pack hides one Apex item: a tiny chance per slot, rolled before everything else */
+    if (pack.only && APEX_CHANCE[pack.only] && rand() < APEX_CHANCE[pack.only]) {
+      const ax = ["effect", "tag", "bg"].flatMap((t) => lists[t].filter((x) => x.rarity === "apex" && x.only === pack.only).map((x) => ({ ...x, type: x.type ?? t })))[0];
+      if (ax) { const ad = owned[ax.type].has(ax.id); owned[ax.type].add(ax.id); items.push({ type: ax.type, id: ax.id, name: ax.name, rarity: "apex", dupe: ad, refund: ad ? RARITY.apex.dupe : 0 }); continue; }
+    }
     const roll = rand(), tier = roll < OMEGA_CHANCE ? "omega" : roll < FORBIDDEN_CHANCE ? "forbidden" : roll < SECRET_CHANCE ? "secret" : null;
     if (tier) {
       const secrets = ["effect", "tag", "bg"].flatMap((t) => lists[t].filter((x) => x.rarity === tier).map((x) => ({ ...x, type: t })));

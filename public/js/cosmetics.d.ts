@@ -1,6 +1,6 @@
 export interface Rarity { name: string; color: string; weight: number; dupe: number }
 export interface Cosmetic { id: string; name: string; rarity: string; limited?: string; cat?: string; desc?: string; color?: string; c?: string[] }
-export interface PackDef { id: string; kind: string; name: string; cost: number; count: number; boost: number; desc: string; color: string; guarantee?: string; cat?: string; pool?: string[]; chromaBoost?: number }
+export interface PackDef { id: string; kind: string; name: string; cost: number; count: number; boost: number; desc: string; color: string; guarantee?: string; cat?: string; pool?: string[]; chromaBoost?: number; only?: string }
 export interface PackItem { type: "effect" | "tag" | "theme" | "bg"; id: string; name: string; rarity: string; dupe: boolean; refund: number }
 export interface GameDef { id: string; name: string; desc: string; per: number; add: number; coinDiv: number }
 export const RARITY: Record<string, Rarity>;
@@ -49,6 +49,7 @@ export const noUps: () => { luck: number; speed: number; refund: number; cash: n
 
 export const FORBIDDEN_CHANCE: number;
 export const OMEGA_CHANCE: number;
+export const APEX_CHANCE: { halloween: number; fall: number };
 export const SECRET_TIERS: string[];
 export function isSecretTier(r: string): boolean;
 export function tierChance(r: string): number;

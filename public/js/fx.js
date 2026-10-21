@@ -36,9 +36,9 @@ function chromaBanner(m) {
 function secretBanner(m) {
   const mine = m.user === state.me?.username;
   const fl = document.createElement("div"); fl.className = "secret-flash"; document.body.appendChild(fl); setTimeout(() => fl.remove(), 1200);
-  const tier = m.tier === "forbidden" || m.tier === "omega" ? m.tier : "secret", word = { secret: "a SECRET", forbidden: "a FORBIDDEN item", omega: "an OMEGA item" }[tier], ic = tier === "omega" ? "\u03a9" : tier === "forbidden" ? "\u16df" : "\u25fc";
+  const tier = ["forbidden", "omega", "apex"].includes(m.tier) ? m.tier : "secret", fall = m.season === "fall", word = { secret: "a SECRET", forbidden: "a FORBIDDEN item", omega: "an OMEGA item", apex: fall ? "the FALL APEX" : "the HALLOWEEN APEX" }[tier], ic = tier === "apex" ? (fall ? "\ud83c\udf41" : "\ud83c\udf83") : tier === "omega" ? "\u03a9" : tier === "forbidden" ? "\u16df" : "\u25fc";
   const el = document.createElement("div"); el.className = "secret-banner " + tier + (mine ? " mine" : "");
-  el.innerHTML = `<span class="sb-i">${ic}</span><div><b>${mine ? "You" : esc(m.user)} pulled ${word}</b><small>${mine ? (tier === "secret" ? "Nobody knows what it is. Nobody else has it." : tier === "forbidden" ? "The seal is broken. Almost nobody will ever see this." : "The last thing there will ever be. Nobody else has it.") : "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 \u00b7 nobody knows what it is"}</small></div><span class="sb-i">${ic}</span>`;
+  el.innerHTML = `<span class="sb-i">${ic}</span><div><b>${mine ? "You" : esc(m.user)} pulled ${word}</b><small>${mine ? (tier === "secret" ? "Nobody knows what it is. Nobody else has it." : tier === "apex" ? "A super-limited item that leaves with the season." : tier === "forbidden" ? "The seal is broken. Almost nobody will ever see this." : "The last thing there will ever be. Nobody else has it.") : "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 \u00b7 nobody knows what it is"}</small></div><span class="sb-i">${ic}</span>`;
   document.body.appendChild(el);
   try { chord([55, 58, 110, 116.5], 1.6); } catch { /* sound is optional */ }
   setTimeout(() => el.classList.add("out"), 8000); setTimeout(() => el.remove(), 8900);

@@ -3,6 +3,7 @@
    Built to stay light: few particles, no heavy blur, and it lowers its own resolution if the computer struggles. */
 import { state } from "./util.js";
 import { tierOf, oddsText, playForbidden, playOmega } from "./tiers.js";
+import { playApex } from "./apex.js";
 
 /* The real odds, worked out from the same numbers the pack roll uses: one hidden roll per pack slot, then a pick among every Secret. */
 const TIER = { secret: { word: "SECRET", hue: 0 } };
@@ -286,7 +287,7 @@ function frame(x, W, H, t, S, item) {
 
 /** Play the Secret cutscene. Resolves when it ends or the viewer skips it. item = { name, type } */
 export function playSecret(item) {
-  { const tier = tierOf(item); if (tier === "forbidden") return playForbidden(item); if (tier === "omega") return playOmega(item); }
+  { const tier = tierOf(item); if (tier === "forbidden") return playForbidden(item); if (tier === "omega") return playOmega(item); if (tier === "apex") return playApex(item); }
   return new Promise((resolve) => {
     const cv = document.createElement("canvas"); cv.className = "secret-cut"; { const th = TIER[tierOf(item)].hue; if (th) cv.style.filter = `hue-rotate(${th}deg) saturate(1.15)`; } cv.setAttribute("role", "img"); cv.setAttribute("aria-label", "A Secret was pulled");
     const LV = [Math.min(1, window.devicePixelRatio || 1), 0.7, 0.5]; let lv = 0, ema = 16, nf = 0;

@@ -1,3 +1,4 @@
+import { startCloud, cloudState } from "./cloudsave.js";
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
@@ -31,6 +32,7 @@ import { ask, card, cards, checkAll, INSTANCES, openStream, status as ytStatus, 
 import { ENGINES, search, suggest, type EngineId } from "./search.js";
 
 const app = express();
+app.get("/healthz", (_req, res) => void res.type("text").send("ok"));
 if (TRUST_PROXY) app.set("trust proxy", 1);
 app.disable("x-powered-by");
 
@@ -657,6 +659,7 @@ api.put("/settings", auth, (req, res) => {
   if ("cloakIcon" in b) s.cloakIcon = str(b.cloakIcon, 20);
   if ("antiClose" in b) s.antiClose = !!b.antiClose;
   if ("skipCutscenes" in b) s.skipCutscenes = !!b.skipCutscenes;
+  for (const k of ["skipChroma", "skipSecret", "skipHigh", "skipApex"] as const) if (k in b) s[k] = !!b[k];
   if ("tourSeen" in b) s.tourSeen = !!b.tourSeen;
   if ("panicKey" in b) s.panicKey = str(b.panicKey, 10);
   if ("panicUrl" in b) s.panicUrl = str(b.panicUrl, 500);
@@ -920,6 +923,7 @@ api.get("/owner/overview", auth, panelUp, (_req, res) => {
     counts: { owner: users.filter((u) => u.role === "owner").length, coowner: users.filter((u) => u.role === "coowner").length, admin: users.filter((u) => u.role === "admin").length, member: users.filter((u) => u.role === "member").length, banned: users.filter((u) => u.banned).length },
     messages: db.data.messages.length, channels: db.data.channels.length, invites: db.data.invites.length, auditEntries: db.data.audit.length,
     history: users.reduce((n, u) => n + u.history.length, 0), bookmarks: users.reduce((n, u) => n + u.bookmarks.length, 0),
+    cloud: { enabled: cloudState.enabled, repo: cloudState.repo, lastOk: cloudState.lastOk, lastErr: cloudState.lastErr, restored: cloudState.restored },
     dataBytes, node: process.version, memoryMb: Math.round(process.memoryUsage().rss / 1048576), uptimeSec: Math.round(process.uptime()),
     reports: [...db.data.reports].reverse(),
     maintenance: db.data.server.maintenance, maintenanceMessage: db.data.server.maintenanceMessage,
@@ -1142,6 +1146,7 @@ if (OWNER_PASSWORD.length >= 8 && !db.data.users.some((u) => u.role === "owner" 
   console.log(`Owner account "${OWNER_USERNAME}" created from OWNER_PASSWORD.`);
 }
 resumeDirector();
+startCloud(() => db.flush());
 server.listen(PORT, HOST, () => {
   console.log(`\n  ☾  Project Artemis is on the pad  →  http://localhost:${PORT}`);
   if (PROXY_ORIGIN) console.log(`  proxied sites are isolated on ${PROXY_ORIGIN}`);

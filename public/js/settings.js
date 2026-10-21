@@ -93,7 +93,12 @@ export function buildSettings() {
     <div class="card glass"><h3>Tab cloak</h3><label>Preset<select id="setCloak">${Object.entries(CLOAKS).map(([k, c]) => `<option value="${k}" ${s.cloakIcon === k ? "selected" : ""}>${c.label}</option>`).join("")}</select></label>
       <label>Custom title<input id="setCloakTitle" maxlength="80" value="${esc(s.cloakTitle)}" placeholder="Overrides the preset title"></label>
       <label class="switch"><span>Anti-close<small>Asks "Are you sure you want to leave?" before the tab can be closed or reloaded.</small></span><input type="checkbox" id="setAntiClose" ${s.antiClose !== false ? "checked" : ""}></label>
-      <label class="switch"><span>Skip cutscenes<small>Pack openings skip the Chroma, Secret, Forbidden and Omega cutscenes and just show the item. The announcement banner still appears.</small></span><input type="checkbox" id="setSkipCut" ${s.skipCutscenes ? "checked" : ""}></label>
+      <label class="switch"><span>Skip all cutscenes<small>Pack openings never play a cutscene, just show the item. The announcement banner still appears.</small></span><input type="checkbox" id="setSkipCut" ${s.skipCutscenes ? "checked" : ""}></label>
+      <p class="note">Or choose which ones to skip and which to keep:</p>
+      <label class="switch"><span>Skip Chroma cutscenes</span><input type="checkbox" data-skip="skipChroma" ${s.skipChroma ? "checked" : ""}></label>
+      <label class="switch"><span>Skip Secret cutscenes</span><input type="checkbox" data-skip="skipSecret" ${s.skipSecret ? "checked" : ""}></label>
+      <label class="switch"><span>Skip Forbidden and Omega cutscenes</span><input type="checkbox" data-skip="skipHigh" ${s.skipHigh ? "checked" : ""}></label>
+      <label class="switch"><span>Skip Apex cutscenes<small>The super-limited Halloween and Fall items.</small></span><input type="checkbox" data-skip="skipApex" ${s.skipApex ? "checked" : ""}></label>
       <button class="btn" id="blankBtn">Open in an about:blank window</button></div>
     <div class="card glass"><h3>About Artemis <span class="beta-badge sm">BETA</span></h3><p class="note">Artemis is in beta. Things can break or change while it is being built. The proxy, Tube and the Cloud Browser are the most likely to act up.</p><div class="inline"><button class="btn" id="replayTour">Replay the welcome tour</button><button class="btn" id="viewRules">Read the rules</button></div></div>
     <div class="card glass"><h3>Panic key</h3><label>Key (press twice quickly)<input id="setPanicKey" maxlength="10" value="${esc(s.panicKey)}"></label><label>Jump to<input id="setPanicUrl" value="${esc(s.panicUrl)}"></label></div>
@@ -135,6 +140,7 @@ export function buildSettings() {
   $("#setEngine").onchange = (e) => saveSettings({ engine: e.target.value });
   $("#setCloak").onchange = (e) => { saveSettings({ cloakIcon: e.target.value, cloakTitle: "" }); $("#setCloakTitle").value = ""; };
   $("#setSkipCut").onchange = (e) => saveSettings({ skipCutscenes: e.target.checked });
+  document.querySelectorAll("[data-skip]").forEach((el) => { el.onchange = () => saveSettings({ [el.dataset.skip]: el.checked }); });
   $("#setAntiClose").onchange = (e) => saveSettings({ antiClose: e.target.checked });
   $("#setCloakTitle").oninput = (e) => saveSettings({ cloakTitle: e.target.value });
   $("#setPanicKey").oninput = (e) => saveSettings({ panicKey: e.target.value });

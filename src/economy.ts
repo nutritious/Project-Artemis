@@ -23,8 +23,8 @@ export function announceChroma(u: User, items: { type: string; id: string; name:
   for (const it of items) if (it.rarity === "chroma") broadcast({ t: "chroma", user: u.username, item: { type: it.type, id: it.id, name: it.name } });
 }
 /** Global banner when anyone pulls a Secret. It says who, never what. */
-export function announceSecret(u: User, items: { rarity: string }[]) {
-  for (const it of items) if (isSecretTier(it.rarity)) broadcast({ t: "secret", user: u.username, tier: it.rarity });
+export function announceSecret(u: User, items: { rarity: string }[], season?: string) {
+  for (const it of items) if (isSecretTier(it.rarity)) broadcast({ t: "secret", user: u.username, tier: it.rarity, ...(it.rarity === "apex" ? { season } : {}) });
 }
 export function spinWheel(u: User) {
   const g = u.game, now = Date.now();
@@ -98,7 +98,7 @@ export function openPack(u: User, packId: string, free: boolean, n = 1) {
     if (!free && rand() < up.dbl * 0.01) { take(rollPack(rolled, u.inv, rand, up.luck), true); doubles++; }
   }
   u.game.stats.packs = (u.game.stats.packs ?? 0) + n + doubles;
-  announceChroma(u, items); announceSecret(u, items);
+  announceChroma(u, items); announceSecret(u, items, rolled.only);
   stat(u, "chroma", items.filter((i) => i.rarity === "chroma").length);
   saveDb(); push(u);
   return { items, coins: u.coins, freePacks: u.freePacks, inv: u.inv, cashback, doubles, up: upgradeState(u) };

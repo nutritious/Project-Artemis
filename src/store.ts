@@ -1,3 +1,4 @@
+import "./boot.js"; /* must finish first: brings the data back from the cloud copy before the store reads the disk */
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -18,6 +19,7 @@ export interface Settings {
   cloakIcon: string;
   antiClose: boolean;
   skipCutscenes?: boolean;
+  skipChroma?: boolean; skipSecret?: boolean; skipHigh?: boolean; skipApex?: boolean;
   tourSeen?: boolean;
   panicKey: string;
   panicUrl: string;
@@ -123,6 +125,7 @@ export const SEED_UPDATES: UpdateEntry[] = [
   { id: "u37", ts: Date.UTC(2026, 9, 21, 0, 30), by: "Artemis", title: "GIF library fixes", body: "- The GIF library panel is taller and scrolls smoothly up and down, even with hundreds of GIFs, and keeps your place while it refreshes.\n- GIFs that fail to load now retry quietly, and tiles that are truly dead are hidden instead of showing broken boxes.\n- Loading lots of GIFs at once no longer hits the image limit (it was 120 a minute, now 1,500), and bigger GIFs up to 10 MB load." },
   { id: "u38", ts: Date.UTC(2026, 9, 21, 2, 10), by: "Artemis", title: "Cleaner GIFs in chat", body: "- Chat: when a message is just a GIF or picture link, only the picture shows now, not the long link above it. If the picture cannot load, the link comes back.\n- Pictures in chat that fail to load retry quietly twice before giving up." },
   { id: "u39", ts: Date.UTC(2026, 9, 21, 3, 0), by: "Artemis", title: "Artemis is in BETA: Fall Pack, rules and a welcome tour", body: "- Artemis now wears a BETA badge next to the logo. Things are still being built and tested, so some parts may break.\n- New: the limited Fall Pack with fall-themed effects, tags, backgrounds and themes. It leaves the shop on Dec 20.\n- New: a Fall look for the whole site (falling leaves and warm colors) that arrives after Halloween ends. You can turn it off in Settings.\n- New accounts must read the rules and tick the box to agree. The owner can edit the rules in the owner panel.\n- New: a step-by-step welcome tour on first login that shows every feature and what is still in beta (the proxy, Tube, the Cloud Browser, and V2 which might work and might not). Replay it any time from Settings > About Artemis." },
+  { id: "u40", ts: Date.UTC(2026, 9, 21, 20, 50), by: "Artemis", title: "Apex items, skip switches and no more sleeping", body: "- New: every limited season pack now hides one super-limited Apex item, rarer than Chroma, each with its own full cutscene. Halloween Apex is 1 in 800 per item, Fall Apex is 1 in 2,500. They leave with the pack.\n- Settings: you can now skip each kind of cutscene on its own (Chroma, Secret, Forbidden and Omega, Apex) or skip them all.\n- Fixed: the site no longer falls asleep on its own, and your accounts, chat and items are now backed up to the cloud every couple of minutes and come back automatically if the server restarts." },
   { id: "u33", ts: Date.UTC(2026, 9, 20, 21, 45), by: "Artemis", title: "Skip cutscenes", body: "- New: Settings > Tab cloak > Skip cutscenes. Turn it on and pack openings skip the big pull cutscenes and just show your item. The announcement banner still appears." },
   { id: "u26", ts: Date.UTC(2026, 9, 19, 9, 0), by: "Artemis", title: "Home exit node for YouTube", body: "- The owner can connect a home computer as an exit node (Owner console, Safety). While it runs, everyone's browsing leaves from the owner's home internet, which sites like YouTube trust, so the YouTube bot check goes away even though the site itself stays on Render.\n- If the exit node stops, the site checks every 20 seconds and goes back to its own connection by itself.\n- Bans and the blocklist still apply on the exit node." },
   { id: "u25", ts: Date.UTC(2026, 9, 19, 8, 0), by: "Artemis", title: "Direct messages, voice and video calls, and Halloween", body: "- Direct messages: open anyone's profile and tap Message, or use + under Direct messages in Chat. Only the two of you can read them. You can block someone, and bad language is filtered like in channels.\n- Private calls: tap Call or Video in a DM. The other person gets a ringing pop-up and can accept or decline. In a call you can mute, turn your camera on or off, and share your screen. Call lengths and missed calls show up in the DM.\n- Voice channels: the new Voice Lounge is under Voice in Chat. Click it to join, talk, turn on your camera or share your screen with up to 8 people. Staff can add and delete voice channels with the + button.\n- The Halloween Pack is here until Nov 1: 16 limited effects, titles, backdrops and themes you cannot get anywhere else. After Nov 1 it leaves the shop for good, but what you own stays yours.\n- The whole app gets a Halloween look (orange glow, floating bats and pumpkins) until Nov 1. You can turn it off in Settings.\n- The Gulper arena no longer has computer players: it is only real people (and the boss worm during boss hunts).\n- The owner can now remove a title, effect, backdrop or theme from one person, a role or everyone (Owner console, Economy)." },
@@ -160,7 +163,7 @@ export const defaultSettings = (engine: Settings["engine"] = "ddg"): Settings =>
   cloakTitle: "",
   cloakIcon: "none",
   antiClose: true,
-  skipCutscenes: false,
+  skipCutscenes: false, skipChroma: false, skipSecret: false, skipHigh: false, skipApex: false,
   tourSeen: false,
   panicKey: "`",
   panicUrl: "https://en.wikipedia.org/",

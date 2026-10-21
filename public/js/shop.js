@@ -1,6 +1,6 @@
 /* Packs: loot crates and theme packs, a pack-opening reveal, and your collection (equip effects, titles and themes). */
 import { $, $$, api, esc, on, state, titleChip, toast, rarityColor, overlay, promptBox } from "./util.js";
-import { hasPass, isSecretTier, UPGRADES, upCost, speedMult, noUps, packOpen, packContents, EFFECTS, TAGS, THEMES, BGS, RARITY, PACKS, WHEEL, WHEEL_MS, DAILY_CAP, effectMap, themeMap, tagMap, bgMap } from "./cosmetics.js";
+import { APEX_CHANCE, hasPass, isSecretTier, UPGRADES, upCost, speedMult, noUps, packOpen, packContents, EFFECTS, TAGS, THEMES, BGS, RARITY, PACKS, WHEEL, WHEEL_MS, DAILY_CAP, effectMap, themeMap, tagMap, bgMap } from "./cosmetics.js";
 import { saveSettings } from "./settings.js";
 import { playChroma } from "./chroma.js";
 import { playSecret } from "./secret.js";
@@ -16,7 +16,7 @@ function blip(freq, dur = 0.18, type = "sine", vol = 0.09, when = 0) {
   if (state.me?.settings?.chatSound === false) return;
   try { ac ??= new (window.AudioContext || window.webkitAudioContext)(); const t = ac.currentTime + when, o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.value = freq; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + 0.05); } catch { /* silent */ }
 }
-const REVEAL = { common: [440], rare: [523, 659], epic: [523, 659, 784], legendary: [523, 659, 784, 1047, 1319], limited: [659, 880, 1175], chroma: [523, 659, 784, 1047, 1319, 1568, 2093], secret: [110, 73, 55] };
+const REVEAL = { common: [440], rare: [523, 659], epic: [523, 659, 784], legendary: [523, 659, 784, 1047, 1319], limited: [659, 880, 1175], chroma: [523, 659, 784, 1047, 1319, 1568, 2093], secret: [110, 73, 55], apex: [392, 523, 659, 784, 988, 1319] };
 const sfxReveal = (r) => (REVEAL[r] ?? REVEAL.common).forEach((f, i) => blip(f, 0.4, "triangle", 0.1, i * 0.09));
 
 /* ---------- item preview helpers ---------- */
@@ -140,10 +140,11 @@ async function onClick(e) {
 }
 
 /* ---------- Instant Open pass: no ceremony, just the results ---------- */
-const noCuts = () => !!state.me?.settings?.skipCutscenes;
+/* each kind of cutscene can be skipped on its own; "skip all" covers every kind */
+const cutOff = (r) => { const s = state.me?.settings ?? {}; return !!(s.skipCutscenes || (r === "chroma" && s.skipChroma) || (r === "secret" && s.skipSecret) || ((r === "forbidden" || r === "omega") && s.skipHigh) || (r === "apex" && s.skipApex)); };
 async function instant(pack, items) {
-  for (const it of items) { if (noCuts()) break; const info = itemInfo(it.type, it.id) ?? { name: it.name }; if (it.rarity === "chroma") await playChroma({ name: info.name, type: it.type, id: it.id }); if (isSecretTier(it.rarity)) await playSecret({ name: info.name, type: it.type, id: it.id, rarity: it.rarity }); }
-  const best = ["omega", "forbidden", "secret", "chroma", "limited", "legendary", "epic", "rare", "common"].find((r) => items.some((i) => i.rarity === r)) ?? "common"; sfxReveal(best);
+  for (const it of items) { const info = itemInfo(it.type, it.id) ?? { name: it.name }; if (it.rarity === "chroma" && !cutOff("chroma")) await playChroma({ name: info.name, type: it.type, id: it.id }); if (isSecretTier(it.rarity) && !cutOff(it.rarity)) await playSecret({ name: info.name, type: it.type, id: it.id, rarity: it.rarity }); }
+  const best = ["apex", "omega", "forbidden", "secret", "chroma", "limited", "legendary", "epic", "rare", "common"].find((r) => items.some((i) => i.rarity === r)) ?? "common"; sfxReveal(best);
   return new Promise((resolve) => {
     const o = overlay(`<div class="inst glass" style="--pc:${pack.color}"><h3>${esc(pack.name)} · ${items.length} item${items.length === 1 ? "" : "s"}</h3>
       <div class="inst-grid">${items.map((it) => { const info = itemInfo(it.type, it.id) ?? { name: it.name }; return `<div class="inst-it ${it.rarity}" style="--rc:${rarityColor(it.rarity)}"><b>${esc(info.name)}</b><small>${esc(RARITY[it.rarity]?.name ?? "")}</small>${it.dupe ? `<em class="dupe">+${it.refund}</em>` : `<em class="new">NEW</em>`}${it.bonus ? `<i title="Double Roll">🎲</i>` : ""}</div>`; }).join("")}</div>
@@ -165,13 +166,13 @@ function reveal(pack, items) {
     const showNext = async () => {
       if (shown >= items.length) { done.classList.remove("hidden"); hint.textContent = "Added to your collection"; return; }
       const it = items[shown++], info = itemInfo(it.type, it.id) ?? { name: it.name, rarity: it.rarity };
-      if (it.rarity === "chroma" && !skipping && !noCuts()) await playChroma({ name: info.name, type: it.type, id: it.id });
-      if (isSecretTier(it.rarity) && !skipping && !noCuts()) await playSecret({ name: info.name, type: it.type, id: it.id, rarity: it.rarity });
+      if (it.rarity === "chroma" && !skipping && !cutOff("chroma")) await playChroma({ name: info.name, type: it.type, id: it.id });
+      if (isSecretTier(it.rarity) && !skipping && !cutOff(it.rarity)) await playSecret({ name: info.name, type: it.type, id: it.id, rarity: it.rarity });
       const el = document.createElement("div"); el.className = `rc ${it.rarity}`; el.style.setProperty("--rc", rarityColor(it.rarity));
       el.innerHTML = `<div class="rc-in"><div class="rc-front">?</div><div class="rc-back"><small>${esc(it.type === "tag" ? "Title" : it.type === "effect" ? "Profile effect" : it.type === "bg" ? "Backdrop" : "Theme")}</small><div class="cvis">${itemVisual(it.type, it.id)}</div><b>${esc(info.name)}</b><span class="rar">${esc(RARITY[it.rarity]?.name ?? "")}</span>${it.dupe ? `<em class="dupe">Duplicate · +${it.refund} coins</em>` : `<em class="new">NEW</em>`}</div></div>`;
       cards.appendChild(el);
       requestAnimationFrame(() => requestAnimationFrame(() => { el.classList.add("flip"); sfxReveal(it.rarity); if (["epic", "legendary", "limited"].includes(it.rarity)) stage.classList.add("flash"), setTimeout(() => stage.classList.remove("flash"), 500); if (it.rarity === "chroma") { stage.classList.add("chromaflash"); setTimeout(() => stage.classList.remove("chromaflash"), 1200); } }));
-      setTimeout(showNext, skipping ? 0 : wait(noCuts() ? 900 : isSecretTier(it.rarity) ? 3000 : it.rarity === "chroma" ? 2200 : it.rarity === "legendary" ? 1500 : 800));
+      setTimeout(showNext, skipping ? 0 : wait(cutOff(it.rarity) ? 900 : isSecretTier(it.rarity) ? 3000 : it.rarity === "chroma" ? 2200 : it.rarity === "legendary" ? 1500 : 800));
     };
     const open = () => { if (opened) return; opened = true; hint.textContent = ""; box.classList.add("pop"); [180, 240, 300].forEach((f, i) => blip(f, 0.12, "square", 0.05, i * 0.07)); blip(120, 0.5, "sawtooth", 0.06, 0.25); setTimeout(() => { box.classList.add("gone"); showNext(); }, 650); };
     stage.addEventListener("click", (ev) => { if (!ev.target.closest(".ps-done")) open(); });
@@ -229,6 +230,7 @@ function peek(pack) {
   const o = overlay(`<div class="peek glass" style="--pc:${pack.color}"><button class="prof-x" data-x aria-label="Close">×</button>
     <h3>${esc(pack.name)}</h3><p class="dim">${esc(pack.desc)} · ${pack.count} items · ◎ ${pack.cost}</p>
     <div class="pk-chroma"><b>🌈 Chroma in this pack</b><span>${chromaCount} Chroma item${chromaCount === 1 ? "" : "s"} can drop. About ${pct(odds.chroma)} per item, ${pct(chromaPack)} that a pack has one.${pack.chromaBoost ? " This vault is built for Chroma hunting." : ""}${pack.guarantee ? ` Guaranteed ${esc(pack.guarantee)} or better in one slot.` : ""}</span></div>
+    ${pack.only && APEX_CHANCE[pack.only] ? `<div class="pk-chroma"><b>👑 Hidden Apex</b><span>One super-limited item is hidden in this pack, with its own cutscene. 1 in ${Math.round(1 / APEX_CHANCE[pack.only]).toLocaleString("en-US")} per item. It leaves with the pack.</span></div>` : ""}
     <div class="pk-body">${sections}</div></div>`, { center: true });
   const close = () => o.remove();
   o.querySelector("[data-x]").onclick = close; o.addEventListener("click", async (e) => {
