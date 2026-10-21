@@ -314,7 +314,7 @@ function renderMsgs(scroll = "keep") {
       <div class="body">
         ${m.replyTo ? `<div class="reply-ref" data-jump="${esc(m.replyTo.id)}">↪ <b>${esc(m.replyTo.username)}</b> ${esc(m.replyTo.text)}</div>` : ""}
         ${first ? `<div class="meta"><button class="who" data-profile="${esc(m.userId)}" style="${nameColor(state.people.get(m.userId)) || `color:hsl(${hue(m.username)} 70% 72%)`}">${esc(m.username)}</button>${m.userId === "bot" ? `<span class="chip bot">BOT</span>` : roleTags(state.people.get(m.userId))}${state.people.get(m.userId)?.trusted && !roleTags(state.people.get(m.userId)).includes("OWNER") ? `<span class="chip trusted" title="Trusted member">✓</span>` : ""}<span class="when">${timeStr(m.ts)}</span></div>` : ""}
-        <div class="txt">${fmtText(m.text)}${m.edited ? ` <span class="edited">(edited)</span>` : ""}</div>
+        <div class="txt${/^https?:\/\/\S+\.(png|jpe?g|gif|webp|avif)(\?\S*)?$/i.test(m.text.trim()) ? " linkhid" : ""}">${fmtText(m.text)}${m.edited ? ` <span class="edited">(edited)</span>` : ""}</div>
         ${embeds(m.text)}
         ${reacts ? `<div class="reacts">${reacts}</div>` : ""}
       </div>

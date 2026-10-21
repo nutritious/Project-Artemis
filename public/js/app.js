@@ -21,7 +21,14 @@ import { buildUpdates, checkUpdatesDot, onUpdatesShown } from "./updates.js";
 import { applySettings, buildSettings, panicCheck, saveSettings, THEMES } from "./settings.js";
 
 /* broken images hide themselves (inline handlers are blocked by CSP) */
-document.addEventListener("error", (e) => { const t = e.target; if (t?.tagName === "IMG" && t.hasAttribute("data-hide")) t.remove(); }, true);
+document.addEventListener("error", (e) => {
+  const t = e.target; if (t?.tagName !== "IMG" || !t.hasAttribute("data-hide")) return;
+  /* chat pictures get two quiet retries (the server may be busy) before they give up; if one fails for good, a hidden link shows again */
+  const n = +(t.dataset.try || 0);
+  if (t.closest(".embed") && n < 2) { t.dataset.try = String(n + 1); const base = t.getAttribute("src").replace(/&r=\d+$/, ""); setTimeout(() => { if (t.isConnected) t.src = base + "&r=" + (n + 1); }, 700 * (n + 1) + Math.random() * 500); return; }
+  t.closest(".body")?.querySelector(".linkhid")?.classList.remove("linkhid");
+  t.remove();
+}, true);
 
 /* ------------------------------ ambient starfield: 3 parallax layers, twinkle, shooting stars ------------------------------ */
 (function ambient() {

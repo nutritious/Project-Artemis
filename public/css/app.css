@@ -1119,3 +1119,5 @@ body:has(.cb-view) #liveBar { display: none !important; } /* the coin/spin chips
 .gp-grid { min-height: 220px; overscroll-behavior: contain; scroll-behavior: smooth; }
 .gp-add textarea { height: 38px; } .gp-add textarea:focus { height: 90px; }
 .gp-it.gp-dead { display: none; }
+/* a message that is only a picture link shows just the picture; the link comes back if the picture cannot load */
+.txt.linkhid { display: none; }
