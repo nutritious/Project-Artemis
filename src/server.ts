@@ -448,10 +448,14 @@ api.get("/owner/economy", auth, panelUp, (_req, res) => res.json({
   users: db.data.users.filter((u) => !u.banned).map((u) => ({ id: u.id, username: u.username, role: u.role, roleId: u.roleId ?? null, coins: u.coins, xp: u.game.xp, rank: rankIndex(u.game.xp), freePacks: u.freePacks, equip: u.equip, effects: u.inv.effects.length, tags: u.inv.tags.length, themes: u.inv.themes.length })),
   customTags: db.data.customTags, event: publicEvent(), party: partyState(), boosts: activeBoosts(), totalCoins: db.data.users.reduce((n, u) => n + u.coins, 0),
 }));
+const SELF_COIN_MAX = 100_000;
+/** Nobody can hand themselves more than 100,000 coins at a time, whether they pick themselves or a group that includes them. */
+const selfCoinCap = (u: User, amount: number, t: { type: string; value?: string }) => amount > SELF_COIN_MAX && targets(t as any).some((x) => x.id === u.id);
 api.post("/owner/coins", auth, panelUp, (req, res) => {
   const amount = Math.round(Number(req.body?.amount));
   if (!Number.isFinite(amount) || amount === 0 || Math.abs(amount) > 1e12) return void res.status(400).json({ error: "Enter an amount, positive or negative (up to a trillion)" });
-  const n = giveCoinsTo(me(req).username, amount, parseTarget(req.body?.target), String(req.body?.reason ?? "").slice(0, 60));
+  const tg = parseTarget(req.body?.target); if (selfCoinCap(me(req), amount, tg)) return void res.status(400).json({ error: "You can only give yourself up to 100,000 coins at a time" });
+  const n = giveCoinsTo(me(req).username, amount, tg, String(req.body?.reason ?? "").slice(0, 60));
   broadcastMembers(); res.json({ ok: true, reached: n });
 });
 api.post("/admin/coins", auth, (req, res) => {
@@ -460,6 +464,7 @@ api.post("/admin/coins", auth, (req, res) => {
   if (!Number.isFinite(amount) || amount === 0 || Math.abs(amount) > 1e12) return void res.status(400).json({ error: "Enter an amount, positive or negative (up to a trillion)" });
   const name = String(req.body?.username ?? "").trim().toLowerCase(), t = db.data.users.find((u) => u.username.toLowerCase() === name && !u.banned);
   if (!t) return void res.status(404).json({ error: "No active player with that callsign" });
+  if (selfCoinCap(me(req), amount, { type: "user", value: t.id })) return void res.status(400).json({ error: "You can only give yourself up to 100,000 coins at a time" });
   giveCoinsTo(me(req).username, amount, { type: "user", value: t.id }, String(req.body?.reason ?? "").slice(0, 60));
   broadcastMembers(); res.json({ ok: true, username: t.username, coins: t.coins });
 });
