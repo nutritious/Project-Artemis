@@ -19,7 +19,7 @@ export const RANKS = [
   { name: "Infinity", xp: 90000, color: "#fff0b8" },
   { name: "Touch Grass", xp: 100000, color: "#58d35a" },
 ];
-const LEGEND = 6;
+const LEGEND = RANKS.length - 1; /* the announcement is only for the top rank, Touch Grass */
 export const MISSIONS = [
   { id: "browse", title: "Explore the web", hint: "Open 5 pages in the browser", goal: 5, xp: 40, coins: 15, cap: 25, per: 1 },
   { id: "chat", title: "Radio check", hint: "Send 3 chat messages", goal: 3, xp: 30, coins: 10, cap: 25, per: 2 },

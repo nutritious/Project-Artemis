@@ -55,7 +55,7 @@ onLegend((u) => {
   broadcast({ t: "legend", user: { id: u.id, username: u.username, fx: u.equip.effect, tag: u.equip.tag }, ts: Date.now() });
   // The banner only lasts a few seconds and only reaches people who are online, so it also stays in the chat for everyone.
   const ch = db.data.channels.find((c) => c.id === "general") ?? db.data.channels[0];
-  if (ch) { const m = botPost(ch.id, `✦ ${u.username} just reached LEGEND, the top rank in Project Artemis! Say congrats! ✦`); saveDb(); broadcastMsg(m); }
+  if (ch) { const m = botPost(ch.id, `✦ ${u.username} just reached TOUCH GRASS, the top rank in Project Artemis! Say congrats! ✦`); saveDb(); broadcastMsg(m); }
 });
 /** Start a live event for everyone online. They each earn a little XP for showing up. */
 export function broadcastEvent(ev: { kind: string; title: string; sub: string; by: string }) {

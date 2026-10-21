@@ -12,12 +12,12 @@ const chord = (fs, d = 0.7) => fs.forEach((f, i) => blip(f, d, "triangle", 0.1, 
 const layer = () => { let l = $("#fxLayer"); if (!l) { l = document.createElement("div"); l.id = "fxLayer"; document.body.appendChild(l); } return l; };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** A gold banner slides across the top for everyone online when somebody reaches Legend. */
+/** A gold banner slides across the top for everyone online when somebody reaches the top rank, Touch Grass. */
 function legendBanner(m) {
   const u = m.user ?? {}, mine = u.id === state.me?.id;
   const el = document.createElement("div");
   el.className = "legend-banner";
-  el.innerHTML = `<span class="lg-star">✦</span><div><b>${mine ? "You have" : esc(u.username) + " has"} reached LEGEND</b><small>${mine ? "The whole crew just saw that." : "A new Legend of Project Artemis. Say congrats in chat!"}</small></div><span class="lg-star">✦</span>`;
+  el.innerHTML = `<span class="lg-star">✦</span><div><b>${mine ? "You have" : esc(u.username) + " has"} reached TOUCH GRASS</b><small>${mine ? "The whole crew just saw that." : "The top rank in Project Artemis. Say congrats in chat!"}</small></div><span class="lg-star">✦</span>`;
   document.body.appendChild(el);
   chord([523.25, 659.25, 783.99, 1046.5], 0.9);
   setTimeout(() => el.classList.add("out"), 12000);
