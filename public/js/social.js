@@ -40,7 +40,7 @@ export function buildSocial() {
     <div class="cbox dmbox"><textarea id="dmInput" rows="1" maxlength="2000" placeholder="Message…"></textarea><button class="btn" id="dmSend" type="button">Send</button></div>`;
   chat.querySelector("section.main").after(main);
   const dock = document.createElement("div"); dock.id = "callDock"; dock.className = "calldock glass hidden";
-  dock.innerHTML = `<div class="cd-head"><b id="cdTitle"></b><span id="cdSub"></span><button type="button" class="icon-btn" data-cd="big" title="Make bigger" aria-label="Make bigger">⤢</button></div>
+  dock.innerHTML = `<div class="cd-head"><b id="cdTitle"></b><span id="cdSub"></span><button type="button" class="icon-btn" data-cd="smaller" title="Make the call window smaller" aria-label="Smaller">−</button><button type="button" class="icon-btn" data-cd="bigger" title="Make the call window bigger" aria-label="Bigger">+</button><button type="button" class="icon-btn" data-cd="big" title="Fill the middle of the screen" aria-label="Fill the middle">⤢</button></div><div class="cd-resize" title="Drag to resize"></div>
     <div class="cd-grid" id="cdGrid"></div>
     <div class="cd-bar"><button type="button" data-cd="mute" title="Mute microphone">🎤<span>Mute</span></button><button type="button" data-cd="cam" title="Camera">📷<span>Camera</span></button><button type="button" data-cd="screen" title="Share your screen">🖥<span>Share screen</span></button><button type="button" data-cd="leave" class="leave">⏻<span>Leave</span></button></div>`;
   document.body.append(dock);
@@ -51,6 +51,14 @@ export function buildSocial() {
   $("#dmSend").onclick = sendDm;
   $("#dmInput").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendDm(); } });
   dock.addEventListener("click", onDockClick);
+  dock.addEventListener("dblclick", (e) => { const t = e.target.closest(".ctile"); if (t) goFull(t); });
+  /* drag the top-left corner to size the call window; the buttons step it smaller and bigger; the size is remembered */
+  try { const w = +localStorage.getItem("artemis.cdw"); if (w >= 240) setDockW(w); } catch { /* no storage */ }
+  dock.querySelector(".cd-resize").addEventListener("pointerdown", (e) => {
+    e.preventDefault(); const x0 = e.clientX, w0 = dock.getBoundingClientRect().width; const h = e.currentTarget; h.setPointerCapture(e.pointerId);
+    const mv = (ev) => setDockW(w0 + (x0 - ev.clientX)), up = () => { h.removeEventListener("pointermove", mv); h.removeEventListener("pointerup", up); };
+    h.addEventListener("pointermove", mv); h.addEventListener("pointerup", up);
+  });
   ring.addEventListener("click", onRingClick);
   /* leaving to a channel closes the DM view */
   chat.addEventListener("click", (e) => { if (e.target.closest("[data-chan]")) closeDm(); }, true);
@@ -342,7 +350,7 @@ function showDock() { $("#callDock").classList.remove("hidden"); paintDock(); }
 function addSelfVideo() { paintDock(); }
 function addTile(peer) {
   const el = document.createElement("div"); el.className = "ctile"; el.dataset.cid = peer.cid;
-  el.innerHTML = `<video autoplay playsinline></video><div class="ct-av">${avatar(peer.name, true, false, true)}</div><span class="ct-n">${esc(peer.name)}</span><i class="ct-m" title="Muted">🔇</i>`;
+  el.innerHTML = `<video autoplay playsinline></video><div class="ct-av">${avatar(peer.name, true, false, true)}</div><span class="ct-n">${esc(peer.name)}</span><i class="ct-m" title="Muted">🔇</i><button type="button" class="ct-fs" data-fs title="Full screen (or double-click)" aria-label="Full screen">⛶</button>`;
   $("#cdGrid").append(el); tiles.set(peer.cid, { el, video: el.querySelector("video") });
   if (peer.stream) tiles.get(peer.cid).video.srcObject = peer.stream;
   paintTile(peer);
@@ -358,7 +366,7 @@ function paintDock() {
   $("#cdSub").textContent = R.peers.size ? `${R.peers.size + 1} here` : R.kind === "call" ? "Connecting…" : "You're the first one here";
   /* my own tile */
   let me_ = tiles.get("me");
-  if (!me_) { const el = document.createElement("div"); el.className = "ctile self"; el.innerHTML = `<video autoplay playsinline muted></video><div class="ct-av">${avatar(me().username, true, false, true)}</div><span class="ct-n">You</span><i class="ct-m" title="Muted">🔇</i>`; $("#cdGrid").prepend(el); tiles.set("me", (me_ = { el, video: el.querySelector("video") })); }
+  if (!me_) { const el = document.createElement("div"); el.className = "ctile self"; el.innerHTML = `<video autoplay playsinline muted></video><div class="ct-av">${avatar(me().username, true, false, true)}</div><span class="ct-n">You</span><i class="ct-m" title="Muted">🔇</i><button type="button" class="ct-fs" data-fs title="Full screen (or double-click)" aria-label="Full screen">⛶</button>`; $("#cdGrid").prepend(el); tiles.set("me", (me_ = { el, video: el.querySelector("video") })); }
   const track = R.screen ?? R.cam;
   if (track) { const cur = me_.video.srcObject; if (!cur || cur.getVideoTracks()[0] !== track) me_.video.srcObject = new MediaStream([track]); } else me_.video.srcObject = null;
   me_.el.classList.toggle("has-video", !!track); me_.el.classList.toggle("screen", !!R.screen); me_.el.classList.toggle("muted", R.muted);
@@ -367,13 +375,22 @@ function paintDock() {
   set("mute", R.muted, R.muted ? "Unmute" : "Mute"); set("cam", !!R.cam, R.cam ? "Camera off" : "Camera"); set("screen", !!R.screen, R.screen ? "Stop sharing" : "Share screen");
   dock.classList.toggle("big", R.big);
 }
+function setDockW(w) {
+  const dock = $("#callDock"); if (!dock) return; w = Math.round(Math.max(240, Math.min(innerWidth - 24, w)));
+  dock.style.width = w + "px"; dock.classList.remove("big"); if (R) R.big = false;
+  try { localStorage.setItem("artemis.cdw", String(w)); } catch { /* no storage */ }
+}
+function goFull(tile) { try { if (document.fullscreenElement) document.exitFullscreen(); else (tile.requestFullscreen?.() ?? Promise.reject()).catch?.(() => toast("Your browser would not go full screen.", true)); } catch { toast("Your browser would not go full screen.", true); } }
 function onDockClick(e) {
-  const b = e.target.closest("[data-cd]"); if (!b || !R) return;
+  const fs = e.target.closest("[data-fs]"); if (fs) return goFull(fs.closest(".ctile"));
+  const b = e.target.closest("[data-cd]"); if (!b) return;
   const a = b.dataset.cd;
+  if (a === "smaller" || a === "bigger") return setDockW($("#callDock").getBoundingClientRect().width * (a === "bigger" ? 1.25 : 0.8));
+  if (!R) return;
   if (a === "mute") { R.muted = !R.muted; R.local.getAudioTracks().forEach((t) => (t.enabled = !R.muted)); sendState(); paintDock(); }
   else if (a === "cam") toggleCam();
   else if (a === "screen") toggleScreen();
-  else if (a === "big") { R.big = !R.big; paintDock(); }
+  else if (a === "big") { R.big = !R.big; if (R.big) $("#callDock").style.width = ""; paintDock(); }
   else if (a === "leave") leaveRoom(true);
 }
 export const inCall = () => !!R;

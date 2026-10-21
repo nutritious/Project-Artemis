@@ -1171,3 +1171,10 @@ body:has(.cb-view) #liveBar { display: none !important; } /* the coin/spin chips
 
 /* member list: role tags sit under the name so long tags never squeeze the name out */
 .member .mtags { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0; min-width: 0; } .member .mtags:empty { display: none; } .member .mt .n { min-width: 0; }
+
+/* call window: resize handle, full-screen tiles */
+.calldock { max-width: calc(100vw - 16px); } .calldock.big { width: min(1100px, calc(100vw - 32px)) !important; }
+.cd-resize { position: absolute; left: 0; top: 0; width: 22px; height: 22px; cursor: nwse-resize; touch-action: none; border-radius: 12px 0 8px 0; }
+.cd-resize::before { content: ""; position: absolute; left: 5px; top: 5px; width: 10px; height: 10px; border-left: 2px solid var(--faint); border-top: 2px solid var(--faint); border-radius: 3px 0 0 0; opacity: .7; } .cd-resize:hover::before { border-color: var(--accent); opacity: 1; }
+.ct-fs { position: absolute; right: 6px; top: 6px; z-index: 3; display: none; width: 28px; height: 28px; border-radius: 8px; border: 0; background: rgba(0, 0, 0, .55); color: #fff; font-size: 15px; cursor: pointer; place-items: center; } .ctile.has-video .ct-fs { display: grid; } .ct-fs:hover { background: rgba(0, 0, 0, .8); }
+.ctile:fullscreen { aspect-ratio: auto; border-radius: 0; border: 0; background: #000; } .ctile:fullscreen video { object-fit: contain !important; } .ctile:fullscreen .ct-n { font-size: 15px; left: 16px; bottom: 14px; }
