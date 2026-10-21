@@ -68,5 +68,6 @@ export function startCloud(flush: () => void) {
   if (!TOKEN) { if (process.env.RENDER) console.warn("  ⚠ GITHUB_TOKEN is not set: data is lost when Render restarts."); return; }
   setTimeout(() => { flush(); void pushNow(true); }, 20000).unref();
   setInterval(() => { flush(); void pushNow(); }, 2 * 60 * 1000).unref();
-  process.on("SIGTERM", () => { flush(); void pushNow(); });
+  /* when Render stops the app for an update or restart, save one last time before exiting */
+  (globalThis as any).__artemisFinal = async () => { flush(); await pushNow(true); };
 }

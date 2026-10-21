@@ -132,6 +132,7 @@ export const SEED_UPDATES: UpdateEntry[] = [
   { id: "u43", ts: Date.UTC(2026, 9, 21, 22, 40), by: "Artemis", title: "Owner coin gifts", body: "- The 100,000-coin limit on giving yourself coins now only applies to admins and co-owners. The owner can give any amount." },
   { id: "u44", ts: Date.UTC(2026, 9, 21, 22, 50), by: "Artemis", title: "Rank announcements", body: "- The big announcement banner and chat post now only happen when someone reaches the top rank, Touch Grass, not Legend." },
   { id: "u45", ts: Date.UTC(2026, 9, 21, 23, 10), by: "Artemis", title: "Full screen and a resizable call window", body: "- Calls: every video or shared screen now has a full screen button in its corner (or double-click it). Press Esc to come back.\n- Calls: the call window can be made smaller or bigger with the − and + buttons, or by dragging its top-left corner. It remembers the size you pick." },
+  { id: "u46", ts: Date.UTC(2026, 9, 21, 23, 40), by: "Artemis", title: "Trust time survives restarts", body: "- Fixed: proxy hours, message counts and everything else that earns Trusted are now saved to the cloud and restored after an update or restart, with one last save as the server shuts down, so nobody loses their progress." },
   { id: "u33", ts: Date.UTC(2026, 9, 20, 21, 45), by: "Artemis", title: "Skip cutscenes", body: "- New: Settings > Tab cloak > Skip cutscenes. Turn it on and pack openings skip the big pull cutscenes and just show your item. The announcement banner still appears." },
   { id: "u26", ts: Date.UTC(2026, 9, 19, 9, 0), by: "Artemis", title: "Home exit node for YouTube", body: "- The owner can connect a home computer as an exit node (Owner console, Safety). While it runs, everyone's browsing leaves from the owner's home internet, which sites like YouTube trust, so the YouTube bot check goes away even though the site itself stays on Render.\n- If the exit node stops, the site checks every 20 seconds and goes back to its own connection by itself.\n- Bans and the blocklist still apply on the exit node." },
   { id: "u25", ts: Date.UTC(2026, 9, 19, 8, 0), by: "Artemis", title: "Direct messages, voice and video calls, and Halloween", body: "- Direct messages: open anyone's profile and tap Message, or use + under Direct messages in Chat. Only the two of you can read them. You can block someone, and bad language is filtered like in channels.\n- Private calls: tap Call or Video in a DM. The other person gets a ringing pop-up and can accept or decline. In a call you can mute, turn your camera on or off, and share your screen. Call lengths and missed calls show up in the DM.\n- Voice channels: the new Voice Lounge is under Voice in Chat. Click it to join, talk, turn on your camera or share your screen with up to 8 people. Staff can add and delete voice channels with the + button.\n- The Halloween Pack is here until Nov 1: 16 limited effects, titles, backdrops and themes you cannot get anywhere else. After Nov 1 it leaves the shop for good, but what you own stays yours.\n- The whole app gets a Halloween look (orange glow, floating bats and pumpkins) until Nov 1. You can turn it off in Settings.\n- The Gulper arena no longer has computer players: it is only real people (and the boss worm during boss hunts).\n- The owner can now remove a title, effect, backdrop or theme from one person, a role or everyone (Owner console, Economy)." },
@@ -203,7 +204,8 @@ class JsonStore<T extends object> {
     const backup = () => { try { if (!fs.existsSync(this.file)) return; fs.mkdirSync(bdir, { recursive: true }); this.flush(); fs.copyFileSync(this.file, path.join(bdir, `${base}-${new Date().toISOString().replace(/[:.]/g, "-")}.json`)); for (const old of backups().slice(12)) fs.rmSync(path.join(bdir, old), { force: true }); } catch { /* ignore */ } };
     backup(); setInterval(backup, 3 * 36e5).unref();
     const bye = () => { try { this.flush(); } catch { /* ignore */ } };
-    process.on("SIGTERM", () => { bye(); process.exit(0); }); process.on("SIGINT", () => { bye(); process.exit(0); }); process.on("beforeExit", bye);
+    const finish = () => { bye(); const f = (globalThis as any).__artemisFinal as (() => Promise<void>) | undefined; if (!f) return process.exit(0); const t = setTimeout(() => process.exit(0), 12000); f().catch(() => {}).finally(() => { clearTimeout(t); process.exit(0); }); };
+    process.on("SIGTERM", finish); process.on("SIGINT", finish); process.on("beforeExit", bye);
   }
   save() {
     if (this.timer) return;
@@ -330,9 +332,4 @@ export function audit(by: string, action: string, detail = "") {
 }
 
 process.on("exit", () => db.flush());
-for (const sig of ["SIGINT", "SIGTERM"] as const) {
-  process.on(sig, () => {
-    db.flush();
-    process.exit(0);
-  });
-}
+/* (SIGINT and SIGTERM are handled in JsonStore: they flush, make one last cloud save, then exit) */
