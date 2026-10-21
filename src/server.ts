@@ -308,25 +308,61 @@ api.post("/gifs/mine", auth, (req, res) => {
 });
 api.delete("/gifs/mine/:id", auth, (req, res) => { const u = me(req); u.gifs = (u.gifs ?? []).filter((g) => g.id !== req.params.id); saveDb(); res.json({ mine: u.gifs }); });
 api.post("/gifs/library", auth, coownerUp, (req, res) => {
-  try { const url = gifUrl(req.body?.url), title = String(req.body?.title ?? "").trim().slice(0, 40); if (db.data.gifs.length >= 400) throw new Error("The library is full (400 GIFs)"); if (db.data.gifs.some((g) => g.url === url)) throw new Error("That GIF is already in the library"); db.data.gifs.unshift({ id: uid(), url, title, by: me(req).username, ts: Date.now() }); saveDb(); logAdmin(req, "gif.add", url.slice(0, 120)); res.json(gifView()); } catch (e: any) { res.status(400).json({ error: e.message }); }
+  try { const url = gifUrl(req.body?.url), title = String(req.body?.title ?? "").trim().slice(0, 40); if (db.data.gifs.length >= 2000) throw new Error("The library is full (2,000 GIFs)"); if (db.data.gifs.some((g) => g.url === url)) throw new Error("That GIF is already in the library"); db.data.gifs.unshift({ id: uid(), url, title, by: me(req).username, ts: Date.now() }); saveDb(); logAdmin(req, "gif.add", url.slice(0, 120)); res.json(gifView()); } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+api.post("/gifs/library/bulk", auth, coownerUp, (req, res) => {
+  const parts = String(req.body?.text ?? "").split(/[\s,]+/).filter(Boolean).slice(0, 1000); let added = 0, skipped = 0;
+  for (const raw of parts) {
+    try { const url = gifUrl(raw); if (db.data.gifs.length >= 2000 || db.data.gifs.some((g) => g.url === url)) { skipped++; continue; } db.data.gifs.unshift({ id: uid(), url, title: "", by: me(req).username, ts: Date.now() }); added++; } catch { skipped++; }
+  }
+  saveDb(); logAdmin(req, "gif.bulk", `${added} added, ${skipped} skipped`); res.json({ ...gifView(), added, skipped });
 });
 api.delete("/gifs/library/:id", auth, coownerUp, (req, res) => { db.data.gifs = db.data.gifs.filter((g) => g.id !== req.params.id); saveDb(); logAdmin(req, "gif.remove", String(req.params.id)); res.json(gifView()); });
+/** Ask Tenor or Giphy (whichever key is set) for GIFs. Family-friendly filters are on. Throws on any failure. */
+async function searchGifs(q: string, limit: number): Promise<{ url: string; preview: string; title: string }[]> {
+  const url = TENOR_API_KEY
+    ? `https://tenor.googleapis.com/v2/${q ? "search" : "featured"}?key=${encodeURIComponent(TENOR_API_KEY)}&client_key=artemis&limit=${limit}&contentfilter=high&media_filter=gif,tinygif${q ? "&q=" + encodeURIComponent(q) : ""}`
+    : `https://api.giphy.com/v1/gifs/${q ? "search" : "trending"}?api_key=${encodeURIComponent(GIPHY_API_KEY)}&limit=${limit}&rating=pg${q ? "&q=" + encodeURIComponent(q) : ""}`;
+  const r = await undiciRequest(url, { method: "GET", dispatcher: safeDispatcher, headers: { accept: "application/json" }, signal: AbortSignal.timeout(8000) });
+  if (r.statusCode !== 200) { await r.body.dump(); throw new Error("status " + r.statusCode); }
+  const j: any = await r.body.json();
+  const gifs = TENOR_API_KEY
+    ? (j.results ?? []).map((x: any) => ({ url: x.media_formats?.gif?.url, preview: x.media_formats?.tinygif?.url ?? x.media_formats?.gif?.url, title: String(x.content_description ?? "").slice(0, 60) }))
+    : (j.data ?? []).map((x: any) => ({ url: x.images?.original?.url?.split("?")[0], preview: x.images?.fixed_width?.url?.split("?")[0], title: String(x.title ?? "").slice(0, 60) }));
+  return gifs.filter((g: any) => typeof g.url === "string" && /^https:\/\//.test(g.url));
+}
 api.get("/gifs/search", auth, async (req, res) => {
   if (!allow(`gifs:${me(req).id}`, 40, 60_000)) return void res.status(429).json({ error: "Slow down a little" });
   if (!TENOR_API_KEY && !GIPHY_API_KEY) return void res.status(501).json({ error: "GIF search is off. The owner can turn it on with a Tenor or Giphy key (TENOR_API_KEY or GIPHY_API_KEY)." });
   const q = String(req.query.q ?? "").trim().slice(0, 60);
+  try { res.json({ gifs: (await searchGifs(q, 24)).slice(0, 24) }); } catch { res.status(502).json({ error: "The GIF service did not answer. Try again in a moment." }); }
+});
+/* Fill the library from the internet: one search per topic, family-friendly filters, skips anything already there. */
+const IMPORT_TOPICS = ["gg", "lol", "W", "L", "wow", "no way", "bruh", "oof", "hype", "lets go", "nice", "celebrate", "dance", "thumbs up", "facepalm", "mind blown", "excited", "sad", "happy", "good morning", "good night", "hello", "bye", "thank you", "sorry", "funny cat", "funny dog", "gaming", "victory", "fail", "shocked", "clapping", "high five", "mic drop", "cool", "awkward", "popcorn", "eye roll", "laughing", "cheers"];
+let gifImporting = false;
+api.post("/gifs/library/import", auth, coownerUp, async (req, res) => {
+  if (!TENOR_API_KEY && !GIPHY_API_KEY) return void res.status(501).json({ error: "Importing needs a Tenor or Giphy key. Set TENOR_API_KEY or GIPHY_API_KEY on the server (see the README), then try again." });
+  if (gifImporting) return void res.status(429).json({ error: "An import is already running" });
+  gifImporting = true;
   try {
-    const url = TENOR_API_KEY
-      ? `https://tenor.googleapis.com/v2/${q ? "search" : "featured"}?key=${encodeURIComponent(TENOR_API_KEY)}&client_key=artemis&limit=24&contentfilter=high&media_filter=gif,tinygif${q ? "&q=" + encodeURIComponent(q) : ""}`
-      : `https://api.giphy.com/v1/gifs/${q ? "search" : "trending"}?api_key=${encodeURIComponent(GIPHY_API_KEY)}&limit=24&rating=pg${q ? "&q=" + encodeURIComponent(q) : ""}`;
-    const r = await undiciRequest(url, { method: "GET", dispatcher: safeDispatcher, headers: { accept: "application/json" }, signal: AbortSignal.timeout(8000) });
-    if (r.statusCode !== 200) { await r.body.dump(); throw new Error("status " + r.statusCode); }
-    const j: any = await r.body.json();
-    const gifs = TENOR_API_KEY
-      ? (j.results ?? []).map((x: any) => ({ url: x.media_formats?.gif?.url, preview: x.media_formats?.tinygif?.url ?? x.media_formats?.gif?.url, title: String(x.content_description ?? "").slice(0, 60) }))
-      : (j.data ?? []).map((x: any) => ({ url: x.images?.original?.url?.split("?")[0], preview: x.images?.fixed_width?.url?.split("?")[0], title: String(x.title ?? "").slice(0, 60) }));
-    res.json({ gifs: gifs.filter((g: any) => typeof g.url === "string" && /^https:\/\//.test(g.url)).slice(0, 24) });
-  } catch { res.status(502).json({ error: "The GIF service did not answer. Try again in a moment." }); }
+    const per = Math.max(5, Math.min(50, Math.round(Number(req.body?.per) || 20)));
+    const extra = String(req.body?.topics ?? "").split(/[\n,]+/).map((x) => x.trim().slice(0, 40)).filter(Boolean).slice(0, 40);
+    const topics = extra.length ? extra : IMPORT_TOPICS; let added = 0, failed = 0;
+    for (const t of topics) {
+      if (db.data.gifs.length >= 2000) break;
+      try {
+        for (const g of await searchGifs(t, per)) {
+          if (db.data.gifs.length >= 2000) break;
+          let url: string; try { url = gifUrl(g.url); } catch { continue; }
+          if (db.data.gifs.some((x) => x.url === url)) continue;
+          db.data.gifs.push({ id: uid(), url, title: (g.title || t).slice(0, 40), by: me(req).username, ts: Date.now() }); added++;
+        }
+      } catch { failed++; }
+    }
+    saveDb(); logAdmin(req, "gif.import", `${added} added from ${topics.length} topics`);
+    if (!added && failed) return void res.status(502).json({ error: "The GIF service did not answer. Check your key and try again." });
+    res.json({ ...gifView(), added, topics: topics.length });
+  } finally { gifImporting = false; }
 });
 api.get("/proxy-token", auth, (req, res) => res.json({ proxyToken: proxyToken(me(req)), proxyOrigin: proxyOriginFor(req), sjOrigin: PROXY_ORIGIN, ...exitInfo(me(req)) }));
 api.get("/cloud-pass", auth, (req, res) => res.json(cloudPass(me(req))));

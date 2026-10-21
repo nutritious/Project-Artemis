@@ -102,4 +102,4 @@ The cloud button in Browse opens a real Chrome or Firefox style browser that run
 ### Optional settings added with Tube and the GIF library
 
 - `ARTEMIS_INVIDIOUS`: comma-separated list of https Invidious servers for the Tube page (the default list is built in; servers come and go).
-- `TENOR_API_KEY` or `GIPHY_API_KEY`: turns on the Search tab in the chat GIF library. Without one, the library still has the server library and each person's Saved GIFs.
+- `TENOR_API_KEY` or `GIPHY_API_KEY`: turns on the Search tab in the chat GIF library. It also adds an "Import lots of GIFs from the internet" button for the owner and co-owners, which fills the server library with about 500 GIFs in one click. Without one, the library still has the server library and each person's Saved GIFs.
