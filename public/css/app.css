@@ -1114,3 +1114,8 @@ body:has(.cb-view) #liveBar { display: none !important; } /* the coin/spin chips
 .secret-banner.mine b { font-size: 11px; letter-spacing: .1em; } .secret-banner.mine small { font-size: 9.5px; display: block; line-height: 1.3; } .secret-banner.mine .sb-i { font-size: 15px; }
 @keyframes sbIn2 { from { opacity: 0; transform: scaleY(.1); filter: brightness(3); } }
 .gp-add textarea { flex: 1; min-width: 0; resize: vertical; font: 12px var(--mono); }
+/* GIF library: taller panel, the grid always keeps room to scroll, and the add boxes stay compact */
+.gifpanel { height: min(680px, 86vh); }
+.gp-grid { min-height: 220px; overscroll-behavior: contain; scroll-behavior: smooth; }
+.gp-add textarea { height: 38px; } .gp-add textarea:focus { height: 90px; }
+.gp-it.gp-dead { display: none; }

@@ -21,11 +21,12 @@ export async function openGifPicker(onPick) {
     return found.map((g) => ({ ...g, id: "", rm: "" }));
   };
   const paint = () => {
-    const saved = mineUrls(), list = items();
+    const keep = el.querySelector(".gp-grid")?.scrollTop ?? 0, saved = mineUrls(), list = items();
     el.innerHTML = `<div class="gp-head"><div class="gp-tabs"><button data-t="library" class="${tab === "library" ? "on" : ""}">Library</button><button data-t="mine" class="${tab === "mine" ? "on" : ""}">Saved</button>${data.search ? `<button data-t="search" class="${tab === "search" ? "on" : ""}">Search</button>` : ""}</div><button class="gp-x" data-close aria-label="Close">×</button></div>
       <form class="gp-q" data-q><input name="q" value="${esc(q)}" placeholder="${tab === "search" ? "Search GIFs, press Enter" : "Filter…"}" autocomplete="off" spellcheck="false">${tab === "search" ? `<button class="btn sm">Go</button>` : ""}</form>
       <div class="gp-grid">${busy ? `<p class="gp-msg">Loading…</p>` : err ? `<p class="gp-msg">${esc(err)}</p>` : list.length ? list.map((g, i) => `<figure class="gp-it" data-i="${i}" title="${esc(g.title || "")}"><img src="${esc(thumb(g.preview || g.url))}" alt="${esc(g.title || "GIF")}" loading="lazy" referrerpolicy="no-referrer"><span class="gp-act">${saved.has(g.url) ? "" : `<button data-save="${i}" title="Save to my GIFs">☆</button>`}${g.rm ? `<button data-rm="${i}" title="Remove">×</button>` : ""}</span></figure>`).join("") : `<p class="gp-msg">${tab === "library" ? "The library is empty." + (staff ? " Add a GIF link below." : " The owner has not added any yet. Try Saved.") : tab === "mine" ? "You have no saved GIFs yet. Paste a link below, or tap ☆ on a GIF from the library." : "Nothing yet. Search for something."}</p>`}</div>
       ${tab === "mine" || (tab === "library" && staff) ? `<form class="gp-add" data-add><input name="url" placeholder="Paste a link that ends in .gif" autocomplete="off" spellcheck="false" required>${tab === "library" ? `<input name="title" maxlength="40" placeholder="Name (optional)" autocomplete="off">` : ""}<button class="btn sm primary">Add</button></form>` : ""}${tab === "library" && staff ? `<form class="gp-add" data-bulk><textarea name="text" rows="3" placeholder="Add a lot at once: paste many links that end in .gif, one per line" spellcheck="false" required></textarea><button class="btn sm primary">Add all</button></form>` : ""}${tab === "library" && staff && data.search ? `<div class="gp-add"><button class="btn sm primary" data-import>Import lots of GIFs from the internet</button></div>` : ""}`;
+    const g = el.querySelector(".gp-grid"); if (g && keep) g.scrollTop = keep;
   };
   const load = async () => { try { data = await api("/gifs"); } catch (e) { err = e.message; } paint(); };
   const runSearch = async () => {
@@ -33,6 +34,13 @@ export async function openGifPicker(onPick) {
     try { const r = await api("/gifs/search?q=" + encodeURIComponent(q)); found = r.gifs; } catch (e) { found = []; err = e.message; }
     if (id === busy) busy = 0; paint();
   };
+  /* a GIF that fails to load gets two quiet retries (the server may be busy), then its tile is hidden so no broken pictures show */
+  el.addEventListener("error", (e) => {
+    const im = e.target; if (!(im instanceof HTMLImageElement) || !im.closest(".gp-it")) return;
+    const n = +(im.dataset.try || 0);
+    if (n < 2) { im.dataset.try = String(n + 1); const base = im.getAttribute("src").replace(/&r=\d+$/, ""); setTimeout(() => { if (im.isConnected) im.src = base + "&r=" + (n + 1); }, 700 * (n + 1) + Math.random() * 600); }
+    else im.closest(".gp-it").classList.add("gp-dead");
+  }, true);
   el.addEventListener("click", async (e) => {
     const t = e.target.closest("[data-t],[data-close],[data-save],[data-rm],[data-import],.gp-it"); if (!t) return;
     if (t.matches("[data-close]")) return closeGifPicker();

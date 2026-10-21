@@ -236,7 +236,7 @@ api.get("/me", auth, (req, res) => {
 const IMG_OK = /^image\/(png|jpe?g|gif|webp|avif|x-icon|vnd\.microsoft\.icon)$/i;
 api.get("/img", auth, async (req, res) => {
   const u = me(req);
-  if (!allow(`img:${u.id}`, 120, 60_000)) return void res.status(429).end();
+  if (!allow(`img:${u.id}`, 1500, 60_000)) return void res.status(429).end();
   let target: URL;
   try { target = new URL(String(req.query.u ?? "")); } catch { return void res.status(400).end(); }
   if (!/^https?:$/.test(target.protocol) || target.username || target.password || (!ALLOW_PRIVATE && target.port && !["80", "443"].includes(target.port))) return void res.status(400).end();
@@ -252,7 +252,7 @@ api.get("/img", auth, async (req, res) => {
     const type = String(r.headers["content-type"] ?? "").split(";")[0].trim();
     if (!IMG_OK.test(type)) { await r.body.dump(); return void res.status(415).end(); }
     const chunks: Buffer[] = []; let size = 0;
-    for await (const c of r.body) { size += (c as Buffer).length; if (size > 5_000_000) { r.body.destroy(); return void res.status(413).end(); } chunks.push(c as Buffer); }
+    for await (const c of r.body) { size += (c as Buffer).length; if (size > 10_000_000) { r.body.destroy(); return void res.status(413).end(); } chunks.push(c as Buffer); }
     res.setHeader("Content-Type", type); res.setHeader("X-Content-Type-Options", "nosniff"); res.setHeader("Cache-Control", "private, max-age=3600"); res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
     res.end(Buffer.concat(chunks));
   } catch { res.status(502).end(); }
