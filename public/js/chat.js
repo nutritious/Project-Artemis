@@ -246,7 +246,7 @@ function renderMembers() {
   const el = $("#memberList"); if (!el) return;
   const online = new Set(C.online.map((o) => o.id));
   const byName = (a, b) => a.username.localeCompare(b.username);
-  const row = (m) => `<button class="member${online.has(m.id) ? "" : " off"}" data-profile="${esc(m.id)}">${avatar(m.username, online.has(m.id), true)}<span class="mt"><span class="n" style="${nameColor(m)}">${esc(m.username)}</span>${m.profile?.status ? `<span class="ms">${esc(m.profile.status)}</span>` : ""}</span>${roleTags(m)}</button>`;
+  const row = (m) => `<button class="member${online.has(m.id) ? "" : " off"}" data-profile="${esc(m.id)}">${avatar(m.username, online.has(m.id), true)}<span class="mt"><span class="n" style="${nameColor(m)}">${esc(m.username)}</span><span class="mtags">${roleTags(m)}</span>${m.profile?.status ? `<span class="ms">${esc(m.profile.status)}</span>` : ""}</span></button>`;
   /* Discord-style: online staff are grouped under their role, then plain Online, then Offline. */
   const groups = [["owner", "Owner"], ["coowner", "Co-owner"], ["admin", "Commanders"], ...[...state.roles].sort((a, b) => a.position - b.position).map((r) => ["r:" + r.id, r.name])];
   const groupOf = (m) => (m.role !== "member" ? m.role : m.roleId && state.roles.some((r) => r.id === m.roleId) ? "r:" + m.roleId : "");
