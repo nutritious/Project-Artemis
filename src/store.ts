@@ -102,6 +102,7 @@ export interface Db {
   betaRoleSeeded?: boolean;
   antiCloseOn?: boolean;
   tourMig?: boolean;
+  inviteMig?: boolean;
   reports: Report[];
   customTags: CustomTag[];
   gifs: { id: string; url: string; title: string; by: string; ts: number }[];
@@ -126,6 +127,7 @@ export const SEED_UPDATES: UpdateEntry[] = [
   { id: "u38", ts: Date.UTC(2026, 9, 21, 2, 10), by: "Artemis", title: "Cleaner GIFs in chat", body: "- Chat: when a message is just a GIF or picture link, only the picture shows now, not the long link above it. If the picture cannot load, the link comes back.\n- Pictures in chat that fail to load retry quietly twice before giving up." },
   { id: "u39", ts: Date.UTC(2026, 9, 21, 3, 0), by: "Artemis", title: "Artemis is in BETA: Fall Pack, rules and a welcome tour", body: "- Artemis now wears a BETA badge next to the logo. Things are still being built and tested, so some parts may break.\n- New: the limited Fall Pack with fall-themed effects, tags, backgrounds and themes. It leaves the shop on Dec 20.\n- New: a Fall look for the whole site (falling leaves and warm colors) that arrives after Halloween ends. You can turn it off in Settings.\n- New accounts must read the rules and tick the box to agree. The owner can edit the rules in the owner panel.\n- New: a step-by-step welcome tour on first login that shows every feature and what is still in beta (the proxy, Tube, the Cloud Browser, and V2 which might work and might not). Replay it any time from Settings > About Artemis." },
   { id: "u40", ts: Date.UTC(2026, 9, 21, 20, 50), by: "Artemis", title: "Apex items, skip switches and no more sleeping", body: "- New: every limited season pack now hides one super-limited Apex item, rarer than Chroma, each with its own full cutscene. Halloween Apex is 1 in 800 per item, Fall Apex is 1 in 2,500. They leave with the pack.\n- Settings: you can now skip each kind of cutscene on its own (Chroma, Secret, Forbidden and Omega, Apex) or skip them all.\n- Fixed: the site no longer falls asleep on its own, and your accounts, chat and items are now backed up to the cloud every couple of minutes and come back automatically if the server restarts." },
+  { id: "u41", ts: Date.UTC(2026, 9, 21, 21, 10), by: "Artemis", title: "Invite only", body: "- Artemis is now invite only. New accounts need an invite code, and only the owner can make or revoke codes and switch invite-only on or off (owner panel > Invite codes). Each code works once." },
   { id: "u33", ts: Date.UTC(2026, 9, 20, 21, 45), by: "Artemis", title: "Skip cutscenes", body: "- New: Settings > Tab cloak > Skip cutscenes. Turn it on and pack openings skip the big pull cutscenes and just show your item. The announcement banner still appears." },
   { id: "u26", ts: Date.UTC(2026, 9, 19, 9, 0), by: "Artemis", title: "Home exit node for YouTube", body: "- The owner can connect a home computer as an exit node (Owner console, Safety). While it runs, everyone's browsing leaves from the owner's home internet, which sites like YouTube trust, so the YouTube bot check goes away even though the site itself stays on Render.\n- If the exit node stops, the site checks every 20 seconds and goes back to its own connection by itself.\n- Bans and the blocklist still apply on the exit node." },
   { id: "u25", ts: Date.UTC(2026, 9, 19, 8, 0), by: "Artemis", title: "Direct messages, voice and video calls, and Halloween", body: "- Direct messages: open anyone's profile and tap Message, or use + under Direct messages in Chat. Only the two of you can read them. You can block someone, and bad language is filtered like in channels.\n- Private calls: tap Call or Video in a DM. The other person gets a ringing pop-up and can accept or decline. In a call you can mute, turn your camera on or off, and share your screen. Call lengths and missed calls show up in the DM.\n- Voice channels: the new Voice Lounge is under Voice in Chat. Click it to join, talk, turn on your camera or share your screen with up to 8 people. Staff can add and delete voice channels with the + button.\n- The Halloween Pack is here until Nov 1: 16 limited effects, titles, backdrops and themes you cannot get anywhere else. After Nov 1 it leaves the shop for good, but what you own stays yours.\n- The whole app gets a Halloween look (orange glow, floating bats and pumpkins) until Nov 1. You can turn it off in Settings.\n- The Gulper arena no longer has computer players: it is only real people (and the boss worm during boss hunts).\n- The owner can now remove a title, effect, backdrop or theme from one person, a role or everyone (Owner console, Economy)." },
@@ -229,7 +231,7 @@ export const db = new JsonStore<Db>("artemis.json", {
   dms: [],
   friendReqs: [],
   blocklist: [],
-  server: { openRegistration: true, rateLimit: DEFAULT_RATE_LIMIT, defaultEngine: "ddg", maintenance: false, maintenanceMessage: "" },
+  server: { openRegistration: false, rateLimit: DEFAULT_RATE_LIMIT, defaultEngine: "ddg", maintenance: false, maintenanceMessage: "" },
   announcement: null,
   audit: [],
   updates: SEED_UPDATES,
@@ -292,6 +294,7 @@ const d = db.data;
     if (!d.antiCloseOn) u.settings.antiClose = true; /* one time: Anti-close is on by default for everyone, they can still turn it off */
     if (!["ddg", "brave", "mojeek", "google"].includes(u.settings.engine)) u.settings.engine = "ddg";
   }
+  if (!d.inviteMig) { d.server.openRegistration = false; d.inviteMig = true; } /* one time: the site is invite only, the owner can change it */
   d.antiCloseOn = true; d.tourMig = true;
   d.server.rules ??= DEFAULT_RULES;
   if (!d.secret) d.secret = crypto.randomBytes(32).toString("hex");

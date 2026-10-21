@@ -756,7 +756,7 @@ api.get("/admin/overview", auth, (req, res) => {
   res.json({
     stats: dash ? snapshot(true) : null,
     users: dash || crew ? adminUsers() : [],
-    invites: can(u, "manage_users") ? db.data.invites : [],
+    invites: u.role === "owner" ? db.data.invites : [],
     blocklist: can(u, "manage_blocklist") || dash ? db.data.blocklist : [],
     server: db.data.server,
     announcement: db.data.announcement,
@@ -772,7 +772,9 @@ api.put("/admin/settings", auth, adminOnly, (req, res) => {
   const b = req.body ?? {};
   const s = db.data.server;
   const changes: string[] = [];
-  if ("openRegistration" in b && !!b.openRegistration !== s.openRegistration) { s.openRegistration = !!b.openRegistration; changes.push(`openRegistration=${s.openRegistration}`); }
+  if ("openRegistration" in b && !!b.openRegistration !== s.openRegistration) {
+    if (me(req).role !== "owner") return void res.status(403).json({ error: "Only the owner can change invite-only mode" });
+    s.openRegistration = !!b.openRegistration; changes.push(`openRegistration=${s.openRegistration}`); }
   if ("rateLimit" in b) {
     const n = Math.round(Number(b.rateLimit));
     if (!Number.isFinite(n) || n < 30 || n > 20000) return void res.status(400).json({ error: "Rate limit must be between 30 and 20,000 requests per minute" });
@@ -815,14 +817,15 @@ api.delete("/admin/blocklist/:host", auth, need("manage_blocklist"), (req, res) 
   logAdmin(req, "block.remove", req.params.host);
   res.json({ blocklist: db.data.blocklist });
 });
-api.post("/admin/invites", auth, need("manage_users"), (req, res) => {
+const ownerOnlyInvites = (req: Request, res: Response, next: NextFunction) => (me(req).role === "owner" ? next() : void res.status(403).json({ error: "Only the owner can make invite codes" }));
+api.post("/admin/invites", auth, ownerOnlyInvites, (req, res) => {
   const code = "ARTEMIS-" + crypto.randomBytes(4).toString("hex").toUpperCase();
   db.data.invites.push({ code, createdBy: me(req).username, createdAt: Date.now() });
   saveDb();
   logAdmin(req, "invite.create", code);
   res.json({ code });
 });
-api.delete("/admin/invites/:code", auth, need("manage_users"), (req, res) => {
+api.delete("/admin/invites/:code", auth, ownerOnlyInvites, (req, res) => {
   db.data.invites = db.data.invites.filter((i) => i.code !== req.params.code);
   saveDb();
   logAdmin(req, "invite.revoke", req.params.code);

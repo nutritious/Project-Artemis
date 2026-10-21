@@ -121,7 +121,7 @@ function crew(d) {
       <td>${(() => { const canAct = !self && u.role !== "owner" && u.rank > myRank(); if (!canAct) return `<span class="faint" style="float:right">${u.role === "owner" ? "protected" : self ? "" : "ranked above you"}</span>`;
         return `<div class="acts">${isCoOwnerUp(state.me) ? `<button class="btn sm" data-role="${u.id}" data-to="${u.role === "admin" || u.role === "coowner" ? "member" : "admin"}">${u.role === "admin" || u.role === "coowner" ? "Demote" : "Make commander"}</button>` : ""}${can("manage_roles") && u.role !== "coowner" && u.role === "member" ? `<select class="sm-sel" data-crole="${u.id}"><option value="">No role</option>${state.roles.filter((r) => isOwner(state.me) || r.position > myRank()).map((r) => `<option value="${esc(r.id)}" ${r.id === u.roleId ? "selected" : ""}>${esc(r.name)}</option>`).join("")}</select>` : ""}${can("manage_users") ? `<button class="btn sm" data-reset="${u.id}" data-name="${esc(u.username)}">Reset password</button><button class="btn sm ${u.banned ? "" : "danger"}" data-ban="${u.id}" data-name="${esc(u.username)}" data-to="${u.banned ? 0 : 1}">${u.banned ? "Reinstate" : "Suspend"}</button><button class="btn sm danger" data-rm="${u.id}" data-name="${esc(u.username)}">Remove</button>` : ""}</div>`; })()}</td></tr>`; }).join("") || `<tr><td colspan="6" class="dim">No crew matches.</td></tr>`}
       </tbody></table></div></div>
-    ${can("manage_users") ? `<div class="card glass"><h3>Invite codes <button class="btn sm primary" data-newinvite>+ New code</button></h3>
+    ${isOwner(state.me) ? `<div class="card glass"><h3>Invite codes <button class="btn sm primary" data-newinvite>+ New code</button></h3>
       ${open.length ? `<div class="list">${open.map((i) => `<div class="li"><span class="mono lt" style="flex:1">${esc(i.code)}</span><span class="ls">by ${esc(i.createdBy)} · ${ago(i.createdAt)}</span><button class="btn sm" data-copy="${esc(i.code)}">Copy</button><button class="x" data-revoke="${esc(i.code)}" title="Revoke">×</button></div>`).join("")}</div>` : `<p class="note">No unused invites. ${d.server.openRegistration ? "Registration is open, so anyone can join." : "Create a code and share it with someone you trust."}</p>`}
       ${d.invites.filter((i) => i.usedBy).length ? `<p class="note">Redeemed: ${d.invites.filter((i) => i.usedBy).map((i) => esc(i.usedBy)).join(", ")}</p>` : ""}</div>` : ""}</div>`;
 }
@@ -160,7 +160,7 @@ function server(d) {
       <form data-announce class="inline"><input name="text" maxlength="300" placeholder="Launch window opens at 18:00 UTC" required><button class="btn primary">Broadcast</button></form>
       ${a ? `<button class="btn sm danger" data-clear-ann style="justify-self:start">Clear announcement</button>` : ""}</div>` : ""}
     ${isStaffRole() ? `<div class="card glass"><h3>Server settings</h3>
-      <label class="switch"><span>Open registration<small>Anyone can create an account without an invite.</small></span><input type="checkbox" data-open ${s.openRegistration ? "checked" : ""}></label>
+      ${isOwner(state.me) ? `<label class="switch"><span>Invite only<small>On: new accounts need an invite code that only the owner can make. Off: anyone can join.</small></span><input type="checkbox" data-open ${s.openRegistration ? "" : "checked"}></label>` : ""}
       <label>Proxy rate limit per user (requests / min)<div class="inline"><input type="number" min="30" max="20000" value="${s.rateLimit}" data-rate><button class="btn" data-saverate>Apply</button></div></label>
       <label>Rules new accounts must agree to<textarea data-rules rows="9" maxlength="8000" spellcheck="true" style="font:12px var(--mono)">${esc(s.rules ?? "")}</textarea></label>
       <div class="inline"><button class="btn" data-saverules>Save rules</button><span class="note">Use "## Heading" for sections and "- Title — text" for each rule. Leave it empty to turn the rules checkbox off.</span></div>
@@ -203,7 +203,7 @@ async function onClick(e) {
 }
 function onChange(e) {
   if (e.target.matches("[data-crole]")) { run(() => api(`/admin/users/${e.target.dataset.crole}/custom-role`, "PUT", { roleId: e.target.value || null }), "Role updated"); return; }
-  if (e.target.matches("[data-open]")) run(() => api("/admin/settings", "PUT", { openRegistration: e.target.checked }), e.target.checked ? "Registration opened" : "Registration closed");
+  if (e.target.matches("[data-open]")) run(() => api("/admin/settings", "PUT", { openRegistration: !e.target.checked }), e.target.checked ? "Invite only is on" : "Registration is open to everyone");
   if (e.target.matches("[data-engine]")) run(() => api("/admin/settings", "PUT", { defaultEngine: e.target.value }), "Default engine updated");
 }
 function onInput(e) { if (e.target.matches("[data-filter]")) { A.filter = e.target.value; const pos = e.target.selectionStart; paint(); const f = $("[data-filter]"); f.focus(); f.setSelectionRange(pos, pos); } }

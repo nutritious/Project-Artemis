@@ -32,7 +32,7 @@ const D = {
   history: [{ url: "https://www.nasa.gov/", title: "NASA", ts: now - 20 * min }],
   invites: [{ code: "ARTEMIS-3F9A12CC", createdBy: "Warmaster", createdAt: now - 864e5 }],
   blocklist: ["ads.example.net"],
-  server: { openRegistration: true, rateLimit: 900, defaultEngine: "ddg", maintenance: false, maintenanceMessage: "" },
+  server: { openRegistration: false, rateLimit: 900, defaultEngine: "ddg", maintenance: false, maintenanceMessage: "" },
   announcement: null,
   reports: [],
   audit: [{ ts: now - 40 * min, by: "Warmaster", action: "invite.create", detail: "ARTEMIS-3F9A12CC" }],
