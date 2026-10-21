@@ -490,7 +490,7 @@ api.get("/owner/economy", auth, panelUp, (_req, res) => res.json({
 }));
 const SELF_COIN_MAX = 100_000;
 /** Nobody can hand themselves more than 100,000 coins at a time, whether they pick themselves or a group that includes them. */
-const selfCoinCap = (u: User, amount: number, t: { type: string; value?: string }) => amount > SELF_COIN_MAX && targets(t as any).some((x) => x.id === u.id);
+const selfCoinCap = (u: User, amount: number, t: { type: string; value?: string }) => u.role !== "owner" && amount > SELF_COIN_MAX && targets(t as any).some((x) => x.id === u.id);
 api.post("/owner/coins", auth, panelUp, (req, res) => {
   const amount = Math.round(Number(req.body?.amount));
   if (!Number.isFinite(amount) || amount === 0 || Math.abs(amount) > 1e12) return void res.status(400).json({ error: "Enter an amount, positive or negative (up to a trillion)" });
