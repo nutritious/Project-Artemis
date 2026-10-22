@@ -2,6 +2,7 @@
 import { $, esc, state } from "./util.js";
 import { playCinema } from "./cinema.js";
 import { playLevelUp } from "./levelup.js";
+import { worldOf } from "./cosmetics.js";
 const RANKS = [{ name: "Stardust", color: "#8d96bd" }, { name: "Cadet", color: "#4cc9f0" }, { name: "Pilot", color: "#3ddc97" }, { name: "Navigator", color: "#ffc857" }, { name: "Captain", color: "#ff8a5b" }, { name: "Voyager", color: "#e879f9" }, { name: "Legend", color: "#ffd76a" }, { name: "Nova", color: "#ff7ab8" }, { name: "Quasar", color: "#5ad1ff" }, { name: "Pulsar", color: "#9d7bff" }, { name: "Singularity", color: "#c9d1ff" }, { name: "Paradox", color: "#22e3c9" }, { name: "Multiverse", color: "#ff4d6d" }, { name: "Infinity", color: "#fff0b8" }, { name: "Touch Grass", color: "#58d35a" }];
 
 const STYLES = {
@@ -12,7 +13,7 @@ const STYLES = {
 let running = false;
 
 export function playEvent(ev) {
-  if (/^levelup:([1-9]|1[0-4])$/.test(ev.kind)) { const i = +ev.kind.slice(8); return void playLevelUp(i, RANKS[i]); }
+  if (/^levelup:([1-9]|1[0-4])$/.test(ev.kind)) { const i = +ev.kind.slice(8); return void playLevelUp(i, RANKS[i], worldOf(state.me?.rb ?? 0)); }
   if (["opening", "halloween", "update"].includes(ev.kind)) return void playCinema(ev.kind, ev);
   if (running) return; running = true;
   const st = STYLES[ev.kind] ?? STYLES.launch, reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;

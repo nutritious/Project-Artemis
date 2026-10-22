@@ -3,30 +3,35 @@ import { playLevelUp } from "./levelup.js";
 import { lookupHtml, wireLookup, openFullProfile } from "./profile.js";
 import { GAMES, ACHIEVEMENTS, DAILY_CAP } from "./cosmetics.js";
 import { redeemCard, bindRedeem } from "./redeem.js";
+import { worldsHtml, loadRebirth, onWorldsClick } from "./worlds.js";
+import { worldOf } from "./cosmetics.js";
 bindRedeem();
 import { $, api, isCoOwnerUp, avatar, esc, fmtNum, on, personByName, roleColor, state, toast } from "./util.js";
 
-let T = null, A = null, G = null, B = { ranks: [], xp: [], arcade: {} }, tab = "xp";
+let T = null, A = null, G = null, R = null, B = { ranks: [], xp: [], arcade: {} }, tab = "xp";
 const rk = (i) => B.ranks[i] ?? { name: "Stardust", color: "#8d96bd", xp: 0 };
-export const rankChip = (i) => `<span class="rchip" style="--rc:${esc(rk(i).color)}">${esc(rk(i).name)}</span>`;
+export const rankChip = (i, rb = 0) => `<span class="rchip" style="--rc:${esc(rk(i).color)}">${rb ? `★${rb} ` : ""}${esc(rk(i).name)}</span>`;
+const refreshR = async (st) => { R = st ?? (await loadRebirth().catch(() => R)); if (state.view === "hub" && B.ranks.length) paint(); };
 
 export function buildHub() {
   $("#view-hub").innerHTML = `<div class="page" id="hubPage"><div class="skel"></div></div>`;
-  $("#hubPage").addEventListener("click", (e) => {
+  $("#hubPage").addEventListener("click", async (e) => {
+    if (await onWorldsClick(e, refreshR)) return;
     const b = e.target.closest("[data-lb]"); if (b) { tab = b.dataset.lb; paint(); }
     const row = e.target.closest("[data-prof]"); if (row) return openFullProfile(row.dataset.prof);
-    const r = e.target.closest("[data-rk]"); if (r) playLevelUp(+r.dataset.rk, rk(+r.dataset.rk)); /* replay a rank you have reached */
+    const r = e.target.closest("[data-rk]"); if (r) playLevelUp(+r.dataset.rk, rk(+r.dataset.rk), worldOf(G?.rb ?? 0)); /* replay a rank you have reached */
   });
   on("game", (m) => {
     G = m.game; state.siteHours = G.hours ?? 0; state.me.coins = G.coins; state.me.freePacks = G.freePacks;
     for (const g of m.gains ?? []) toast(g.xp ? `+${g.xp} XP · ${g.text}` : g.text, "ok");
-    if (m.rankUp) playLevelUp(m.game.rank, m.rankUp);
-    if (state.view === "hub" && B.ranks.length) paint();
+    if (m.rankUp) playLevelUp(m.game.rank, m.rankUp, worldOf(m.game.rb ?? 0));
+    if (state.view === "hub") loadRebirth().then((x) => { R = x; if (B.ranks.length) paint(); }).catch(() => {});
+    else if (B.ranks.length) paint();
   });
   on("ach", async () => { if (state.view === "hub") { A = await api("/achievements").catch(() => A); paint(); } });
 }
 export async function onHubShown() {
-  try { const r = await api("/game"); G = r.game; state.me.coins = G.coins; state.me.freePacks = G.freePacks; B = { ranks: r.ranks, xp: r.xp, arcade: r.arcade }; A = await api("/achievements").catch(() => A); T = await api("/trust").catch(() => T); paint(); } catch (e) { toast(e.message, true); }
+  try { const r = await api("/game"); G = r.game; state.me.coins = G.coins; state.me.freePacks = G.freePacks; B = { ranks: r.ranks, xp: r.xp, arcade: r.arcade }; A = await api("/achievements").catch(() => A); T = await api("/trust").catch(() => T); R = await loadRebirth().catch(() => R); paint(); } catch (e) { toast(e.message, true); }
 }
 export function setBoards(r) { G = r.game; B = { ranks: r.ranks, xp: r.xp, arcade: r.arcade }; }
 
@@ -36,14 +41,14 @@ function paint() {
   const gname = GAMES.find((x) => x.id === tab)?.name ?? "Eclipse Run";
   const board = (tab === "xp" ? B.xp : B.arcade[tab] ?? []).map((r, i) => {
     const p = personByName(r.username), c = roleColor(p ?? r);
-    return `<div class="lbrow ${r.id === me.id ? "me" : ""}" data-prof="${esc(r.username)}" role="button" tabindex="0"><span class="pos">${i + 1}</span>${avatar(r.username, false, true)}<b style="${c ? `color:${esc(c)}` : ""}">${esc(r.username)}</b>${tab === "xp" ? rankChip(r.rank) : ""}<span class="grow"></span><span class="mono lbv">${tab === "xp" ? fmtNum(r.xp) + " XP" : fmtNum(r.best)}</span></div>`;
+    return `<div class="lbrow ${r.id === me.id ? "me" : ""}" data-prof="${esc(r.username)}" role="button" tabindex="0"><span class="pos">${i + 1}</span>${avatar(r.username, false, true)}<b style="${c ? `color:${esc(c)}` : ""}">${esc(r.username)}</b>${tab === "xp" ? rankChip(r.rank, r.rb) : ""}<span class="grow"></span><span class="mono lbv">${tab === "xp" ? fmtNum(r.xp) + " XP" : fmtNum(r.best)}</span></div>`;
   }).join("") || `<p class="note">Nobody on the board yet. ${tab === "xp" ? "Browse or chat to earn XP." : `Play ${esc(gname)} in the Arcade.`}</p>`;
   $("#hubPage").innerHTML = `
     <div><h2>Hub</h2><p class="sub" style="margin:4px 0 0">Earn XP by browsing, chatting and playing. Climb the ranks (each one has its own level-up scene) and keep your streak alive.</p></div>
     ${redeemCard()}
     <div class="grid2">
       <div class="card glass idcard" style="--rc:${esc(cur.color)}">
-        <div class="idtop">${avatar(me.username, false, false, true)}<div class="idname"><b>${esc(me.username)}</b><span class="rank-big">${esc(cur.name)}</span></div></div>
+        <div class="idtop">${avatar(me.username, false, false, true)}<div class="idname"><b>${esc(me.username)}</b><span class="rank-big">${g.rb ? `★${g.rb} ` : ""}${esc(cur.name)}</span></div></div>
         <div class="xpbar" role="progressbar" aria-valuenow="${g.xp}" aria-valuemin="${base}" aria-valuemax="${nxt?.xp ?? g.xp}"><i style="width:${pct}%"></i></div>
         <div class="xpline"><span class="mono">${fmtNum(g.xp)} XP</span><span class="dim">${nxt ? `${nxt.xp - g.xp} to ${esc(nxt.name)}` : "Max rank reached"}</span></div>
         <div class="chips"><span class="chip warn">Streak ${g.streak} day${g.streak === 1 ? "" : "s"}</span><span class="chip">Best run ${fmtNum(g.best)}</span><span class="chip">${g.plays} run${g.plays === 1 ? "" : "s"}</span><span class="chip" style="color:#ffc857">◎ ${(state.me.coins ?? 0).toLocaleString()}</span>${state.me.freePacks ? `<span class="chip ok">${state.me.freePacks} free crate${state.me.freePacks > 1 ? "s" : ""}</span>` : ""}</div>
@@ -54,6 +59,7 @@ function paint() {
         <p class="note">Finish all three for a full sweep bonus of +${g.sweep} XP. Come back every day for a bigger streak bonus.</p>
       </div>
     </div>
+    ${worldsHtml(R)}
     <div class="card glass cap-meter"><h3>Coins today <span class="chip">${g.earnedToday ?? 0} / ${g.cap ?? DAILY_CAP}</span></h3>
       <div class="xpbar" role="progressbar" aria-valuenow="${g.earnedToday ?? 0}" aria-valuemin="0" aria-valuemax="${g.cap ?? DAILY_CAP}"><i style="width:${Math.min(100, ((g.earnedToday ?? 0) / (g.cap ?? DAILY_CAP)) * 100)}%"></i></div>
       <small>You earn coins by chatting (1), searching (2), browsing (1) and playing games, up to ${g.cap ?? DAILY_CAP} a day. Resets at 00:00 UTC. Wheel spins, achievements and event prizes do not count.</small></div>

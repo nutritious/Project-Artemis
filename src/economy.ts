@@ -1,9 +1,9 @@
 /* Coins, packs, items, live events and quick events. */
 import crypto from "node:crypto";
 import { audit, db, saveDb, uid, type User, type Upgrades } from "./store.js";
-import { hasPass, isSecretTier, UPGRADES, upgradeMap, upCost, noUps, refundMult, packContents, cleanSchedule, DEFAULT_CFG, DUPE_COINS, EVENT_PRESETS, QUICK_PRESETS, BASE_THEMES, EVENTS, QUICK_EVENTS, packMap, rollPack, TAGS, EFFECTS, THEMES, BGS, WHEEL, WHEEL_MS } from "../public/js/cosmetics.js";
+import { hasPass, luckOf, isSecretTier, UPGRADES, upgradeMap, upCost, noUps, refundMult, packContents, cleanSchedule, DEFAULT_CFG, DUPE_COINS, EVENT_PRESETS, QUICK_PRESETS, BASE_THEMES, EVENTS, QUICK_EVENTS, packMap, rollPack, TAGS, EFFECTS, THEMES, BGS, WHEEL, WHEEL_MS } from "../public/js/cosmetics.js";
 import { broadcast, onlineUsers, sendToUser } from "./chat.js";
-import { activeBoosts, grant, giveCoins, publicEvent, publicGame, startRush, stat, wheelMs } from "./game.js";
+import { activeBoosts, grant, giveCoins, publicEvent, publicGame, startRush, stat, wheelMs, rbOf, doRebirth } from "./game.js";
 
 const rand = () => crypto.randomInt(0, 1_000_000_000) / 1_000_000_000;
 const rint = (a: number, b: number) => Math.floor(a + rand() * (b - a + 1));
@@ -46,6 +46,7 @@ export const upgradeState = (u: User) => ({ ...ups(u) });
 export function buyUpgrade(u: User, id: string) {
   const def = upgradeMap.get(id); if (!def) throw new Error("No such upgrade");
   const up = ups(u);
+  if (((def as any).rb ?? 0) > rbOf(u)) throw new Error(`That pass unlocks at rebirth ${(def as any).rb}`);
   if (def.kind === "pass") {
     if (up.pass.includes(id)) throw new Error("You already own that");
     const cost = upCost(def, 0); if (u.coins < cost) throw new Error("Not enough coins");
@@ -70,6 +71,7 @@ export function giftPass(u: User, id: string, toName: string) {
   const to = db.data.users.find((x) => x.username.toLowerCase() === String(toName ?? "").trim().toLowerCase() && !x.banned);
   if (!to) throw new Error("No one here has that username");
   if (to.id === u.id) throw new Error("Buy it for yourself from the shop instead");
+  if (((def as any).rb ?? 0) > rbOf(to)) throw new Error(`${to.username} has not unlocked that pass yet`);
   const tu = ups(to); if (tu.pass.includes(id)) throw new Error(`${to.username} already has ${def.name}`);
   const cost = upCost(def, 0); if (u.coins < cost) throw new Error("Not enough coins");
   u.coins -= cost; tu.pass.push(id);
@@ -93,9 +95,9 @@ export function openPack(u: User, packId: string, free: boolean, n = 1) {
     if (bonus) it.bonus = true; items.push(it);
   } };
   for (let k = 0; k < n; k++) {
-    take(rollPack(rolled, u.inv, rand, up.luck), false);
+    take(rollPack(rolled, u.inv, rand, luckOf(up)), false);
     if (!free && rand() < up.cash * 0.01) { u.coins += pack.cost; cashback += pack.cost; }
-    if (!free && rand() < up.dbl * 0.01) { take(rollPack(rolled, u.inv, rand, up.luck), true); doubles++; }
+    if (!free && rand() < up.dbl * 0.01) { take(rollPack(rolled, u.inv, rand, luckOf(up)), true); doubles++; }
   }
   u.game.stats.packs = (u.game.stats.packs ?? 0) + n + doubles;
   announceChroma(u, items); announceSecret(u, items, rolled.only);
@@ -150,6 +152,18 @@ export function giveCoinsTo(by: string, amount: number, t: Target, reason: strin
 }
 
 /** Give (or take back, when negative) any amount of XP. Gifts can trigger rank-up cutscenes; taking XP never drops below 0. */
+/** Owner / co-owner: add rebirths (which also pay a point each) or just points. Negative takes them back. */
+export function giveRebirthTo(by: string, amount: number, mode: "rebirths" | "points", t: Target, reason: string) {
+  const list = targets(t);
+  for (const u of list) {
+    if (mode === "points") u.game.rp = Math.max(0, (u.game.rp ?? 0) + amount);
+    else if (amount > 0) for (let i = 0; i < amount; i++) doRebirth(u, true);
+    else { u.game.rb = Math.max(0, (u.game.rb ?? 0) + amount); u.game.rp = Math.max(0, (u.game.rp ?? 0) + amount); }
+    saveDb(); push(u);
+  }
+  audit(by, "give.rebirth", `${mode} ${amount} → ${t.type}${t.value ? ":" + t.value : ""} (${list.length}) ${reason}`.trim());
+  return list.length;
+}
 export function giveXpTo(by: string, amount: number, t: Target, reason: string) {
   const list = targets(t);
   for (const u of list) {

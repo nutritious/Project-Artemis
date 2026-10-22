@@ -214,6 +214,10 @@ export const ACHIEVEMENTS = [
   { id: "trivia10", name: "Big brain", desc: "Answer 10 trivia questions right", stat: "trivia", goal: 10, coins: 100, icon: "🧠" },
   { id: "trivia50", name: "Quiz master", desc: "Answer 50 trivia questions right", stat: "trivia", goal: 50, coins: 300, icon: "🎓" },
   { id: "earn1k", name: "Piggy bank", desc: "Earn 1,000 coins in total", stat: "earned", goal: 1000, coins: 100, icon: "🐷" },
+  { id: "rebirth1", name: "Born again", desc: "Rebirth for the first time", stat: "rebirths", goal: 1, coins: 1000, icon: "🔄" },
+  { id: "rebirth3", name: "Wanderer of worlds", desc: "Rebirth 3 times", stat: "rebirths", goal: 3, coins: 3000, icon: "🪐" },
+  { id: "rebirth5", name: "Edge of the map", desc: "Rebirth 5 times", stat: "rebirths", goal: 5, coins: 8000, icon: "🕳️" },
+  { id: "rebirth10", name: "Eternal", desc: "Rebirth 10 times", stat: "rebirths", goal: 10, coins: 25000, icon: "♾️" },
   { id: "earn10k", name: "Moon mogul", desc: "Earn 10,000 coins in total", stat: "earned", goal: 10000, coins: 500, icon: "🌕" },
 ];
 export const EVENTS = {
@@ -250,6 +254,85 @@ export const CUTSCENES = [
   { id: "levelup:4", name: "Level-up: Captain" }, { id: "levelup:5", name: "Level-up: Voyager" }, { id: "levelup:6", name: "Level-up: Legend" },
   { id: "levelup:7", name: "Level-up: Nova" }, { id: "levelup:8", name: "Level-up: Quasar" }, { id: "levelup:9", name: "Level-up: Pulsar" }, { id: "levelup:10", name: "Level-up: Singularity" }, { id: "levelup:11", name: "Level-up: Paradox" }, { id: "levelup:12", name: "Level-up: Multiverse" }, { id: "levelup:13", name: "Level-up: Infinity" }, { id: "levelup:14", name: "Level-up: Touch Grass" },
 ];
+
+/* ======================= REBIRTH: worlds, quest rings, exclusive items and the rebirth shop ======================= */
+export const XP_BASE = 2;          /* everyday XP is doubled for everyone */
+export const REBIRTH_XP = 0.25;    /* every rebirth adds this much, forever */
+export const WORLDS = [
+  { id: "sol", name: "Sol System", sub: "The Milky Way. Every crew starts here.", emoji: "☀️", color: "#ffc857", color2: "#ff8a5b" },
+  { id: "centauri", name: "Alpha Centauri", sub: "Three suns, one very warm welcome.", emoji: "🌞", color: "#ff8a5b", color2: "#ffd76a" },
+  { id: "kepler", name: "Kepler-452", sub: "An older cousin of Earth, green and quiet.", emoji: "🌍", color: "#3ddc97", color2: "#4cc9f0" },
+  { id: "orion", name: "Orion Nebula", sub: "A star nursery glowing in pink and violet.", emoji: "🌌", color: "#e879f9", color2: "#9d7bff" },
+  { id: "andromeda", name: "Andromeda", sub: "The neighbouring galaxy. Two million light years from home.", emoji: "🌀", color: "#5ad1ff", color2: "#b57bff" },
+  { id: "void", name: "The Void Beyond", sub: "Past the last star. Only the brave keep going.", emoji: "🕳️", color: "#9d7bff", color2: "#22e3c9" },
+];
+export const worldOf = (rb) => Math.max(0, Math.min(rb | 0, WORLDS.length - 1));
+export const QUESTS = [
+  { id: "msgs", name: "Radio Ring", icon: "📡", stat: "msgs", base: 100, verb: "Send chat messages" },
+  { id: "pages", name: "Explorer Ring", icon: "🧭", stat: "pages", base: 150, verb: "Open pages in the browser" },
+  { id: "plays", name: "Arcade Ring", icon: "🎮", stat: "plays", base: 25, verb: "Finish arcade runs" },
+  { id: "packs", name: "Crate Ring", icon: "📦", stat: "packs", base: 15, verb: "Open packs" },
+];
+export const questGoal = (q, rb) => Math.max(5, Math.round((q.base * (1 + 0.6 * rb)) / 5) * 5);
+export const rebirthXp = (rb) => 1 + REBIRTH_XP * rb;
+export const REBIRTH_COINS = (rb) => 2500 * rb;
+
+/* items every player gets on entering a world (rebirth 1..5 gives world 1..5) */
+export const WORLD_ITEMS = [
+  null,
+  { effect: "w1-suns", tag: "w1-centaurian", bg: "w1-dawn" },
+  { effect: "w2-tides", tag: "w2-terraformer", bg: "w2-kepler" },
+  { effect: "w3-veil", tag: "w3-nebula-walker", bg: "w3-nebula" },
+  { effect: "w4-spiral", tag: "w4-andromedan", bg: "w4-spiral" },
+  { effect: "w5-horizon", tag: "w5-voidborn", bg: "w5-void" },
+];
+EFFECTS.push(
+  { id: "w1-suns", name: "Triple Suns", rarity: "limited", limited: "rebirth", desc: "Alpha Centauri: three tiny suns circle you" },
+  { id: "w2-tides", name: "Kepler Tides", rarity: "limited", limited: "rebirth", desc: "Kepler-452: a green ring that breathes like an ocean" },
+  { id: "w3-veil", name: "Nebula Veil", rarity: "limited", limited: "rebirth", desc: "Orion Nebula: drifting pink and violet gas" },
+  { id: "w4-spiral", name: "Spiral Arm", rarity: "limited", limited: "rebirth", desc: "Andromeda: a slow spiral of stars" },
+  { id: "w5-horizon", name: "Event Horizon", rarity: "limited", limited: "rebirth", desc: "The Void: light bends around your picture" },
+  { id: "rb-comet", name: "Comet Trail", rarity: "limited", limited: "rebirth", desc: "A comet loops around you with a long tail" },
+  { id: "rb-supernova", name: "Supernova", rarity: "limited", limited: "rebirth", desc: "A star that keeps almost bursting" },
+  { id: "rb-wormhole", name: "Wormhole", rarity: "limited", limited: "rebirth", desc: "A swirling portal behind your picture" },
+);
+TAGS.push(
+  { id: "w1-centaurian", name: "Centaurian", color: "#ff8a5b", rarity: "limited", limited: "rebirth" },
+  { id: "w2-terraformer", name: "Terraformer", color: "#3ddc97", rarity: "limited", limited: "rebirth" },
+  { id: "w3-nebula-walker", name: "Nebula Walker", color: "#e879f9", rarity: "limited", limited: "rebirth" },
+  { id: "w4-andromedan", name: "Andromedan", color: "#5ad1ff", rarity: "limited", limited: "rebirth" },
+  { id: "w5-voidborn", name: "Voidborn", color: "#9d7bff", rarity: "limited", limited: "rebirth" },
+  { id: "rb-wanderer", name: "Wanderer", color: "#cfe0ff", rarity: "limited", limited: "rebirth" },
+  { id: "rb-ascended", name: "Ascended", color: "#ffd76a", rarity: "limited", limited: "rebirth" },
+  { id: "rb-eternal", name: "ETERNAL", color: "#ff4df0", rarity: "limited", limited: "rebirth" },
+);
+BGS.push(
+  { id: "w1-dawn", name: "Centauri Dawn", rarity: "limited", limited: "rebirth", desc: "Three suns rising over a rust-coloured sky" },
+  { id: "w2-kepler", name: "Kepler Sky", rarity: "limited", limited: "rebirth", desc: "A green horizon under a huge pale sun" },
+  { id: "w3-nebula", name: "Orion Gas", rarity: "limited", limited: "rebirth", desc: "Pink and violet clouds lit from inside" },
+  { id: "w4-spiral", name: "Andromeda Arms", rarity: "limited", limited: "rebirth", desc: "A whole galaxy turning slowly" },
+  { id: "w5-void", name: "Void Edge", rarity: "limited", limited: "rebirth", desc: "Almost nothing, and then a thin ring of light" },
+  { id: "rb-starforge", name: "Starforge", rarity: "limited", limited: "rebirth", desc: "Sparks flying off a new star" },
+  { id: "rb-galaxy-core", name: "Galactic Core", rarity: "limited", limited: "rebirth", desc: "The bright, crowded middle of a galaxy" },
+);
+THEMES.push({ id: "rb-quantum", name: "Quantum", rarity: "limited", limited: "rebirth", c: ["#05030f", "#22e3c9"] });
+
+/* the Rebirth shop: spend rebirth points (1 per rebirth) */
+export const RB_SHOP = [
+  { id: "rb-tag-wanderer", kind: "item", type: "tag", item: "rb-wanderer", cost: 1 },
+  { id: "rb-fx-comet", kind: "item", type: "effect", item: "rb-comet", cost: 1 },
+  { id: "rb-crates", kind: "crates", icon: "📦", name: "Crate Bundle", desc: "5 free crates. Buy as many times as you like.", cost: 1, n: 5, repeat: true },
+  { id: "rb-bg-starforge", kind: "item", type: "bg", item: "rb-starforge", cost: 2 },
+  { id: "rb-tag-ascended", kind: "item", type: "tag", item: "rb-ascended", cost: 2 },
+  { id: "rb-theme-quantum", kind: "item", type: "theme", item: "rb-quantum", cost: 2 },
+  { id: "rb-perk-xp", kind: "perk", icon: "🧠", name: "Rebirth Memory", desc: "+10% XP, forever.", cost: 2 },
+  { id: "rb-perk-coins", kind: "perk", icon: "👛", name: "Stardust Purse", desc: "+15% coin income and +100 on your daily coin limit, forever.", cost: 2 },
+  { id: "rb-fx-supernova", kind: "item", type: "effect", item: "rb-supernova", cost: 3 },
+  { id: "rb-bg-core", kind: "item", type: "bg", item: "rb-galaxy-core", cost: 3 },
+  { id: "rb-fx-wormhole", kind: "item", type: "effect", item: "rb-wormhole", cost: 4 },
+  { id: "rb-tag-eternal", kind: "item", type: "tag", item: "rb-eternal", cost: 5 },
+];
+export const rbShopMap = new Map(RB_SHOP.map((x) => [x.id, x]));
 
 const byId = (list) => new Map(list.map((x) => [x.id, x]));
 export const effectMap = byId(EFFECTS), tagMap = byId(TAGS), themeMap = byId(THEMES), packMap = byId(PACKS), bgMap = byId(BGS), achMap = byId(ACHIEVEMENTS);
@@ -320,11 +403,16 @@ export const UPGRADES = [
   { id: "slot", kind: "pass", icon: "➕", name: "Extra Slot", cost: 3000, desc: "Every pack you open has one extra item." },
   { id: "instant", kind: "pass", icon: "⚡", name: "Instant Open", cost: 10000, desc: "Skips the pack opening completely: click a pack and see everything you got at once. Chroma and Secret pulls still get their cutscene." },
   { id: "wheel", kind: "pass", icon: "🎡", name: "Quick Wheel", cost: 800, desc: "The hourly wheel recharges every 30 minutes." },
+  { id: "magnet", kind: "pass", rb: 1, icon: "🧲", name: "Coin Magnet", cost: 5000, desc: "Rebirth pass. All everyday coin income is 20% bigger." },
+  { id: "surge", kind: "pass", rb: 2, icon: "🌊", name: "XP Surge", cost: 15000, desc: "Rebirth pass. 15% more XP from everything." },
+  { id: "overdrive", kind: "pass", rb: 3, icon: "🎡", name: "Wheel Overdrive", cost: 30000, desc: "Rebirth pass. The wheel recharges every 15 minutes." },
+  { id: "lucky", kind: "pass", rb: 4, icon: "🍀", name: "Lucky Star", cost: 60000, desc: "Rebirth pass. Counts as two free Extra Luck levels in every pack." },
 ];
 export const upgradeMap = new Map(UPGRADES.map((u) => [u.id, u]));
 export const upCost = (def, lvl) => (def.kind === "pass" ? def.cost : Math.min(Number.MAX_SAFE_INTEGER, Math.round(def.base * Math.pow(def.grow, lvl))));
 export const noUps = () => ({ luck: 0, speed: 0, refund: 0, cash: 0, dbl: 0, pass: [], off: [] });
 /** A pass counts only when owned and not switched off. */
+export const luckOf = (up) => (up?.luck ?? 0) + (hasPass(up, "lucky") ? 2 : 0);
 export const hasPass = (up, id) => !!up?.pass?.includes(id) && !(up.off ?? []).includes(id);
 
 /** What a pack can contain: per-item chances by rarity (for one item slot, ignoring guarantees) and the items themselves. */

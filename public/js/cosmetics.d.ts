@@ -37,7 +37,7 @@ export const DEFAULT_CFG: { bots: number; loot: string; boss: string; loop: bool
 export function cleanSchedule(list: unknown): { kind: string; mins: number }[];
 export const scheduleMins: (s: { kind: string; mins: number }[]) => number;
 
-export interface UpgradeDef { id: string; kind: "level" | "pass"; icon: string; name: string; desc: string; base?: number; grow?: number; max?: number; cost?: number; effect?: (l: number) => string }
+export interface UpgradeDef { rb?: number; id: string; kind: "level" | "pass"; icon: string; name: string; desc: string; base?: number; grow?: number; max?: number; cost?: number; effect?: (l: number) => string }
 export const UPGRADES: UpgradeDef[];
 export const upgradeMap: Map<string, UpgradeDef>;
 export const luckStep: (l: number) => number;
@@ -55,3 +55,19 @@ export function isSecretTier(r: string): boolean;
 export function tierChance(r: string): number;
 export function hasPass(up: any, id: string): boolean;
 export const DEFAULT_RULES: string;
+
+export const XP_BASE: number;
+export const REBIRTH_XP: number;
+export interface World { id: string; name: string; sub: string; emoji: string; color: string; color2: string }
+export const WORLDS: World[];
+export const worldOf: (rb: number) => number;
+export interface QuestDef { id: string; name: string; icon: string; stat: string; base: number; verb: string }
+export const QUESTS: QuestDef[];
+export const questGoal: (q: QuestDef, rb: number) => number;
+export const rebirthXp: (rb: number) => number;
+export const REBIRTH_COINS: (rb: number) => number;
+export const WORLD_ITEMS: ({ effect: string; tag: string; bg: string } | null)[];
+export interface RbShopItem { id: string; kind: "item" | "perk" | "crates"; type?: "effect" | "tag" | "theme" | "bg"; item?: string; icon?: string; name?: string; desc?: string; cost: number; n?: number; repeat?: boolean }
+export const RB_SHOP: RbShopItem[];
+export const rbShopMap: Map<string, RbShopItem>;
+export const luckOf: (up: any) => number;

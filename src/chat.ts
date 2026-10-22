@@ -9,7 +9,7 @@ import { canSeeChannel, checkTrust, gifUrl, isTrusted, onTrust, trustInfo } from
 import { moderate, post as botPost } from "./bot.js";
 import { initSocial, socialClose, socialInit, socialMessage } from "./social.js";
 import { initPoker, pokerClose, pokerMessage } from "./poker.js";
-import { activity, grant, onGame, onLegend, progress, publicEvent, activeBoosts, rankIndex } from "./game.js";
+import { activity, grant, onGame, onLegend, onRebirth, progress, publicEvent, activeBoosts, rankIndex } from "./game.js";
 
 interface Client { ws: WebSocket; user: User; adminSub: boolean; cid: string; rooms: Set<string> }
 const clients = new Set<Client>();
@@ -56,6 +56,11 @@ onLegend((u) => {
   // The banner only lasts a few seconds and only reaches people who are online, so it also stays in the chat for everyone.
   const ch = db.data.channels.find((c) => c.id === "general") ?? db.data.channels[0];
   if (ch) { const m = botPost(ch.id, `✦ ${u.username} just reached TOUCH GRASS, the top rank in Project Artemis! Say congrats! ✦`); saveDb(); broadcastMsg(m); }
+});
+onRebirth((u, rb) => {
+  broadcast({ t: "rebirth", user: { id: u.id, username: u.username, fx: u.equip.effect, tag: u.equip.tag }, rb, ts: Date.now() });
+  const ch = db.data.channels.find((c) => c.id === "general") ?? db.data.channels[0];
+  if (ch) { const m = botPost(ch.id, `🔄 ${u.username} was just reborn! Rebirth #${rb}. Say congrats! 🔄`); saveDb(); broadcastMsg(m); }
 });
 /** Start a live event for everyone online. They each earn a little XP for showing up. */
 export function broadcastEvent(ev: { kind: string; title: string; sub: string; by: string }) {

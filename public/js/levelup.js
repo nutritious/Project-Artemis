@@ -1,6 +1,7 @@
 /* Level-up cutscenes (10 seconds each). Every rank has its own scene and its own sound design.
    Click or press Esc to skip. Scenes and sound are pure canvas / Web Audio, so they also render offline. */
 import { state } from "./util.js";
+import { WORLDS } from "./cosmetics.js";
 
 const TAU = Math.PI * 2, clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v)), lerp = (a, b, k) => a + (b - a) * k;
 const ease = (v) => { v = clamp(v); return v * v * (3 - 2 * v); }, easeOut = (v) => 1 - Math.pow(1 - clamp(v), 3);
@@ -396,7 +397,26 @@ export function sound(i, dur, ctx) {
 }
 
 /** Play the scene for rank index i (1..14; Stardust has none). */
-export function playLevelUp(i, rank) {
+/* Every world dresses the same scenes differently: a tint over everything, its own drifting particles and a planet on the horizon. */
+function worldSkin(x, W, H, t, world, S) {
+  const w = WORLDS[world]; if (!w || !world) return;
+  const R = Math.min(W, H), fade = clamp(t / 1.2) * clamp((9.6 - t) / 1.2);
+  x.save(); x.globalCompositeOperation = "soft-light"; x.globalAlpha = 0.32 * fade; const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, w.color); g.addColorStop(1, w.color2); x.fillStyle = g; x.fillRect(0, 0, W, H); x.restore();
+  S.wp ??= Array.from({ length: 46 }, () => ({ x: Math.random(), y: Math.random(), v: 0.02 + Math.random() * 0.06, s: 1 + Math.random() * 2.5, p: Math.random() * 6 }));
+  x.save(); x.globalAlpha = 0.7 * fade;
+  for (const p of S.wp) {
+    const dir = world % 3, px = ((p.x + (dir === 0 ? t * p.v : dir === 1 ? Math.sin(t * 0.4 + p.p) * 0.02 : -t * p.v * 0.6)) % 1 + 1) % 1, py = ((p.y + (dir === 1 ? -t * p.v : dir === 2 ? t * p.v * 0.5 : Math.sin(t + p.p) * 0.01)) % 1 + 1) % 1;
+    x.fillStyle = p.s > 2 ? w.color2 : w.color; x.globalAlpha = (0.25 + 0.5 * Math.abs(Math.sin(t * 1.3 + p.p))) * fade;
+    if (world >= 4) { x.beginPath(); x.arc(px * W, py * H, p.s * 1.4, 0, TAU); x.fill(); } else x.fillRect(px * W, py * H, p.s * 1.6, p.s * 1.6);
+  }
+  x.restore();
+  const pr = R * (0.07 + 0.015 * world), px = W * 0.88, py = H * 0.16 + Math.sin(t * 0.5) * 4;
+  x.save(); x.globalAlpha = 0.85 * fade; const pg = x.createRadialGradient(px - pr * 0.35, py - pr * 0.35, pr * 0.1, px, py, pr); pg.addColorStop(0, "#fff"); pg.addColorStop(0.3, w.color); pg.addColorStop(1, "#05060f"); x.fillStyle = pg; x.beginPath(); x.arc(px, py, pr, 0, TAU); x.fill();
+  if (world % 2 === 0) { x.strokeStyle = w.color2; x.lineWidth = pr * 0.1; x.beginPath(); x.ellipse(px, py, pr * 1.8, pr * 0.45, -0.35, 0, TAU); x.stroke(); }
+  x.restore();
+  x.save(); x.globalAlpha = 0.8 * fade; x.fillStyle = w.color2; x.font = `600 ${Math.max(10, R * 0.014)}px 'JetBrains Mono', monospace`; x.letterSpacing = "3px"; x.textAlign = "right"; x.fillText(w.name.toUpperCase(), W - 18, H - 18); x.restore();
+}
+export function playLevelUp(i, rank, world = 0) {
   const idx = Math.max(0, Math.min(SCENES.length - 1, i - 1));
   if (running) return; running = true;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches, dur = reduce ? 3 : DUR;
@@ -409,7 +429,7 @@ export function playLevelUp(i, rank) {
   const end = () => { if (done) return; done = true; cancelAnimationFrame(raf); removeEventListener("resize", fit); removeEventListener("keydown", onKey, true); try { audio?.close(); } catch { /* */ } el.classList.add("out"); setTimeout(() => { el.remove(); running = false; }, 600); };
   const onKey = (e) => { if (e.key === "Escape") { e.preventDefault(); end(); } };
   addEventListener("keydown", onKey, true); el.onclick = end;
-  const frame = (now) => { const t = (now - T0) / 1000; if (t > dur) return end(); renderFrame(ctx, W, H, reduce ? Math.max(t, SCENES[idx].hit + 2.5) : t, rank, idx, S); raf = requestAnimationFrame(frame); };
+  const frame = (now) => { const t = (now - T0) / 1000; if (t > dur) return end(); const tt = reduce ? Math.max(t, SCENES[idx].hit + 2.5) : t; renderFrame(ctx, W, H, tt, rank, idx, S); worldSkin(ctx, W, H, tt, world, S); raf = requestAnimationFrame(frame); };
   raf = requestAnimationFrame(frame);
 }
 let running = false;

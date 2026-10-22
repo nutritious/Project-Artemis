@@ -83,8 +83,8 @@ function upgradesHtml() {
       ${maxed ? "" : `<button class="btn ${can ? "" : "ghost"}" data-upbuy="${d.id}" ${can ? "" : "disabled"}>Upgrade · ◎ ${n(cost)}</button>`}</article>`;
   }).join("");
   const pass = UPGRADES.filter((d) => d.kind === "pass").map((d) => {
-    const own = up.pass.includes(d.id), on = hasPass(up, d.id), can = S.coins >= d.cost;
-    return `<article class="upg pass ${own ? "own" : ""} ${own && !on ? "off" : ""}"><div class="upg-h"><span class="upg-i">${d.icon}</span><div><h4>${esc(d.name)}</h4><span class="upg-lv">${own ? (on ? "Equipped" : "Unequipped") : "One-time pass"}</span></div></div><p>${esc(d.desc)}</p>
+    const own = up.pass.includes(d.id), on = hasPass(up, d.id), lock = (d.rb ?? 0) > (S.rb ?? 0), can = S.coins >= d.cost && !lock;
+    return `<article class="upg pass ${own ? "own" : ""} ${own && !on ? "off" : ""} ${lock ? "locked" : ""}"><div class="upg-h"><span class="upg-i">${d.icon}</span><div><h4>${esc(d.name)}</h4><span class="upg-lv">${own ? (on ? "Equipped" : "Unequipped") : lock ? `🔒 Unlocks at rebirth ${d.rb}` : d.rb ? "Rebirth pass" : "One-time pass"}</span></div></div><p>${esc(d.desc)}</p>
       <div class="inline">${own ? `<button class="btn sm ${on ? "ghost" : ""}" data-passtoggle="${d.id}" data-on="${on ? "" : "1"}">${on ? "Unequip" : "Equip"}</button>` : `<button class="btn ${can ? "" : "ghost"}" data-upbuy="${d.id}" ${can ? "" : "disabled"}>Buy · ◎ ${n(d.cost)}</button>`}<button class="btn sm ${can ? "alt" : "ghost"}" data-upgift="${d.id}" ${can ? "" : "disabled"} title="Buy it for someone else">🎁 Gift · ◎ ${n(d.cost)}</button></div></article>`;
   }).join("");
   return `<h3 class="sec">Level upgrades <small>buy them again and again, each level costs more</small></h3><div class="upgs">${level}</div>

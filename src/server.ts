@@ -12,10 +12,10 @@ import { verify as verifyOtp, newSecret, otpUri } from "./totp.js";
 import { trustInfo, TRUST, accrueProxy } from "./trust.js";
 import { can, effectivePerms, hasDashboard, outranks, publicRoles, PERMS, PERM_INFO, rank, roleRank, roleTag, type Perm } from "./perms.js";
 import { runCommand } from "./commands.js";
-import { wheelMs } from "./game.js";
+import { wheelMs, rebirthState, doRebirth, buyRebirth } from "./game.js";
 import { activity, progress, addEventPoints, earnedToday, activeBoosts, newGame, boards, publicEvent, publicGame, rankIndex, submitRun } from "./game.js";
 import { casinoPlay, casinoState } from "./casino.js";
-import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giveXpTo, buyUpgrade, togglePass, giftPass, upgradeState, giveItems, giveSelfWholePack, takeItems, joinLive, openPack, spinWheel, pushEventState, quick, startLive, targets } from "./economy.js";
+import { claim as claimFx, codeView, makeCode, redeem, endLive, giveCoinsTo, giveXpTo, giveRebirthTo, buyUpgrade, togglePass, giftPass, upgradeState, giveItems, giveSelfWholePack, takeItems, joinLive, openPack, spinWheel, pushEventState, quick, startLive, targets } from "./economy.js";
 import { storageInfo, migrate } from "./store.js";
 import { checkExit, cloudPass, exitInfo, exitKey, exitStatus, localCloudKey, setExit } from "./exit.js";
 import { attachCloud } from "./cloud-browser.js";
@@ -444,6 +444,9 @@ api.get("/ping", (_req, res) => res.json({ t: Date.now() }));
 /* ----- crew hub: ranks, coins, missions, arcade ----- */
 const gamePayload = (u: User) => ({ game: publicGame(u), ...boards(), event: publicEvent(u) });
 api.get("/game", auth, (req, res) => res.json(gamePayload(me(req))));
+api.get("/game/rebirth", auth, (req, res) => res.json(rebirthState(me(req))));
+api.post("/game/rebirth", auth, (req, res) => { try { const u = me(req); const rb = doRebirth(u); res.json({ ok: true, rb, state: rebirthState(u), game: publicGame(u) }); } catch (e: any) { res.status(400).json({ error: e.message }); } });
+api.post("/game/rebirth/buy", auth, (req, res) => { try { const u = me(req); buyRebirth(u, String(req.body?.id ?? "")); res.json({ ok: true, state: rebirthState(u), game: publicGame(u), inv: u.inv, freePacks: u.freePacks }); } catch (e: any) { res.status(400).json({ error: e.message }); } });
 api.post("/game/run", auth, (req, res) => {
   const user = me(req);
   if (!allow(`run:${user.id}`, 12, 60_000)) return void res.status(429).json({ error: "Slow down, pilot" });
@@ -478,7 +481,7 @@ api.post("/event/join", auth, (req, res) => { try { joinLive(me(req)); res.json(
 api.post("/fx/claim", auth, (req, res) => { if (!allow(`claim:${me(req).id}`, 40, 60_000)) return void res.status(429).json({ error: "Easy there" }); try { res.json({ coins: claimFx(me(req), String(req.body?.id ?? "")) }); } catch (e: any) { res.status(400).json({ error: e.message }); } });
 
 /* ----- shop: packs, equipping ----- */
-const shopPayload = (u: User) => ({ up: upgradeState(u), nextSpin: u.game.lastSpin + wheelMs(u), coins: u.coins, freePacks: u.freePacks, inv: u.inv, equip: u.equip, packs: PACKS, customTags: db.data.customTags });
+const shopPayload = (u: User) => ({ rb: u.game.rb ?? 0, up: upgradeState(u), nextSpin: u.game.lastSpin + wheelMs(u), coins: u.coins, freePacks: u.freePacks, inv: u.inv, equip: u.equip, packs: PACKS, customTags: db.data.customTags });
 api.get("/shop", auth, (req, res) => res.json(shopPayload(me(req))));
 api.post("/shop/open", auth, (req, res) => {
   const user = me(req);
@@ -520,7 +523,7 @@ api.get("/profile/:name", auth, (req, res) => {
   const viewer = me(req), u = db.data.users.find((x) => x.username.toLowerCase() === String(req.params.name).toLowerCase() && !x.banned);
   if (!u) return void res.status(404).json({ error: "No one with that callsign" });
   const staff = viewer.role === "owner" || viewer.role === "coowner";
-  res.json({ id: u.id, username: u.username, role: u.role, roleId: u.roleId ?? null, profile: u.profile, createdAt: u.createdAt, lastSeen: u.lastSeen, xp: u.game.xp, rank: rankIndex(u.game.xp), streak: u.game.streak, plays: u.game.plays, bests: u.game.bests, equip: u.equip, inv: u.inv, ach: Object.keys(u.game.ach).length, msgs: (u.game.stats as any)?.msgs ?? 0, ...(staff ? { coins: u.coins } : {}) });
+  res.json({ id: u.id, username: u.username, role: u.role, roleId: u.roleId ?? null, profile: u.profile, createdAt: u.createdAt, lastSeen: u.lastSeen, xp: u.game.xp, rank: rankIndex(u.game.xp), rb: u.game.rb ?? 0, streak: u.game.streak, plays: u.game.plays, bests: u.game.bests, equip: u.equip, inv: u.inv, ach: Object.keys(u.game.ach).length, msgs: (u.game.stats as any)?.msgs ?? 0, ...(staff ? { coins: u.coins } : {}) });
 });
 
 /* ----- owner economy and events ----- */
@@ -553,6 +556,12 @@ api.post("/owner/xp", auth, coownerUp, (req, res) => {
   const amount = Math.round(Number(req.body?.amount));
   if (!Number.isFinite(amount) || amount === 0 || Math.abs(amount) > 1_000_000_000) return void res.status(400).json({ error: "Enter an XP amount (any number except 0, negative takes XP back)" });
   const n = giveXpTo(me(req).username, amount, parseTarget(req.body?.target), String(req.body?.reason ?? "").slice(0, 60));
+  broadcastMembers(); res.json({ ok: true, reached: n });
+});
+api.post("/owner/rebirth", auth, coownerUp, (req, res) => {
+  const amount = Math.round(Number(req.body?.amount)), mode = req.body?.mode === "points" ? "points" : "rebirths";
+  if (!Number.isFinite(amount) || amount === 0 || Math.abs(amount) > 50) return void res.status(400).json({ error: "Enter a number between -50 and 50 (not 0)" });
+  const n = giveRebirthTo(me(req).username, amount, mode, parseTarget(req.body?.target), String(req.body?.reason ?? "").slice(0, 60));
   broadcastMembers(); res.json({ ok: true, reached: n });
 });
 api.post("/owner/give", auth, panelUp, (req, res) => {

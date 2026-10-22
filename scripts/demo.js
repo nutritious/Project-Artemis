@@ -141,6 +141,13 @@ hooks.api = async (path, method = "GET", body = {}) => {
   if (p === "/reports") { D.reports.push({ id: uid(), userId: me.id, username: me.username, kind: body.kind, text: body.text, page: body.page, ts: Date.now(), status: "open" }); return { ok: true }; }
   const rpm = p.match(/^\/owner\/reports\/(\w+)$/);
   if (rpm) { const r = D.reports.find((x) => x.id === rpm[1]); if (method === "PUT" && r) r.status = body.status; else D.reports = D.reports.filter((x) => x.id !== rpm[1]); return { ok: true }; }
+  if (p === "/game/rebirth" || p === "/game/rebirth/buy") {
+    const st = () => { const rb = G.rb ?? 0, goals = [100, 150, 25, 15].map((b) => Math.max(5, Math.round(b * (1 + 0.6 * rb) / 5) * 5)), vals = [G.stats.msgs ?? 0, G.stats.pages ?? 0, G.plays, G.stats.packs ?? 0], base = G.wbase ?? [0, 0, 0, 0];
+      const quests = [["msgs", "Radio Ring", "📡", "Send chat messages"], ["pages", "Explorer Ring", "🧭", "Open pages in the browser"], ["plays", "Arcade Ring", "🎮", "Finish arcade runs"], ["packs", "Crate Ring", "📦", "Open packs"]].map(([id, name, icon, verb], i) => { const n = Math.min(goals[i], Math.max(0, vals[i] - base[i])); return { id, name, icon, verb, goal: goals[i], n, done: n >= goals[i] }; });
+      const atTop = G.xp >= 100000, ringsDone = quests.every((x) => x.done); return { rb, rp: G.rp ?? 0, world: Math.min(rb, 5), nextWorld: Math.min(rb + 1, 5), quests, atTop, ringsDone, can: atTop && ringsDone, mul: 2 * (1 + 0.25 * rb), bought: G.rbBought ?? [] }; };
+    if (p === "/game/rebirth/buy") return { ok: true, state: st() };
+    return st();
+  }
   if (p === "/game") return { game: pubGame(), ...boards() };
   if (p === "/game/run") { const sc = Math.floor(body.score); G.plays++; G.best = Math.max(G.best, sc); G.xp += Math.min(30, Math.floor(sc / 40)); X.earn?.(Math.min(60, Math.floor(sc / 60))); gprogress("play"); return { game: pubGame(), ...boards() }; }
   if (p === "/owner/event") { push({ t: "event", kind: body.kind, title: body.title, sub: body.sub, by: me.username }); G.xp += 25; return { ok: true, reached: 1 }; }

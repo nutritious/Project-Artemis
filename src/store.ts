@@ -56,7 +56,7 @@ export interface User {
   up?: Upgrades;
 }
 export interface Upgrades { luck: number; speed: number; refund: number; cash: number; dbl: number; pass: string[]; off?: string[] }
-export interface Game { xp: number; streak: number; lastDay: string; day: string; n: { browse: number; chat: number; play: number }; done: string[]; best: number; plays: number; bests: Record<string, number>; runCoins: number; stats: Record<string, number>; ach: Record<string, number>; earnDay: string; earned: number; lastSpin: number }
+export interface Game { xp: number; streak: number; lastDay: string; day: string; n: { browse: number; chat: number; play: number }; done: string[]; best: number; plays: number; bests: Record<string, number>; runCoins: number; stats: Record<string, number>; ach: Record<string, number>; earnDay: string; earned: number; lastSpin: number; rb?: number; rp?: number; wbase?: Record<string, number>; rbBought?: string[] }
 export interface Inventory { effects: string[]; tags: string[]; themes: string[]; bgs: string[] }
 export interface Equip { effect: string; tag: string; bg: string }
 export interface CustomTag { id: string; name: string; color: string }
