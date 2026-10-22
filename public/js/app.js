@@ -143,12 +143,9 @@ $("#authForm").addEventListener("submit", async (e) => {
     if (authMode === "register" && (authCfg.rules ?? "").trim() && f.get("agree") !== "on") throw new Error("Please read the rules and tick the box to agree");
     await api(authMode === "login" ? "/login" : "/register", "POST", { username: f.get("username"), password: f.get("password"), invite: f.get("invite"), remember: f.get("remember") === "on", agreeRules: f.get("agree") === "on" });
     const meData = await api("/me");
-    /* the launch sequence plays on every sign-in (Skip is always available) */
+    /* no cutscene after signing in: straight into the app */
     $("#auth").classList.add("hidden");
-    /* short cut of the launch (about 7 seconds); the app loads behind it so it is ready the moment it ends */
-    const playing = matchMedia("(prefers-reduced-motion: reduce)").matches ? null : runIntro(introSound, true);
     enterApp(meData);
-    if (playing) await playing;
   } catch (err) { $("#authError").textContent = err.message; } finally { btn.disabled = false; }
 });
 $("#replayIntro").addEventListener("click", async () => { $("#auth").classList.add("hidden"); await runIntro(true); $("#auth").classList.remove("hidden"); });
