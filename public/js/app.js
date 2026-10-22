@@ -12,7 +12,7 @@ import { buildArcade, onArcadeLeft, onArcadeShown } from "./arcade.js";
 import { playEvent } from "./event.js";
 import { initFx } from "./fx.js";
 import { initSpooky } from "./spooky.js";
-import { maybeTour, rulesHtml } from "./tour.js";
+import { maybeTour, forgetWelcome, rulesHtml } from "./tour.js";
 import { initBanners } from "./banners.js";
 import { initArena } from "./arena.js";
 import { initParty } from "./party.js";
@@ -252,7 +252,7 @@ function palette() {
     ...state.bookmarks.map((b) => ({ l: b.title, h: b.url, run: () => openUrl(b.url) })),
     ...THEMES.map(([id, n]) => ({ l: `Theme: ${n}`, h: "Appearance", run: () => saveSettings({ theme: id }) })),
     ...state.engines.map((e) => ({ l: `Search with ${e.name}`, h: "Default engine", run: () => { saveSettings({ engine: e.id }); toast(`Default engine: ${e.name}`, "ok"); } })),
-    { l: "Sign out", h: "Account", run: async () => { await api("/logout", "POST", {}).catch(() => {}); (window.onbeforeunload = null, location.reload()); } },
+    { l: "Sign out", h: "Account", run: async () => { forgetWelcome(); await api("/logout", "POST", {}).catch(() => {}); (window.onbeforeunload = null, location.reload()); } },
   ];
   let items = [], sel = 0;
   const paint = () => {

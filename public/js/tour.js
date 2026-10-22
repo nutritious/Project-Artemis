@@ -70,14 +70,16 @@ export function openTour(onDone) {
 }
 
 /** Shows the tour once for a new account, after the launch animation is finished. */
-const WKEY = "artemis.welcome1";
-const seenWelcome = () => { try { return localStorage.getItem(WKEY) === "1"; } catch { return false; } };
-const markWelcome = () => { try { localStorage.setItem(WKEY, "1"); } catch {} };
-/** New people get the welcome, then the tour. People who already did the tour get the welcome once. */
+const WKEY = "artemis.welcomeFor";
+const seenWelcome = () => { try { return sessionStorage.getItem(WKEY) === state.me?.username; } catch { return false; } };
+const markWelcome = () => { try { sessionStorage.setItem(WKEY, state.me?.username ?? ""); } catch {} };
+/** Call on sign out, so the next sign in shows the welcome again. */
+export const forgetWelcome = () => { try { sessionStorage.removeItem(WKEY); } catch {} };
+/** The welcome shows every time you sign in (once per visit). New people get the tour after it. */
 export function maybeTour() {
   if (!state.me) return;
   const first = state.me.settings?.tourSeen === false;
-  if (!first && seenWelcome()) return;
+  if (seenWelcome()) return;
   let tries = 0;
   const wait = setInterval(() => {
     const introOn = !$("#intro")?.classList.contains("hidden") || !!document.querySelector("#gate:not(.hidden)");

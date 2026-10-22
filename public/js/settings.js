@@ -1,5 +1,5 @@
 /* Settings: themes, search, cloak, panic key, profile, account. */
-import { replayTour, showRules } from "./tour.js";
+import { replayTour, forgetWelcome, showRules } from "./tour.js";
 import { halloweenOpen, setSpooky, spookyWanted, fallOpen, setFall, fallWanted } from "./spooky.js";
 import { $, $$, api, ago, avatar, confirmBox, emit, esc, hostOf, on, promptBox, roleName, roleTags, state, toast } from "./util.js";
 import { openUrl } from "./browser.js";
@@ -181,7 +181,7 @@ export function buildSettings() {
     try { await api("/account", "DELETE", { password }); (window.onbeforeunload = null, location.reload()); } catch (err) { toast(err.message, true); }
   };
   $("#clearHist").onclick = async () => { if (await confirmBox("Clear browsing history?", "Address bar suggestions from your history are deleted.", { ok: "Clear", danger: true })) { try { await api("/history", "DELETE"); toast("History cleared", "ok"); } catch (err) { toast(err.message, true); } } };
-  $("#logoutBtn").onclick = async () => { await api("/logout", "POST", {}).catch(() => {}); (window.onbeforeunload = null, location.reload()); };
+  $("#logoutBtn").onclick = async () => { forgetWelcome(); await api("/logout", "POST", {}).catch(() => {}); (window.onbeforeunload = null, location.reload()); };
 }
 
 /* Center-crop to a 128px square JPEG so avatars stay tiny (a few KB). */
