@@ -54,7 +54,7 @@ export const EFFECTS = [
   { id: "prism-leaf", name: "Prismatic Leaf", rarity: "chroma", only: "fall", desc: "A leaf lit by every colour of autumn" },
   { id: "wraith", name: "Spectral Wraith", rarity: "chroma", only: "halloween", desc: "A rainbow ghost haunts your picture" },
   { id: "prismjack", name: "Prismatic Jack", rarity: "chroma", only: "halloween", desc: "A pumpkin lit by every colour at once" },
-  { id: "horizon", name: "Event Horizon", rarity: "secret", desc: "A black hole that should not be here" },
+  { id: "horizon", name: "Cartwheel Shockwave", rarity: "secret", desc: "A black hole that should not be here" },
   { id: "phantom", name: "Phantom", rarity: "secret", desc: "Something stands just behind you" },
   { id: "eclipse", name: "Total Eclipse", rarity: "forbidden", desc: "The sun went out and it was not an accident" },
   { id: "reaper", name: "Midnight Reaper", rarity: "apex", only: "halloween", desc: "The twelfth bell has struck and something hooded came for the party" },
@@ -259,12 +259,12 @@ export const CUTSCENES = [
 export const XP_BASE = 2;          /* everyday XP is doubled for everyone */
 export const REBIRTH_XP = 0.25;    /* every rebirth adds this much, forever */
 export const WORLDS = [
-  { id: "sol", name: "Sol System", sub: "The Milky Way. Every crew starts here.", emoji: "☀️", color: "#ffc857", color2: "#ff8a5b" },
-  { id: "centauri", name: "Alpha Centauri", sub: "Three suns, one very warm welcome.", emoji: "🌞", color: "#ff8a5b", color2: "#ffd76a" },
-  { id: "kepler", name: "Kepler-452", sub: "An older cousin of Earth, green and quiet.", emoji: "🌍", color: "#3ddc97", color2: "#4cc9f0" },
-  { id: "orion", name: "Orion Nebula", sub: "A star nursery glowing in pink and violet.", emoji: "🌌", color: "#e879f9", color2: "#9d7bff" },
-  { id: "andromeda", name: "Andromeda", sub: "The neighbouring galaxy. Two million light years from home.", emoji: "🌀", color: "#5ad1ff", color2: "#b57bff" },
-  { id: "void", name: "The Void Beyond", sub: "Past the last star. Only the brave keep going.", emoji: "🕳️", color: "#9d7bff", color2: "#22e3c9" },
+  { id: "sol", name: "Milky Way", sub: "Our home galaxy. Every crew starts here.", emoji: "🌌", color: "#ffc857", color2: "#ff8a5b" },
+  { id: "centauri", name: "Andromeda", sub: "The big neighbour, two million light years away.", emoji: "🌀", color: "#ff8a5b", color2: "#ffd76a" },
+  { id: "kepler", name: "Triangulum", sub: "A small green spiral, quiet and full of young stars.", emoji: "🔺", color: "#3ddc97", color2: "#4cc9f0" },
+  { id: "orion", name: "Whirlpool Galaxy", sub: "A face-on spiral locked in a slow dance with a companion.", emoji: "🌊", color: "#e879f9", color2: "#9d7bff" },
+  { id: "andromeda", name: "Sombrero Galaxy", sub: "A bright core wrapped in a thick ring of dust.", emoji: "🪐", color: "#5ad1ff", color2: "#b57bff" },
+  { id: "void", name: "Cartwheel Galaxy", sub: "A ring of new stars, still spreading after a collision.", emoji: "☸️", color: "#9d7bff", color2: "#22e3c9" },
 ];
 export const worldOf = (rb) => Math.max(0, Math.min(rb | 0, WORLDS.length - 1));
 export const QUESTS = [
@@ -287,31 +287,31 @@ export const WORLD_ITEMS = [
   { effect: "w5-horizon", tag: "w5-voidborn", bg: "w5-void" },
 ];
 EFFECTS.push(
-  { id: "w1-suns", name: "Triple Suns", rarity: "limited", limited: "rebirth", desc: "Alpha Centauri: three tiny suns circle you" },
-  { id: "w2-tides", name: "Kepler Tides", rarity: "limited", limited: "rebirth", desc: "Kepler-452: a green ring that breathes like an ocean" },
-  { id: "w3-veil", name: "Nebula Veil", rarity: "limited", limited: "rebirth", desc: "Orion Nebula: drifting pink and violet gas" },
-  { id: "w4-spiral", name: "Spiral Arm", rarity: "limited", limited: "rebirth", desc: "Andromeda: a slow spiral of stars" },
-  { id: "w5-horizon", name: "Event Horizon", rarity: "limited", limited: "rebirth", desc: "The Void: light bends around your picture" },
+  { id: "w1-suns", name: "Twin Cores", rarity: "limited", limited: "rebirth", desc: "Andromeda: two bright cores circle you" },
+  { id: "w2-tides", name: "Triangulum Tides", rarity: "limited", limited: "rebirth", desc: "Triangulum: a green ring that breathes like an ocean" },
+  { id: "w3-veil", name: "Whirlpool Veil", rarity: "limited", limited: "rebirth", desc: "Whirlpool: drifting pink and violet gas" },
+  { id: "w4-spiral", name: "Sombrero Ring", rarity: "limited", limited: "rebirth", desc: "Sombrero: a slow ring of stars" },
+  { id: "w5-horizon", name: "Event Horizon", rarity: "limited", limited: "rebirth", desc: "Cartwheel: a ring of light spreads out from your picture" },
   { id: "rb-comet", name: "Comet Trail", rarity: "limited", limited: "rebirth", desc: "A comet loops around you with a long tail" },
   { id: "rb-supernova", name: "Supernova", rarity: "limited", limited: "rebirth", desc: "A star that keeps almost bursting" },
   { id: "rb-wormhole", name: "Wormhole", rarity: "limited", limited: "rebirth", desc: "A swirling portal behind your picture" },
 );
 TAGS.push(
-  { id: "w1-centaurian", name: "Centaurian", color: "#ff8a5b", rarity: "limited", limited: "rebirth" },
-  { id: "w2-terraformer", name: "Terraformer", color: "#3ddc97", rarity: "limited", limited: "rebirth" },
-  { id: "w3-nebula-walker", name: "Nebula Walker", color: "#e879f9", rarity: "limited", limited: "rebirth" },
-  { id: "w4-andromedan", name: "Andromedan", color: "#5ad1ff", rarity: "limited", limited: "rebirth" },
-  { id: "w5-voidborn", name: "Voidborn", color: "#9d7bff", rarity: "limited", limited: "rebirth" },
+  { id: "w1-centaurian", name: "Andromedan", color: "#ff8a5b", rarity: "limited", limited: "rebirth" },
+  { id: "w2-terraformer", name: "Triangulan", color: "#3ddc97", rarity: "limited", limited: "rebirth" },
+  { id: "w3-nebula-walker", name: "Whirlpooler", color: "#e879f9", rarity: "limited", limited: "rebirth" },
+  { id: "w4-andromedan", name: "Sombrerian", color: "#5ad1ff", rarity: "limited", limited: "rebirth" },
+  { id: "w5-voidborn", name: "Cartwheeler", color: "#9d7bff", rarity: "limited", limited: "rebirth" },
   { id: "rb-wanderer", name: "Wanderer", color: "#cfe0ff", rarity: "limited", limited: "rebirth" },
   { id: "rb-ascended", name: "Ascended", color: "#ffd76a", rarity: "limited", limited: "rebirth" },
   { id: "rb-eternal", name: "ETERNAL", color: "#ff4df0", rarity: "limited", limited: "rebirth" },
 );
 BGS.push(
-  { id: "w1-dawn", name: "Centauri Dawn", rarity: "limited", limited: "rebirth", desc: "Three suns rising over a rust-coloured sky" },
-  { id: "w2-kepler", name: "Kepler Sky", rarity: "limited", limited: "rebirth", desc: "A green horizon under a huge pale sun" },
-  { id: "w3-nebula", name: "Orion Gas", rarity: "limited", limited: "rebirth", desc: "Pink and violet clouds lit from inside" },
-  { id: "w4-spiral", name: "Andromeda Arms", rarity: "limited", limited: "rebirth", desc: "A whole galaxy turning slowly" },
-  { id: "w5-void", name: "Void Edge", rarity: "limited", limited: "rebirth", desc: "Almost nothing, and then a thin ring of light" },
+  { id: "w1-dawn", name: "Andromeda Dawn", rarity: "limited", limited: "rebirth", desc: "A huge glowing core rising over a rust-coloured sky" },
+  { id: "w2-kepler", name: "Triangulum Sky", rarity: "limited", limited: "rebirth", desc: "A green horizon under a huge pale sun" },
+  { id: "w3-nebula", name: "Whirlpool Gas", rarity: "limited", limited: "rebirth", desc: "Pink and violet clouds lit from inside" },
+  { id: "w4-spiral", name: "Sombrero Dust", rarity: "limited", limited: "rebirth", desc: "A thick dark ring around a bright core" },
+  { id: "w5-void", name: "Cartwheel Ring", rarity: "limited", limited: "rebirth", desc: "A wide ring of new blue stars" },
   { id: "rb-starforge", name: "Starforge", rarity: "limited", limited: "rebirth", desc: "Sparks flying off a new star" },
   { id: "rb-galaxy-core", name: "Galactic Core", rarity: "limited", limited: "rebirth", desc: "The bright, crowded middle of a galaxy" },
 );

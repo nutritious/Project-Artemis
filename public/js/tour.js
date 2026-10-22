@@ -1,5 +1,5 @@
 /* The first-login tour, the rules text and the beta notes. Everything a new person should know, one step at a time. */
-import { $, api, esc, emit, overlay, state } from "./util.js";
+import { $, api, esc, emit, hue, overlay, state } from "./util.js";
 
 /** Turns the owner's rules text into HTML. "## Heading" is a section, "- Title — text" is a rule, anything else is a paragraph. */
 export function rulesHtml(text) {
@@ -31,6 +31,24 @@ const STEPS = [
   { i: "📜", t: "Be kind, and you are set", b: ["Keep it friendly and keep it SFW. You agreed to the rules when you joined, and you can read them again any time in <b>Settings &gt; About Artemis</b>.", "See something broken? Use <b>Report issue</b> in the left menu. It helps a lot while we are in beta.", "You can replay this tour from Settings whenever you like. Have fun!"], rules: true },
 ];
 
+/** The first thing a new person sees: who runs the place. Next leads into the tour; the X skips both. */
+export async function openWelcome(onNext) {
+  let crew = [{ name: "Warmaster", title: "Owner", avatar: "" }];
+  try { crew = (await api("/config")).crew ?? crew; } catch {}
+  const pic = (c) => c.avatar ? `<img src="${esc(c.avatar)}" alt="">` : `<span style="background:linear-gradient(135deg,hsl(${hue(c.name)} 60% 50%),hsl(${(hue(c.name) + 40) % 360} 55% 38%))">${esc(c.name[0].toUpperCase())}</span>`;
+  const o = overlay(`<div class="modal glass welcome" role="dialog" aria-modal="true" aria-label="Welcome">
+    <header><h3>Welcome to Project Artemis!</h3><button type="button" class="wl-x" data-x aria-label="Close">✕</button></header>
+    <div class="wl-body"><p>Mission control for the open web. Browse, chat, play and collect, all in one place.</p>
+      <h4>Meet the owners</h4>
+      <div class="wl-crew">${crew.map((c) => `<div class="wl-card"><i class="wl-pic">${pic(c)}</i><div><b>${esc(c.name)}</b><small>${esc(c.title)}</small></div></div>`).join("")}</div></div>
+    <footer><small>Tell a friend about Artemis!</small><button type="button" class="btn primary" data-next>Next</button></footer></div>`);
+  const done = async (next) => { document.removeEventListener("keydown", key, true); o.remove(); if (next) return onNext?.(); if (state.me?.settings && !state.me.settings.tourSeen) { state.me.settings.tourSeen = true; try { await api("/settings", "PUT", { tourSeen: true }); } catch {} } };
+  const key = (e) => { if (e.key === "Escape") done(false); else if (e.key === "Enter") done(true); };
+  document.addEventListener("keydown", key, true);
+  o.addEventListener("click", (e) => { if (e.target.closest("[data-next]")) done(true); else if (e.target.closest("[data-x]") || e.target === o) done(false); });
+  o.querySelector("[data-next]").focus();
+}
+
 let open = null;
 export function openTour(onDone) {
   if (open) return; let n = 0;
@@ -59,7 +77,7 @@ export function maybeTour() {
     const introOn = !$("#intro")?.classList.contains("hidden") || !!document.querySelector("#gate:not(.hidden)");
     if (++tries > 150) return void clearInterval(wait);
     if (introOn || !state.me || state.me.settings?.tourSeen !== false) { if (state.me?.settings?.tourSeen) clearInterval(wait); return; }
-    clearInterval(wait); openTour();
+    clearInterval(wait); openWelcome(() => openTour());
   }, 400);
 }
 void emit;

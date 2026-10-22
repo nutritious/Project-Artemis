@@ -169,7 +169,12 @@ function logAdmin(req: Request, action: string, detail = "") {
 }
 
 const hasOwner = () => db.data.users.some((u) => u.role === "owner");
-api.get("/config", (_req, res) => res.json({ firstRun: !hasOwner(), ownerName: OWNER_USERNAME, openRegistration: db.data.server.openRegistration, announcement: db.data.announcement, rules: db.data.server.rules ?? "", beta: true }));
+/** The people shown on the welcome card. Pictures come from their accounts, if they have one. */
+const WELCOME_CREW = () => [[OWNER_USERNAME, "Owner"], ["Razorblade", "Co-owner"], ["Ditto", "Co-owner"]].map(([name, title]) => {
+  const u = db.data.users.find((x) => x.username.toLowerCase() === name.toLowerCase()), av = u?.profile?.avatar;
+  return { name: u?.username ?? name, title, avatar: av && av.length < 300_000 ? av : "" };
+});
+api.get("/config", (_req, res) => res.json({ crew: WELCOME_CREW(), firstRun: !hasOwner(), ownerName: OWNER_USERNAME, openRegistration: db.data.server.openRegistration, announcement: db.data.announcement, rules: db.data.server.rules ?? "", beta: true }));
 
 /** Bot check: only asks when the behaviour looks automated. Returns true if the request was answered (refused). */
 function botGate(req: Request, res: Response, kind: "login" | "register"): boolean {

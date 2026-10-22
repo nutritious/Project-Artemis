@@ -15,7 +15,7 @@ export function worldsHtml(R) {
   const why = !R.atTop ? "Reach Touch Grass first" : !R.ringsDone ? "Close all four rings first" : "";
   const gains = [`Your rank and XP reset to Stardust. You <b>keep</b> your coins, items, packs and passes.`, `Permanent <b>+${Math.round(REBIRTH_XP * 100)}% XP</b>, stacking, and 1 rebirth point.`, `<b>${REBIRTH_COINS(R.rb + 1).toLocaleString("en-US")} ◎</b> coins${items ? " and a new tag, profile effect and backdrop from " + esc(nxt.name) : ""}.`];
   return `<div class="card glass worlds" style="--wc:${w.color};--wc2:${w.color2}">
-    <h3>Worlds <span class="chip" style="color:${w.color}">Rebirth ${R.rb}</span><span class="chip">XP ×${R.mul}</span></h3>
+    <h3>Galaxies <span class="chip" style="color:${w.color}">Rebirth ${R.rb}</span><span class="chip">XP ×${R.mul}</span></h3>
     <div class="wstrip">${strip}</div>
     <div class="wnow"><span class="wemoji">${w.emoji}</span><div><b>${esc(w.name)}</b><small>${esc(w.sub)}</small></div></div>
     <div class="wrings">${R.quests.map((q) => ring(q, w.color)).join("")}</div>
@@ -23,7 +23,7 @@ export function worldsHtml(R) {
       <button type="button" class="btn ${R.can ? "primary" : "ghost"} wbtn" data-rebirth ${R.can ? "" : "disabled"}>${R.can ? `🔄 Rebirth into ${esc(cyc ? "another cycle of " + nxt.name : nxt.name)}` : `🔒 Rebirth · ${esc(why)}`}</button>
       <ul class="wgain">${gains.map((x) => `<li>${x}</li>`).join("")}</ul>
     </div>
-    ${R.rb ? `<p class="note">Each world has its own look for every level-up scene, so ranking up again feels new every time.</p>` : `<p class="note">Reach Touch Grass and close the four rings to rebirth into the next world. Everyday XP is already doubled for everyone.</p>`}
+    ${R.rb ? `<p class="note">Each galaxy has its own look for every level-up scene, so ranking up again feels new every time.</p>` : `<p class="note">Reach Touch Grass and close the four rings to rebirth into the next galaxy. Everyday XP is already doubled for everyone.</p>`}
   </div>
   <div class="card glass rbshop"><h3>Rebirth shop <span class="chip" style="color:#ffd76a">✦ ${R.rp} point${R.rp === 1 ? "" : "s"}</span></h3>
     <p class="note" style="margin:-4px 0 10px">You get 1 point for every rebirth. Everything here is exclusive and cannot be found in packs.</p>

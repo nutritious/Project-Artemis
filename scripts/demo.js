@@ -96,7 +96,7 @@ hooks.api = async (path, method = "GET", body = {}) => {
   await new Promise((r) => setTimeout(r, 15));
   const [p, qs] = path.split("?"); const q = new URLSearchParams(qs ?? "");
   const m = (re) => p.match(re);
-  if (p === "/config") return { firstRun: false, ownerName: "Warmaster", openRegistration: D.server.openRegistration, announcement: D.announcement, rules: DEFAULT_RULES, beta: true };
+  if (p === "/config") return { crew: [{ name: "Warmaster", title: "Owner", avatar: "" }, { name: "Razorblade", title: "Co-owner", avatar: "" }, { name: "Ditto", title: "Co-owner", avatar: "" }], firstRun: false, ownerName: "Warmaster", openRegistration: D.server.openRegistration, announcement: D.announcement, rules: DEFAULT_RULES, beta: true };
   if (p === "/login") {
     const n = String(body.username ?? "").trim(), a = accounts[n.toLowerCase()];
     if (n.toLowerCase() === "warmaster") { become("Warmaster"); remember("Warmaster"); return { user: me }; }

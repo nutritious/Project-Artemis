@@ -28,7 +28,7 @@ function legendBanner(m) {
 function rebirthBanner(m) {
   const u = m.user ?? {}, mine = u.id === state.me?.id; if (mine) return; /* they get the full cutscene instead */
   const el = document.createElement("div"); el.className = "legend-banner";
-  el.innerHTML = `<span class="lg-star">🔄</span><div><b>${esc(u.username)} was reborn</b><small>Rebirth #${+m.rb || 1}. A new world, a new start. Say congrats in chat!</small></div><span class="lg-star">🔄</span>`;
+  el.innerHTML = `<span class="lg-star">🔄</span><div><b>${esc(u.username)} was reborn</b><small>Rebirth #${+m.rb || 1}. A new galaxy, a new start. Say congrats in chat!</small></div><span class="lg-star">🔄</span>`;
   document.body.appendChild(el); chord([392, 523.25, 659.25, 784], 0.8);
   setTimeout(() => el.classList.add("out"), 7000); setTimeout(() => el.remove(), 7800);
 }
