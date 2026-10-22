@@ -1,5 +1,5 @@
 /* Settings: themes, search, cloak, panic key, profile, account. */
-import { openTour, showRules } from "./tour.js";
+import { replayTour, showRules } from "./tour.js";
 import { halloweenOpen, setSpooky, spookyWanted, fallOpen, setFall, fallWanted } from "./spooky.js";
 import { $, $$, api, ago, avatar, confirmBox, emit, esc, hostOf, on, promptBox, roleName, roleTags, state, toast } from "./util.js";
 import { openUrl } from "./browser.js";
@@ -132,7 +132,7 @@ export function buildSettings() {
   $("#setPresence").onchange = (e) => saveProfile({ presence: e.target.value });
   $("#setSound").onchange = (e) => saveSettings({ chatSound: e.target.checked });
   if ($("#setSpooky")) $("#setSpooky").onchange = (e) => setSpooky(e.target.checked);
-  $("#replayTour").onclick = () => openTour();
+  $("#replayTour").onclick = () => replayTour();
   /* extra login step: a 6-digit code from an authenticator app, for staff accounts */
   const tf = $("#twofaBody");
   if (tf) {

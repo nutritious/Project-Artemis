@@ -70,14 +70,21 @@ export function openTour(onDone) {
 }
 
 /** Shows the tour once for a new account, after the launch animation is finished. */
+const WKEY = "artemis.welcome1";
+const seenWelcome = () => { try { return localStorage.getItem(WKEY) === "1"; } catch { return false; } };
+const markWelcome = () => { try { localStorage.setItem(WKEY, "1"); } catch {} };
+/** New people get the welcome, then the tour. People who already did the tour get the welcome once. */
 export function maybeTour() {
-  if (!state.me || state.me.settings?.tourSeen !== false) return;
+  if (!state.me) return;
+  const first = state.me.settings?.tourSeen === false;
+  if (!first && seenWelcome()) return;
   let tries = 0;
   const wait = setInterval(() => {
     const introOn = !$("#intro")?.classList.contains("hidden") || !!document.querySelector("#gate:not(.hidden)");
     if (++tries > 150) return void clearInterval(wait);
-    if (introOn || !state.me || state.me.settings?.tourSeen !== false) { if (state.me?.settings?.tourSeen) clearInterval(wait); return; }
-    clearInterval(wait); openWelcome(() => openTour());
+    if (introOn || !state.me) return;
+    clearInterval(wait); markWelcome(); openWelcome(first ? () => openTour() : undefined);
   }, 400);
 }
+export const replayTour = () => openWelcome(() => openTour());
 void emit;
