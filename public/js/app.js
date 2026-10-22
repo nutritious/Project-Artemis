@@ -112,7 +112,13 @@ async function boot() {
 }
 
 /* ------------------------------ auth ------------------------------ */
-let authMode = "login", authCfg = {};
+let authMode = "login", authCfg = {}, shownAt = Date.now(), chal = null, picks = new Set();
+function showChallenge(c) {
+  chal = c; picks = new Set(); $("#botPrompt").textContent = c.prompt;
+  $("#botTiles").innerHTML = c.tiles.map((t, i) => `<button type="button" class="bot-tile" data-i="${i}" aria-pressed="false">${t}</button>`).join("");
+  $("#botBox").classList.remove("hidden");
+}
+$("#botTiles").addEventListener("click", (e) => { const b = e.target.closest(".bot-tile"); if (!b) return; const i = +b.dataset.i; if (picks.has(i)) picks.delete(i); else picks.add(i); b.classList.toggle("on", picks.has(i)); b.setAttribute("aria-pressed", String(picks.has(i))); });
 function showAuth(cfg) {
   authCfg = cfg;
   $("#app").classList.add("hidden"); $("#auth").classList.remove("hidden");
@@ -134,7 +140,7 @@ function setAuthMode(mode) {
   $("#authForm [name=password]").minLength = mode === "register" ? 8 : 1;
   $("#authForm [name=password]").autocomplete = mode === "login" ? "current-password" : "new-password";
   $("#authForm button[type=submit]").textContent = mode === "login" ? "Begin mission" : "Join the crew";
-  $("#authError").textContent = ""; $("#otpField").classList.add("hidden");
+  $("#authError").textContent = ""; $("#otpField").classList.add("hidden"); $("#botBox").classList.add("hidden"); chal = null; shownAt = Date.now();
 }
 $$(".seg button").forEach((b) => b.addEventListener("click", () => setAuthMode(b.dataset.mode)));
 $("#authForm").addEventListener("submit", async (e) => {
@@ -143,12 +149,12 @@ $("#authForm").addEventListener("submit", async (e) => {
   btn.disabled = true;
   try {
     if (authMode === "register" && (authCfg.rules ?? "").trim() && f.get("agree") !== "on") throw new Error("Please read the rules and tick the box to agree");
-    await api(authMode === "login" ? "/login" : "/register", "POST", { username: f.get("username"), password: f.get("password"), invite: f.get("invite"), otp: f.get("otp") || undefined, remember: f.get("remember") === "on", agreeRules: f.get("agree") === "on" });
+    await api(authMode === "login" ? "/login" : "/register", "POST", { username: f.get("username"), password: f.get("password"), invite: f.get("invite"), otp: f.get("otp") || undefined, hp: f.get("hp") || undefined, ft: Date.now() - shownAt, chal: chal ? { id: chal.id, picks: [...picks] } : undefined, remember: f.get("remember") === "on", agreeRules: f.get("agree") === "on" });
     const meData = await api("/me");
     /* no cutscene after signing in: straight into the app */
     $("#auth").classList.add("hidden");
     enterApp(meData);
-  } catch (err) { if (err.needOtp) { $("#otpField").classList.remove("hidden"); $("#authForm [name=otp]").focus(); } $("#authError").textContent = err.message; } finally { btn.disabled = false; }
+  } catch (err) { if (err.challenge) showChallenge(err.challenge); if (err.needOtp) { $("#otpField").classList.remove("hidden"); $("#authForm [name=otp]").focus(); } $("#authError").textContent = err.message; } finally { btn.disabled = false; }
 });
 $("#replayIntro").addEventListener("click", async () => { $("#auth").classList.add("hidden"); await runIntro(true); $("#auth").classList.remove("hidden"); });
 

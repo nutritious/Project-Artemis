@@ -7,6 +7,7 @@ import express, { type NextFunction, type Request, type Response } from "express
 import { GIPHY_API_KEY, TENOR_API_KEY, ALLOW_PRIVATE, HOST, OWNER_PASSWORD, OWNER_USERNAME, PORT, PROXY_HOSTNAME, PROXY_ORIGIN, PROXY_TOKEN_TTL_MS, SESSION_TTL_MS, TRUST_PROXY, UPSTREAM_PROXY } from "./config.js";
 import { allow, checkPassword, clientIp, hashPassword, publicUser, sign, SESSION_COOKIE, userFromRequest } from "./auth.js";
 import { audit, db, defaultSettings, isStaff, newEconomy, saveDb, uid, type Settings, type User } from "./store.js";
+import { risk, NEEDS_CHECK, newChallenge, checkChallenge, noteFail, noteReg } from "./botcheck.js";
 import { verify as verifyOtp, newSecret, otpUri } from "./totp.js";
 import { trustInfo, TRUST, accrueProxy } from "./trust.js";
 import { can, effectivePerms, hasDashboard, outranks, publicRoles, PERMS, PERM_INFO, rank, roleRank, roleTag, type Perm } from "./perms.js";
@@ -170,8 +171,21 @@ function logAdmin(req: Request, action: string, detail = "") {
 const hasOwner = () => db.data.users.some((u) => u.role === "owner");
 api.get("/config", (_req, res) => res.json({ firstRun: !hasOwner(), ownerName: OWNER_USERNAME, openRegistration: db.data.server.openRegistration, announcement: db.data.announcement, rules: db.data.server.rules ?? "", beta: true }));
 
+/** Bot check: only asks when the behaviour looks automated. Returns true if the request was answered (refused). */
+function botGate(req: Request, res: Response, kind: "login" | "register"): boolean {
+  const b = req.body ?? {}, ip = clientIp(req);
+  if (b.hp) { res.status(400).json({ error: "Something went wrong. Please reload the page and try again." }); noteFail(ip); return true; } /* the hidden field was filled: a bot */
+  if (kind === "register" && !hasOwner()) return false;
+  const nowMs = Date.now(), badCount = (badInvites.get(ip) ?? []).filter((x) => nowMs - x < 15 * 60_000).length;
+  const score = risk({ ip, ua: String(req.get("user-agent") ?? ""), ft: typeof b.ft === "number" ? b.ft : undefined, badInvites: badCount });
+  if (score < NEEDS_CHECK) return false;
+  if (b.chal && checkChallenge(b.chal.id, b.chal.picks)) return false;
+  res.status(403).json({ error: b.chal ? "That was not right. Try this one." : "Quick check: are you a person? Solve this to continue.", needChallenge: true, challenge: newChallenge() });
+  return true;
+}
 const badInvites = new Map<string, number[]>(); /* wrong invite codes per IP: 5 in 15 minutes locks that IP out */
 api.post("/register", async (req, res) => {
+  if (botGate(req, res, "register")) return;
   if (!allow(`reg:${clientIp(req)}`, 8, 60_000)) return void res.status(429).json({ error: "Too many attempts" });
   const { username, password, invite, remember, agreeRules } = req.body ?? {};
   if ((db.data.server.rules ?? "").trim() && agreeRules !== true) return void res.status(400).json({ error: "You need to agree to the rules to join" });
@@ -185,7 +199,7 @@ api.post("/register", async (req, res) => {
     const ip = clientIp(req), now = Date.now(), bad = (badInvites.get(ip) ?? []).filter((x) => now - x < 15 * 60_000);
     if (bad.length >= 5) return void res.status(429).json({ error: "Too many wrong invite codes. Try again in 15 minutes." });
     const code = String(invite ?? "").trim().toUpperCase(); inv = db.data.invites.find((i) => i.code === code && !i.usedBy);
-    if (!inv || (inv.expiresAt && inv.expiresAt < now)) { bad.push(now); badInvites.set(ip, bad); return void res.status(403).json({ error: inv ? "That invite code has expired. Ask the owner for a new one." : "A valid invite code is required" }); }
+    if (!inv || (inv.expiresAt && inv.expiresAt < now)) { bad.push(now); badInvites.set(ip, bad); noteFail(ip); return void res.status(403).json({ error: inv ? "That invite code has expired. Ask the owner for a new one." : "A valid invite code is required" }); }
   }
   const { salt, hash } = await hashPassword(password);
   const user: User = {
@@ -198,15 +212,16 @@ api.post("/register", async (req, res) => {
   if (inv) { inv.usedBy = user.username; inv.usedAt = Date.now(); user.invitedBy = inv.createdBy; user.inviteCode = inv.code; }
   saveDb();
   setSession(req, res, user, remember !== false);
-  broadcastMembers();
+  broadcastMembers(); noteReg(clientIp(req));
   res.json({ user: publicUser(user) });
 });
 
 api.post("/login", async (req, res) => {
+  if (botGate(req, res, "login")) return;
   if (!allow(`login:${clientIp(req)}`, 10, 60_000)) return void res.status(429).json({ error: "Too many attempts, try again shortly" });
   const { username, password, remember, otp } = req.body ?? {};
   const user = db.data.users.find((u) => u.username.toLowerCase() === String(username ?? "").toLowerCase());
-  if (!user || typeof password !== "string" || !(await checkPassword(user, password))) return void res.status(401).json({ error: "Wrong callsign or passcode" });
+  if (!user || typeof password !== "string" || !(await checkPassword(user, password))) { noteFail(clientIp(req)); return void res.status(401).json({ error: "Wrong callsign or passcode" }); }
   if (user.banned) return void res.status(403).json({ error: "This account has been suspended" });
   if (user.totp?.on) {
     if (!otp) return void res.status(401).json({ error: "Enter the 6-digit code from your authenticator app", needOtp: true });

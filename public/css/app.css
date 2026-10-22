@@ -1183,3 +1183,8 @@ body:has(.cb-view) #liveBar { display: none !important; } /* the coin/spin chips
 .modal { grid-template-columns: minmax(0, 1fr); max-width: 100%; } .modal h3, .modal p { overflow-wrap: anywhere; word-break: break-word; min-width: 0; }
 /* GIFs in DMs */
 .dmt.linkhid { display: none; } .dmb .embed { margin-top: 0; } .dmb .dmt:not(.linkhid) + .embed { margin-top: 6px; }
+
+/* bot check (only shown when behaviour looks automated) */
+.hp { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+.botbox { display: grid; gap: 8px; padding: 12px; border-radius: 12px; background: color-mix(in srgb, var(--accent) 10%, transparent); border: 1px solid var(--line); } .botbox p { margin: 0; font-size: 14px; }
+.bot-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; } .bot-tile { font-size: 30px; padding: 10px 0; border-radius: 12px; border: 2px solid var(--line); background: var(--panel); cursor: pointer; } .bot-tile.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, transparent); }
