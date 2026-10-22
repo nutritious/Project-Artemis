@@ -120,6 +120,8 @@ function showAuth(cfg) {
   const ann = $("#authAnn"); ann.classList.toggle("hidden", !cfg.announcement); if (cfg.announcement) ann.innerHTML = `<b>Announcement</b><span></span>`, ann.querySelector("span").innerHTML = `${esc(cfg.announcement.text)} <span class="a-by">— ${byLine(cfg.announcement)}</span>`;
   if (cfg.ownerName) $("#ownerName").textContent = cfg.ownerName;
   if (cfg.firstRun) { setAuthMode("register"); $("#authForm [name=username]").value = cfg.ownerName ?? ""; } else setAuthMode("login");
+  /* an invite link (/?invite=CODE) opens the sign up form with the code already filled in */
+  try { const inv = new URLSearchParams(location.search).get("invite"); if (inv && !cfg.firstRun) { setAuthMode("register"); $("#authForm [name=invite]").value = inv.trim(); history.replaceState(null, "", location.pathname); } } catch { /* no query */ }
   $("#authForm [name=username]").focus();
 }
 function setAuthMode(mode) {
@@ -132,7 +134,7 @@ function setAuthMode(mode) {
   $("#authForm [name=password]").minLength = mode === "register" ? 8 : 1;
   $("#authForm [name=password]").autocomplete = mode === "login" ? "current-password" : "new-password";
   $("#authForm button[type=submit]").textContent = mode === "login" ? "Begin mission" : "Join the crew";
-  $("#authError").textContent = "";
+  $("#authError").textContent = ""; $("#otpField").classList.add("hidden");
 }
 $$(".seg button").forEach((b) => b.addEventListener("click", () => setAuthMode(b.dataset.mode)));
 $("#authForm").addEventListener("submit", async (e) => {
@@ -141,19 +143,19 @@ $("#authForm").addEventListener("submit", async (e) => {
   btn.disabled = true;
   try {
     if (authMode === "register" && (authCfg.rules ?? "").trim() && f.get("agree") !== "on") throw new Error("Please read the rules and tick the box to agree");
-    await api(authMode === "login" ? "/login" : "/register", "POST", { username: f.get("username"), password: f.get("password"), invite: f.get("invite"), remember: f.get("remember") === "on", agreeRules: f.get("agree") === "on" });
+    await api(authMode === "login" ? "/login" : "/register", "POST", { username: f.get("username"), password: f.get("password"), invite: f.get("invite"), otp: f.get("otp") || undefined, remember: f.get("remember") === "on", agreeRules: f.get("agree") === "on" });
     const meData = await api("/me");
     /* no cutscene after signing in: straight into the app */
     $("#auth").classList.add("hidden");
     enterApp(meData);
-  } catch (err) { $("#authError").textContent = err.message; } finally { btn.disabled = false; }
+  } catch (err) { if (err.needOtp) { $("#otpField").classList.remove("hidden"); $("#authForm [name=otp]").focus(); } $("#authError").textContent = err.message; } finally { btn.disabled = false; }
 });
 $("#replayIntro").addEventListener("click", async () => { $("#auth").classList.add("hidden"); await runIntro(true); $("#auth").classList.remove("hidden"); });
 
 /* ------------------------------ shell ------------------------------ */
 let started = false;
 function enterApp(me) {
-  Object.assign(state, { perms: me.perms ?? [], roles: me.roles ?? [], permInfo: me.permInfo ?? {}, me: me.user, proxyOrigin: me.proxyOrigin, sjOrigin: me.sjOrigin ?? "", exitUrl: me.exitUrl ?? "", exitToken: me.exitToken ?? "", storageWarn: !!me.storageWarn, proxyToken: me.proxyToken, bookmarks: me.bookmarks, channels: me.channels, engines: me.engines, announcement: me.announcement });
+  Object.assign(state, { twofa: !!me.twofa, perms: me.perms ?? [], roles: me.roles ?? [], permInfo: me.permInfo ?? {}, me: me.user, proxyOrigin: me.proxyOrigin, sjOrigin: me.sjOrigin ?? "", exitUrl: me.exitUrl ?? "", exitToken: me.exitToken ?? "", storageWarn: !!me.storageWarn, proxyToken: me.proxyToken, bookmarks: me.bookmarks, channels: me.channels, engines: me.engines, announcement: me.announcement });
   if (state.storageWarn) setTimeout(() => toast("This server has no permanent disk, so updates erase your data. Download a backup in Owner console, Safety.", true), 3500);
   $("#auth").classList.add("hidden"); $("#app").classList.remove("hidden");
   syncRail();

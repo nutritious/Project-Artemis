@@ -100,6 +100,7 @@ export function buildSettings() {
       <label class="switch"><span>Skip Forbidden and Omega cutscenes</span><input type="checkbox" data-skip="skipHigh" ${s.skipHigh ? "checked" : ""}></label>
       <label class="switch"><span>Skip Apex cutscenes<small>The super-limited Halloween and Fall items.</small></span><input type="checkbox" data-skip="skipApex" ${s.skipApex ? "checked" : ""}></label>
       <button class="btn" id="blankBtn">Open in an about:blank window</button></div>
+    ${["owner", "coowner", "admin"].includes(state.me.role) ? `<div class="card glass" id="twofaCard"><h3>Extra login step</h3><div id="twofaBody"></div></div>` : ""}
     <div class="card glass"><h3>About Artemis <span class="beta-badge sm">BETA</span></h3><p class="note">Artemis is in beta. Things can break or change while it is being built. The proxy, Tube and the Cloud Browser are the most likely to act up.</p><div class="inline"><button class="btn" id="replayTour">Replay the welcome tour</button><button class="btn" id="viewRules">Read the rules</button></div></div>
     <div class="card glass"><h3>Panic key</h3><label>Key (press twice quickly)<input id="setPanicKey" maxlength="10" value="${esc(s.panicKey)}"></label><label>Jump to<input id="setPanicUrl" value="${esc(s.panicUrl)}"></label></div>
     <div class="card glass"><h3>Account</h3>
@@ -132,6 +133,19 @@ export function buildSettings() {
   $("#setSound").onchange = (e) => saveSettings({ chatSound: e.target.checked });
   if ($("#setSpooky")) $("#setSpooky").onchange = (e) => setSpooky(e.target.checked);
   $("#replayTour").onclick = () => openTour();
+  /* extra login step: a 6-digit code from an authenticator app, for staff accounts */
+  const tf = $("#twofaBody");
+  if (tf) {
+    const paint = (setup) => {
+      if (state.twofa) tf.innerHTML = `<p class="note">On. Signing in also needs the 6-digit code from your authenticator app.</p><div class="row2"><label>Code to turn it off<input id="tfCode" inputmode="numeric" maxlength="8" placeholder="123456"></label></div><div class="inline"><button class="btn" id="tfOff">Turn off</button></div>`;
+      else if (setup) tf.innerHTML = `<p class="note">1. Open an authenticator app (Google Authenticator, Authy or Microsoft Authenticator) and add an account by typing this key:</p><p class="mono" style="user-select:all;word-break:break-all;font-size:16px">${esc(setup.secret)}</p><p class="note">2. Type the 6-digit code the app shows to finish.</p><div class="row2"><label>Code<input id="tfCode" inputmode="numeric" maxlength="8" placeholder="123456"></label></div><div class="inline"><button class="btn primary" id="tfOn">Turn on</button></div>`;
+      else tf.innerHTML = `<p class="note">Adds a second step when you sign in: a 6-digit code from an app on your phone. A stolen password alone will not get anyone in. Off right now.</p><div class="inline"><button class="btn primary" id="tfStart">Set it up</button></div>`;
+      $("#tfStart")?.addEventListener("click", async () => { try { paint(await api("/me/2fa/start", "POST", {})); } catch (e) { toast(e.message, true); } });
+      $("#tfOn")?.addEventListener("click", async () => { try { await api("/me/2fa/enable", "POST", { code: $("#tfCode").value }); state.twofa = true; toast("Extra login step is on", "ok"); paint(); } catch (e) { toast(e.message, true); } });
+      $("#tfOff")?.addEventListener("click", async () => { try { await api("/me/2fa/disable", "POST", { code: $("#tfCode").value }); state.twofa = false; toast("Extra login step is off", "ok"); paint(); } catch (e) { toast(e.message, true); } });
+    };
+    paint();
+  }
   $("#viewRules").onclick = async () => { try { const c = await api("/config"); showRules(c.rules || "No rules have been set yet."); } catch (e) { toast(e.message, true); } };
   if ($("#setFall")) $("#setFall").onchange = (e) => setFall(e.target.checked);
   $("#setBar").onchange = (e) => saveSettings({ bookmarksBar: e.target.checked });

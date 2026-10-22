@@ -4,7 +4,7 @@ import type { WebSocket } from "ws";
 import { allow } from "./auth.js";
 import { db, saveDb, uid, type DmMsg, type User } from "./store.js";
 import { moderate } from "./bot.js";
-import { canSeeChannel } from "./trust.js";
+import { canSeeChannel, isTrusted } from "./trust.js";
 
 export interface SClient { ws: WebSocket; user: User; cid: string; rooms: Set<string> }
 interface Ctx { clients: () => Iterable<SClient>; send: (ws: WebSocket, d: unknown) => void; ban: (id: string) => void }
@@ -130,6 +130,7 @@ export function socialMessage(c: SClient, me: User, msg: any): boolean {
       if (!to || to.id === me.id || !text) return true;
       if (isBlocked(me, to)) return X.send(ws, { t: "error", message: "You can't message this person." }), true;
       if (!areFriends(me, to)) return X.send(ws, { t: "error", message: "You need to be friends to message each other." }), true;
+      if (/(https?:\/\/|www\.)\S/i.test(text) && !isTrusted(me)) return X.send(ws, { t: "error", message: "New members can't send links yet. Keep using the site to earn Trusted." }), true;
       if (!allow(`dm:${me.id}`, 8, 8000)) return X.send(ws, { t: "error", message: "You're sending messages too fast." }), true;
       const v = moderate(me, text, null);
       if (v.block) { if (v.ban) { saveDb(); X.ban(me.id); } return X.send(ws, { t: "error", message: v.ban ? "You were banned for inappropriate language." : "Message blocked: keep it clean." }), true; }

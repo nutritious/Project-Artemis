@@ -7,6 +7,7 @@ import express, { type NextFunction, type Request, type Response } from "express
 import { GIPHY_API_KEY, TENOR_API_KEY, ALLOW_PRIVATE, HOST, OWNER_PASSWORD, OWNER_USERNAME, PORT, PROXY_HOSTNAME, PROXY_ORIGIN, PROXY_TOKEN_TTL_MS, SESSION_TTL_MS, TRUST_PROXY, UPSTREAM_PROXY } from "./config.js";
 import { allow, checkPassword, clientIp, hashPassword, publicUser, sign, SESSION_COOKIE, userFromRequest } from "./auth.js";
 import { audit, db, defaultSettings, isStaff, newEconomy, saveDb, uid, type Settings, type User } from "./store.js";
+import { verify as verifyOtp, newSecret, otpUri } from "./totp.js";
 import { trustInfo, TRUST, accrueProxy } from "./trust.js";
 import { can, effectivePerms, hasDashboard, outranks, publicRoles, PERMS, PERM_INFO, rank, roleRank, roleTag, type Perm } from "./perms.js";
 import { runCommand } from "./commands.js";
@@ -169,6 +170,7 @@ function logAdmin(req: Request, action: string, detail = "") {
 const hasOwner = () => db.data.users.some((u) => u.role === "owner");
 api.get("/config", (_req, res) => res.json({ firstRun: !hasOwner(), ownerName: OWNER_USERNAME, openRegistration: db.data.server.openRegistration, announcement: db.data.announcement, rules: db.data.server.rules ?? "", beta: true }));
 
+const badInvites = new Map<string, number[]>(); /* wrong invite codes per IP: 5 in 15 minutes locks that IP out */
 api.post("/register", async (req, res) => {
   if (!allow(`reg:${clientIp(req)}`, 8, 60_000)) return void res.status(429).json({ error: "Too many attempts" });
   const { username, password, invite, remember, agreeRules } = req.body ?? {};
@@ -180,8 +182,10 @@ api.post("/register", async (req, res) => {
   const first = isOwnerName;
   let inv: (typeof db.data.invites)[number] | undefined;
   if (!first && !db.data.server.openRegistration) {
-    inv = db.data.invites.find((i) => i.code === String(invite ?? "").trim() && !i.usedBy);
-    if (!inv) return void res.status(403).json({ error: "A valid invite code is required" });
+    const ip = clientIp(req), now = Date.now(), bad = (badInvites.get(ip) ?? []).filter((x) => now - x < 15 * 60_000);
+    if (bad.length >= 5) return void res.status(429).json({ error: "Too many wrong invite codes. Try again in 15 minutes." });
+    const code = String(invite ?? "").trim().toUpperCase(); inv = db.data.invites.find((i) => i.code === code && !i.usedBy);
+    if (!inv || (inv.expiresAt && inv.expiresAt < now)) { bad.push(now); badInvites.set(ip, bad); return void res.status(403).json({ error: inv ? "That invite code has expired. Ask the owner for a new one." : "A valid invite code is required" }); }
   }
   const { salt, hash } = await hashPassword(password);
   const user: User = {
@@ -191,7 +195,7 @@ api.post("/register", async (req, res) => {
   user.rulesAt = Date.now();
   if (!first && db.data.server.launchAt && Date.now() < db.data.server.launchAt + 864e5) { user.inv.tags.push("og"); user.equip.tag = "og"; }
   db.data.users.push(user);
-  if (inv) inv.usedBy = user.username;
+  if (inv) { inv.usedBy = user.username; inv.usedAt = Date.now(); user.invitedBy = inv.createdBy; user.inviteCode = inv.code; }
   saveDb();
   setSession(req, res, user, remember !== false);
   broadcastMembers();
@@ -200,13 +204,34 @@ api.post("/register", async (req, res) => {
 
 api.post("/login", async (req, res) => {
   if (!allow(`login:${clientIp(req)}`, 10, 60_000)) return void res.status(429).json({ error: "Too many attempts, try again shortly" });
-  const { username, password, remember } = req.body ?? {};
+  const { username, password, remember, otp } = req.body ?? {};
   const user = db.data.users.find((u) => u.username.toLowerCase() === String(username ?? "").toLowerCase());
   if (!user || typeof password !== "string" || !(await checkPassword(user, password))) return void res.status(401).json({ error: "Wrong callsign or passcode" });
   if (user.banned) return void res.status(403).json({ error: "This account has been suspended" });
+  if (user.totp?.on) {
+    if (!otp) return void res.status(401).json({ error: "Enter the 6-digit code from your authenticator app", needOtp: true });
+    if (!allow(`otp:${user.id}`, 6, 5 * 60_000) || !verifyOtp(user.totp.secret, String(otp))) return void res.status(401).json({ error: "That code is wrong or expired", needOtp: true });
+  }
   user.lastSeen = Date.now();
   setSession(req, res, user, remember !== false);
   res.json({ user: publicUser(user) });
+});
+
+/* extra login step for staff: an authenticator app code. Start shows the setup key, enable confirms it with a real code, disable needs a current code. */
+api.post("/me/2fa/start", auth, (req, res) => {
+  const u = me(req); if (!isStaff(u)) return void res.status(403).json({ error: "Only staff can turn this on" });
+  if (u.totp?.on) return void res.status(400).json({ error: "It is already on" });
+  u.totp = { secret: newSecret(), on: false }; saveDb(); res.json({ secret: u.totp.secret, uri: otpUri(u.totp.secret, u.username) });
+});
+api.post("/me/2fa/enable", auth, (req, res) => {
+  const u = me(req); if (!u.totp || u.totp.on) return void res.status(400).json({ error: "Start the setup first" });
+  if (!allow(`otp:${u.id}`, 6, 5 * 60_000) || !verifyOtp(u.totp.secret, String(req.body?.code ?? ""))) return void res.status(400).json({ error: "That code is wrong. Check the code in your app." });
+  u.totp.on = true; saveDb(); audit(u.username, "2fa.on", ""); res.json({ ok: true });
+});
+api.post("/me/2fa/disable", auth, (req, res) => {
+  const u = me(req); if (!u.totp?.on) return void res.status(400).json({ error: "It is not on" });
+  if (!allow(`otp:${u.id}`, 6, 5 * 60_000) || !verifyOtp(u.totp.secret, String(req.body?.code ?? ""))) return void res.status(400).json({ error: "That code is wrong" });
+  delete u.totp; saveDb(); audit(u.username, "2fa.off", ""); res.json({ ok: true });
 });
 
 api.post("/logout", (_req, res) => {
@@ -228,6 +253,7 @@ api.get("/me", auth, (req, res) => {
     sjOrigin: PROXY_ORIGIN,
     ...exitInfo(user),
     storageWarn: user.role === "owner" && storageInfo().permanent === false,
+    twofa: !!user.totp?.on,
     proxyToken: proxyToken(user),
     bookmarks: user.bookmarks,
     channels: db.data.channels.map((c) => ({ id: c.id, name: c.name, topic: c.topic })),
@@ -747,7 +773,7 @@ api.delete("/messages/:id", auth, need("delete_messages"), (req, res) => res.jso
 
 /* ----- admin ----- */
 const adminUsers = () =>
-  db.data.users.map((u) => ({ id: u.id, username: u.username, role: u.role, roleId: u.roleId ?? null, rank: rank(u), createdAt: u.createdAt, lastSeen: u.lastSeen, banned: u.banned, requests: u.stats.requests, bytes: u.stats.bytes }));
+  db.data.users.map((u) => ({ id: u.id, username: u.username, role: u.role, roleId: u.roleId ?? null, rank: rank(u), createdAt: u.createdAt, lastSeen: u.lastSeen, banned: u.banned, requests: u.stats.requests, bytes: u.stats.bytes, ...(u.invitedBy ? { invitedBy: u.invitedBy } : {}) }));
 
 api.get("/admin/overview", auth, (req, res) => {
   const u = me(req);
@@ -819,11 +845,12 @@ api.delete("/admin/blocklist/:host", auth, need("manage_blocklist"), (req, res) 
 });
 const ownerOnlyInvites = (req: Request, res: Response, next: NextFunction) => (me(req).role === "owner" ? next() : void res.status(403).json({ error: "Only the owner can make invite codes" }));
 api.post("/admin/invites", auth, ownerOnlyInvites, (req, res) => {
-  const code = "ARTEMIS-" + crypto.randomBytes(4).toString("hex").toUpperCase();
-  db.data.invites.push({ code, createdBy: me(req).username, createdAt: Date.now() });
+  const code = "ARTEMIS-" + crypto.randomBytes(6).toString("hex").toUpperCase(), hours = Math.max(1, Math.min(168, Math.round(Number(req.body?.hours) || 24))), now = Date.now();
+  db.data.invites = db.data.invites.filter((i) => i.usedBy || !i.expiresAt || i.expiresAt > now); /* expired, unused codes are cleaned up */
+  db.data.invites.push({ code, createdBy: me(req).username, createdAt: now, expiresAt: now + hours * 36e5 });
   saveDb();
-  logAdmin(req, "invite.create", code);
-  res.json({ code });
+  logAdmin(req, "invite.create", `${code} (${hours}h)`);
+  res.json({ code, expiresAt: now + hours * 36e5 });
 });
 api.delete("/admin/invites/:code", auth, ownerOnlyInvites, (req, res) => {
   db.data.invites = db.data.invites.filter((i) => i.code !== req.params.code);
@@ -1148,6 +1175,7 @@ if (OWNER_PASSWORD.length >= 8 && !db.data.users.some((u) => u.role === "owner" 
   saveDb();
   console.log(`Owner account "${OWNER_USERNAME}" created from OWNER_PASSWORD.`);
 }
+if (process.env.OWNER_RESET_2FA === "1") { const ow = db.data.users.find((u) => u.role === "owner"); if (ow?.totp) { delete ow.totp; saveDb(); console.log("  Owner extra login step switched off (OWNER_RESET_2FA=1). Remove that setting afterwards."); } }
 resumeDirector();
 startCloud(() => db.flush());
 server.listen(PORT, HOST, () => {

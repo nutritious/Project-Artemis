@@ -145,6 +145,7 @@ wss.on("connection", (ws: WebSocket, user: User) => {
         const chs = db.data.channels.find((c) => c.id === channel);
         if (!text || !chs || chs.voice || !canSeeChannel(fresh, chs)) return;
         if (!allow(`chat:${user.id}`, 6, 5000)) return send(ws, { t: "error", message: "You're sending messages too fast." });
+        if (/(https?:\/\/|www\.)\S/i.test(text) && !isTrusted(fresh)) return send(ws, { t: "error", message: "New members can't post links yet. Keep chatting and using the site to earn Trusted (see the Hub)." });
         if (gifUrl.test(text) && !isTrusted(fresh)) return send(ws, { t: "error", message: "GIFs are for trusted members only. Check your progress in the Hub." });
         const v = moderate(fresh, text, channel);
         if (v.block) {

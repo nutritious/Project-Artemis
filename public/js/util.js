@@ -27,7 +27,7 @@ export async function api(path, method = "GET", body) {
   if (!res.ok) {
     if (res.status === 401 && state.me && !path.startsWith("/login")) { (window.onbeforeunload = null, location.reload()); }
     const err = new Error(data.error || `Request failed (${res.status})`);
-    err.status = res.status;
+    err.status = res.status; if (data.needOtp) err.needOtp = true;
     throw err;
   }
   return data;

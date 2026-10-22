@@ -169,7 +169,9 @@ hooks.api = async (path, method = "GET", body = {}) => {
   if (p === "/admin/announcement") { D.announcement = null; log("announcement.clear"); push({ t: "announcement", announcement: null }); return { ok: true }; }
   if (p === "/admin/blocklist" && method === "POST") { if (!/^[a-z0-9.-]+\.[a-z]+$/i.test(body.host)) throw demoErr("Enter a domain like example.com"); D.blocklist.push(body.host.toLowerCase()); log("block.add", body.host); return { blocklist: D.blocklist }; }
   if (m(/^\/admin\/blocklist\/(.+)$/)) { const h = decodeURIComponent(m(/^\/admin\/blocklist\/(.+)$/)[1]); D.blocklist = D.blocklist.filter((x) => x !== h); log("block.remove", h); return { ok: true }; }
-  if (p === "/admin/invites" && method === "POST") { const code = "ARTEMIS-" + uid().toUpperCase(); D.invites.push({ code, createdBy: "Warmaster", createdAt: Date.now() }); log("invite.create", code); return { code }; }
+  if (p === "/me/2fa/start") return { secret: "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP", uri: "" };
+  if (p === "/me/2fa/enable" || p === "/me/2fa/disable") return { ok: true };
+  if (p === "/admin/invites" && method === "POST") { const code = "ARTEMIS-" + uid().toUpperCase(); D.invites.push({ code, createdBy: "Warmaster", createdAt: Date.now(), expiresAt: Date.now() + (Number(body?.hours) || 24) * 36e5 }); log("invite.create", code); return { code }; }
   if (m(/^\/admin\/invites\/(.+)$/)) { D.invites = D.invites.filter((i) => i.code !== m(/^\/admin\/invites\/(.+)$/)[1]); return { ok: true }; }
   const um = m(/^\/admin\/users\/([^/]+)\/(role|ban|reset-password)$/);
   if (um) { const u = users.find((x) => x.id === um[1]); if (um[2] === "role") { u.role = body.role; if (u.role !== "member") delete u.roleId; push({ t: "members", members: members() }); log("user.role", `${u.username} → ${u.role}`); } else if (um[2] === "ban") { u.banned = body.banned; log(u.banned ? "user.ban" : "user.unban", u.username); } else { log("user.reset-password", u.username); return { password: "Demo-" + uid() }; } return { ok: true }; }
