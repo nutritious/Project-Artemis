@@ -1178,3 +1178,6 @@ body:has(.cb-view) #liveBar { display: none !important; } /* the coin/spin chips
 .cd-resize::before { content: ""; position: absolute; left: 5px; top: 5px; width: 10px; height: 10px; border-left: 2px solid var(--faint); border-top: 2px solid var(--faint); border-radius: 3px 0 0 0; opacity: .7; } .cd-resize:hover::before { border-color: var(--accent); opacity: 1; }
 .ct-fs { position: absolute; right: 6px; top: 6px; z-index: 3; display: none; width: 28px; height: 28px; border-radius: 8px; border: 0; background: rgba(0, 0, 0, .55); color: #fff; font-size: 15px; cursor: pointer; place-items: center; } .ctile.has-video .ct-fs { display: grid; } .ct-fs:hover { background: rgba(0, 0, 0, .8); }
 .ctile:fullscreen { aspect-ratio: auto; border-radius: 0; border: 0; background: #000; } .ctile:fullscreen video { object-fit: contain !important; } .ctile:fullscreen .ct-n { font-size: 15px; left: 16px; bottom: 14px; }
+
+/* dialogs: long unbroken text (links) wraps inside the box instead of stretching it */
+.modal { grid-template-columns: minmax(0, 1fr); max-width: 100%; } .modal h3, .modal p { overflow-wrap: anywhere; word-break: break-word; min-width: 0; }

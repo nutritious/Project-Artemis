@@ -371,7 +371,7 @@ async function onMsgClick(e) {
   if (act === "toggle") send({ t: "react", id, emoji: btn.dataset.emoji });
   else if (act === "reply") setReply(m);
   else if (act === "edit") startEdit(m, row);
-  else if (act === "del") { if (await confirmBox("Delete this message?", m.text.slice(0, 120), { ok: "Delete", danger: true })) send({ t: "delete", id }); }
+  else if (act === "del") { if (await confirmBox("Delete this message?", /^https?:\/\/\S+$/.test(m.text.trim()) ? "A picture or GIF link" : m.text.length > 100 ? m.text.slice(0, 100) + "…" : m.text, { ok: "Delete", danger: true })) send({ t: "delete", id }); }
   else if (act === "react") {
     $$(".picker").forEach((p) => p.remove());
     const p = document.createElement("div"); p.className = "picker";
