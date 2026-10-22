@@ -1181,3 +1181,5 @@ body:has(.cb-view) #liveBar { display: none !important; } /* the coin/spin chips
 
 /* dialogs: long unbroken text (links) wraps inside the box instead of stretching it */
 .modal { grid-template-columns: minmax(0, 1fr); max-width: 100%; } .modal h3, .modal p { overflow-wrap: anywhere; word-break: break-word; min-width: 0; }
+/* GIFs in DMs */
+.dmt.linkhid { display: none; } .dmb .embed { margin-top: 0; } .dmb .dmt:not(.linkhid) + .embed { margin-top: 6px; }

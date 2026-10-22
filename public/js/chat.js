@@ -283,7 +283,7 @@ function fmtText(raw) {
   s = s.replace(/(^|[\s(])@([a-zA-Z0-9_.-]{2,24}|everyone|here)\b/g, (_, p, n) => `${p}<span class="at${n.toLowerCase() === me().username.toLowerCase() || /^(everyone|here)$/i.test(n) ? " me" : ""}">@${n}</span>`);
   return s.replace(/\u0000(\d+)\u0000/g, (_, i) => blocks[+i]);
 }
-function embeds(raw) {
+export function embeds(raw) {
   const urls = [...new Set(raw.match(/https?:\/\/[^\s<]+/g) ?? [])].slice(0, 2);
   return urls.map((u) => {
     if (/\.(png|jpe?g|gif|webp|avif)(\?[^\s]*)?$/i.test(u)) return `<div class="embed"><img src="/api/img?u=${encodeURIComponent(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-hide></div>`;

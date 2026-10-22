@@ -2,7 +2,8 @@
  * Sockets come from chat.js (it re-emits unknown messages on the "ws" bus). Audio and video travel directly between browsers (WebRTC);
  * the server only introduces people and relays the handshake. */
 import { $, $$, api, avatar, can, confirmBox, emit, esc, on, overlay, promptBox, state, toast } from "./util.js";
-import { chatSend as send, ping } from "./chat.js";
+import { chatSend as send, ping, embeds } from "./chat.js";
+import { openGifPicker } from "./gif.js";
 import { openFullProfile } from "./profile.js";
 
 const ICE = { iceServers: [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }] };
@@ -37,7 +38,7 @@ export function buildSocial() {
   side.insertBefore(list, $("#userBar"));
   const main = document.createElement("section"); main.className = "main glass dm-main"; main.id = "dmMain";
   main.innerHTML = `<div class="chead dmhead" id="dmHead"></div><div id="dmMsgs" class="dmmsgs" aria-live="polite"></div>
-    <div class="cbox dmbox"><textarea id="dmInput" rows="1" maxlength="2000" placeholder="Message…"></textarea><button class="btn" id="dmSend" type="button">Send</button></div>`;
+    <div class="cbox dmbox"><textarea id="dmInput" rows="1" maxlength="2000" placeholder="Message…"></textarea><button class="btn gifbtn" id="dmGif" type="button" title="Send a GIF (trusted members)">GIF</button><button class="btn" id="dmSend" type="button">Send</button></div>`;
   chat.querySelector("section.main").after(main);
   const dock = document.createElement("div"); dock.id = "callDock"; dock.className = "calldock glass hidden";
   dock.innerHTML = `<div class="cd-head"><b id="cdTitle"></b><span id="cdSub"></span><button type="button" class="icon-btn" data-cd="smaller" title="Make the call window smaller" aria-label="Smaller">−</button><button type="button" class="icon-btn" data-cd="bigger" title="Make the call window bigger" aria-label="Bigger">+</button><button type="button" class="icon-btn" data-cd="big" title="Fill the middle of the screen" aria-label="Fill the middle">⤢</button></div><div class="cd-resize" title="Drag to resize"></div>
@@ -49,6 +50,11 @@ export function buildSocial() {
   list.addEventListener("click", onListClick);
   main.addEventListener("click", onDmClick);
   $("#dmSend").onclick = sendDm;
+  $("#dmGif").onclick = () => {
+    if (!state.trusted) return toast("GIFs unlock when you become a trusted member. See the Hub for your progress.", true);
+    if (!D.open) return;
+    const to = D.open; openGifPicker((url) => send({ t: "dm-send", to, text: url }));
+  };
   $("#dmInput").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendDm(); } });
   dock.addEventListener("click", onDockClick);
   dock.addEventListener("dblclick", (e) => { const t = e.target.closest(".ctile"); if (t) goFull(t); });
@@ -126,7 +132,7 @@ function renderPane(keep) {
     <span class="dmacts"><button class="btn sm" data-dmact="voice" ${onl && !blocked && fr ? "" : "disabled"} title="Voice call">📞 Call</button><button class="btn sm" data-dmact="video" ${onl && !blocked && fr ? "" : "disabled"} title="Video call">🎥 Video</button><button class="btn sm ghost" data-dmact="block">${blocked ? "Unblock" : "Block"}</button></span>`;
   const box = $("#dmMsgs"), list = D.msgs.get(id) ?? [], atBottom = !keep || box.scrollHeight - box.scrollTop - box.clientHeight < 140;
   box.innerHTML = (D.more.get(id) ? `<button class="btn sm ghost dmmore" data-dmact="older">Load earlier</button>` : "") +
-    (list.length ? list.map((m) => m.sys ? `<div class="dmsys">${esc(m.text)} · ${fmtT(m.ts)}</div>` : `<div class="dmb ${m.from === me().id ? "mine" : ""}"><div class="dmt">${link(m.text)}</div><small>${fmtT(m.ts)}</small></div>`).join("") : D.loaded.has(id) ? `<div class="chat-empty"><b>${esc(name)}</b><span>This is the start of your private chat. Only the two of you can see it.</span></div>` : "");
+    (list.length ? list.map((m) => m.sys ? `<div class="dmsys">${esc(m.text)} · ${fmtT(m.ts)}</div>` : `<div class="dmb ${m.from === me().id ? "mine" : ""}"><div class="dmt${/^https?:\/\/\S+\.(png|jpe?g|gif|webp|avif)(\?\S*)?$/i.test(m.text.trim()) ? " linkhid" : ""}">${link(m.text)}</div>${embeds(m.text)}<small>${fmtT(m.ts)}</small></div>`).join("") : D.loaded.has(id) ? `<div class="chat-empty"><b>${esc(name)}</b><span>This is the start of your private chat. Only the two of you can see it.</span></div>` : "");
   if (atBottom) box.scrollTop = box.scrollHeight;
   $("#dmInput").disabled = blocked || !fr; $("#dmInput").placeholder = blocked ? "You blocked this person" : !fr ? "Friends only" : `Message ${name}`;
   box.insertAdjacentHTML("beforeend", fr ? "" : `<div class="dmgate"><b>You are not friends with ${esc(name)}</b><span>${rel === "outgoing" ? "Your friend request is waiting for them to accept." : rel === "incoming" ? `${esc(name)} sent you a friend request.` : "Add them as a friend to message and call each other."}</span>${rel === "outgoing" ? "" : `<button class="btn primary" data-dmact="${rel === "incoming" ? "accept" : "addfriend"}">${rel === "incoming" ? "Accept request" : "Add friend"}</button>`}</div>`);
