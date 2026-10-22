@@ -5,6 +5,7 @@ import path from "node:path";
 const out = process.argv[2] ?? "preview/artemis-preview.html";
 const r = await build({ stdin: { contents: 'import "./scripts/demo.js"; import "./public/js/app.js";', resolveDir: process.cwd() }, bundle: true, minify: true, format: "esm", write: false, target: "es2020" });
 let js = r.outputFiles[0].text.replace(/<\/script/gi, "<\\/script");
+for (const n of ["warmaster", "razorblade", "ditto"]) js = js.replaceAll(`__CREW_${n.toUpperCase()}__`, "data:image/png;base64," + fs.readFileSync(`public/img/crew/${n}.png`).toString("base64"));
 let css = fs.readFileSync("public/css/app.css", "utf8").replace(/@font-face\s*{[^}]*}/g, "");
 const html = fs.readFileSync("public/index.html", "utf8");
 const body = html.match(/<body>([\s\S]*)<\/body>/)[1].replace(/<script[^>]*><\/script>/, "");

@@ -172,7 +172,8 @@ const hasOwner = () => db.data.users.some((u) => u.role === "owner");
 /** The people shown on the welcome card. Pictures come from their accounts, if they have one. */
 const WELCOME_CREW = () => [[OWNER_USERNAME, "Owner"], ["Razorblade", "Co-owner"], ["Ditto", "Co-owner"]].map(([name, title]) => {
   const u = db.data.users.find((x) => x.username.toLowerCase() === name.toLowerCase()), av = u?.profile?.avatar;
-  return { name: u?.username ?? name, title, avatar: av && av.length < 300_000 ? av : "" };
+  const fixed = `/img/crew/${name.toLowerCase()}.png`; /* shipped with the site, so it survives restarts and wipes */
+  return { name: u?.username ?? name, title, avatar: fs.existsSync(path.resolve("public", "." + fixed)) ? fixed : av && av.length < 300_000 ? av : "" };
 });
 api.get("/config", (_req, res) => res.json({ crew: WELCOME_CREW(), firstRun: !hasOwner(), ownerName: OWNER_USERNAME, openRegistration: db.data.server.openRegistration, announcement: db.data.announcement, rules: db.data.server.rules ?? "", beta: true }));
 
